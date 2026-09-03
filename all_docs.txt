@@ -1,0 +1,367 @@
+# KISHOLOY Project Overview
+
+## Brand
+- **Brand:** কিশলয় (KISHOLOY)
+- **Business:** Single-store Bangladesh e-commerce platform
+- **Market:** Bangladesh
+- **Languages:** বাংলা + English
+- **Currency:** BDT
+- **Timezone:** Asia/Dhaka
+
+## Primary Goal
+Make customer shopping simple while making the entire business manageable from one professional admin control center.
+
+## Stack
+- **Frontend:** React 19, Vite, Tailwind CSS 4, Motion
+- **Backend:** Express (Node.js), TypeScript
+- **Database:** PostgreSQL (Planned, via Cloud SQL or equivalent)
+- **Deployment:** Google Cloud Run (AI Studio Build platform)
+# Requirements Matrix
+
+## Core Modules (MVP)
+- **Storefront:** Homepage, Product Listing, Product Detail, Cart, Checkout, Order Tracking.
+- **Admin Control Center:** Dashboard, Content Management, Operations.
+- **Catalog Management:** Products, Categories, Variants, Inventory.
+- **Order Management:** Orders, Shipments, Returns, Refunds.
+- **Payments:** COD, Online Payment Adapter (SSLCOMMERZ).
+- **Logistics:** Courier Service Adapter (Steadfast/Pathao), Barcode/QR generation.
+- **Customers & Auth:** RBAC, Customer Profiles.
+- **Automation & Notifications:** Webhooks, SMS/Email/In-app, Retries, Queue.
+- **Finance & Reporting:** Expenses, Reconciliation, Reports, Documents (PDF).
+- **Infrastructure:** Backups, Audit Logs, Settings.
+
+## Admin-Controllable Content
+- Logo, Favicon, Brand Info (Name, Description, Headline, Tagline, Motto).
+- Hero Content, Banners, Homepage Sections.
+- Categories, Featured Products, Navigation, Footer, Policies, Notification Templates.
+# Research & Documentation
+
+## VERIFIED
+- Bangladesh Currency: BDT
+- Timezone: Asia/Dhaka
+- Major Couriers: Steadfast, Pathao, RedX, Paperfly.
+- Payment Gateways: SSLCOMMERZ, bKash, Nagad.
+- Regulatory bodies: Bangladesh Bank, NBR (National Board of Revenue), Ministry of Commerce.
+
+## DOCUMENTED
+- SSLCOMMERZ API requires Store ID and Store Password. Supports IPN (webhook) for server-side verification.
+- Courier APIs (e.g., Steadfast, Pathao) require API key/secret and specific area/thana codes for delivery mapping.
+
+## ASSUMED
+- Use of PostgreSQL for relational data.
+- Standard Node.js backend using Express to serve API and Vite SPA in production.
+- Cloud storage (e.g., Cloudflare R2 or Firebase Storage) for product media.
+
+## UNKNOWN
+- Client's exact API credentials for payment gateways and SMS (to be configured via `.env`).
+- Final NBR tax/VAT rules for specific product categories (requires compliance check at launch).
+# User Flows
+
+## Checkout Flow (Guest & Authenticated)
+1. User adds items to Cart.
+2. User proceeds to Checkout.
+3. Auth Check:
+   - If Authenticated: Load saved addresses and preferences.
+   - If Guest: Prompt for Mobile Number / OTP or quick Guest Details (Name, Phone).
+4. User enters/selects Shipping Address (Division, District, Thana).
+5. System validates Serviceable Area and calculates Shipping Cost and Taxes.
+6. User selects Payment Method (COD, Online/SSLCOMMERZ).
+7. Pre-flight check: System reserves stock (Transactional).
+8. Order Placed -> Order Confirmation Page (if COD) or Redirect to Gateway (if Online).
+
+## Order Flow (Customer Perspective)
+1. Order Placed (PENDING).
+2. Customer receives Order Confirmation via SMS/Email (CONFIRMED).
+3. Order moves to Processing (PROCESSING) when warehouse starts packing.
+4. Order handed to Courier (SHIPPED) with Tracking Link sent to Customer.
+5. Order Delivered (DELIVERED) and Review Prompt sent.
+
+## Payment Flow (Online / Gateway)
+1. User selects Online Payment.
+2. Order created with UNPAID status.
+3. User redirected to Payment Gateway (SSLCOMMERZ/bKash).
+4. Gateway processes payment.
+5. User redirected back to Storefront (Success/Fail URL).
+6. CRITICAL: Server receives IPN/Webhook in background.
+7. Server verifies payment signature, amount, and currency.
+8. System records `payment_transactions` and updates Order status to PAID.
+
+## Shipping Flow (Fulfillment)
+1. Admin packs order and requests Courier booking (e.g., Steadfast/Pathao).
+2. System sends API request to Courier with delivery details.
+3. Courier returns Consignment/Tracking ID.
+4. System generates PDF Shipping Label + Barcode.
+5. System updates Order to SHIPPED.
+6. System polls Courier Webhook/Status API.
+7. Courier marks DELIVERED -> System automatically updates Order to DELIVERED.
+
+## Return / Refund Flow
+1. Customer initiates Return from Account Dashboard or via Support within 7 days.
+2. Admin reviews and approves Return -> Courier reverse pickup scheduled.
+3. Item received at warehouse -> Admin inspects condition.
+4. If accepted: System triggers Refund (Gateway Reversal or Bank Transfer).
+5. System records `inventory_transactions` (restock/damage).
+6. Order marked as RETURNED, Payment marked as REFUNDED.
+
+## Order Cancellation Flow
+1. Customer clicks "Cancel Order" (Only available if status is PENDING or CONFIRMED).
+2. System prompts for Reason.
+3. System reverses stock reservation (releases inventory).
+4. If payment was made, system automatically queues a Refund task.
+5. Order marked as CANCELLED, notification sent.
+# State Machines & Transitions
+
+## Order States
+- `PENDING`: Created, awaiting confirmation/payment.
+- `CONFIRMED`: Acknowledged by store.
+- `PROCESSING`: Being packed.
+- `READY_TO_SHIP`: Packed, awaiting courier pickup.
+- `SHIPPED`: Picked up by courier.
+- `OUT_FOR_DELIVERY`: Courier is out for delivery.
+- `DELIVERED`: Successfully handed to customer.
+- `CANCELLED`: Cancelled by customer or admin.
+- `FAILED`: E.g., stock allocation failed post-payment.
+- `RETURN_REQUESTED`: Customer requested return.
+- `RETURNED`: Item returned to inventory.
+
+**Valid Transitions:**
+- PENDING -> CONFIRMED, CANCELLED, FAILED
+- CONFIRMED -> PROCESSING, CANCELLED
+- PROCESSING -> READY_TO_SHIP, CANCELLED
+- READY_TO_SHIP -> SHIPPED, CANCELLED
+- SHIPPED -> OUT_FOR_DELIVERY, RETURN_REQUESTED (if rejected at door)
+- OUT_FOR_DELIVERY -> DELIVERED, RETURN_REQUESTED
+- DELIVERED -> RETURN_REQUESTED
+- RETURN_REQUESTED -> RETURNED, DELIVERED (if return rejected)
+
+**Invalid Transitions (Guarded):**
+- DELIVERED -> CANCELLED (Cannot cancel after delivery)
+- SHIPPED -> PROCESSING (Cannot go backward in fulfillment)
+- CANCELLED -> DELIVERED (Terminal state)
+
+## Payment States
+- `UNPAID`: Default state.
+- `PENDING`: User initiated payment, awaiting gateway response.
+- `AUTHORIZED`: Gateway authorized, awaiting capture.
+- `PAID`: Payment successfully captured.
+- `FAILED`: Payment failed or rejected.
+- `CANCELLED`: User abandoned payment.
+- `REFUNDED`: Fully refunded.
+- `PARTIALLY_REFUNDED`: Partially refunded.
+
+**Valid Transitions:**
+- UNPAID -> PENDING, PAID (COD delivery)
+- PENDING -> AUTHORIZED, PAID, FAILED, CANCELLED
+- AUTHORIZED -> PAID, FAILED, CANCELLED
+- PAID -> REFUNDED, PARTIALLY_REFUNDED
+- PARTIALLY_REFUNDED -> REFUNDED
+
+**Invalid Transitions (Guarded):**
+- PAID -> PENDING (Cannot un-pay)
+- FAILED -> PAID (Must create new transaction/attempt)
+- REFUNDED -> PAID (Terminal state)
+
+## Settlement States (Gateway to Bank)
+- `PENDING`: Awaiting settlement.
+- `ELIGIBLE`: Gateway marked eligible for payout.
+- `PROCESSING`: Payout initiated.
+- `SETTLED`: Funds in merchant bank.
+- `PARTIALLY_SETTLED`: Partial funds received.
+- `ON_HOLD`: Held by gateway (e.g., dispute).
+- `FAILED`: Payout failed.
+
+## Shipment States
+- `CREATED`: Label generated.
+- `PICKED_UP`: Handed to courier.
+- `IN_TRANSIT`: Moving between hubs.
+- `AT_HUB`: At local distribution center.
+- `OUT_FOR_DELIVERY`: Rider is out.
+- `DELIVERED`: Customer received.
+- `RETURNED`: Returned to merchant.
+- `FAILED`: Delivery attempt failed (e.g., customer unreachable).
+- `CANCELLED`: Shipment cancelled before pickup.
+
+**Valid Transitions:**
+- CREATED -> PICKED_UP, CANCELLED
+- PICKED_UP -> IN_TRANSIT, CANCELLED
+- IN_TRANSIT -> AT_HUB, RETURNED
+- AT_HUB -> OUT_FOR_DELIVERY, RETURNED
+- OUT_FOR_DELIVERY -> DELIVERED, FAILED
+- FAILED -> OUT_FOR_DELIVERY (Retry), RETURNED
+
+## Automation / Job States
+- `PENDING`: Queued.
+- `PROCESSING`: Currently running.
+- `SUCCESS`: Completed successfully.
+- `FAILED`: Hard failure.
+- `RETRYING`: Waiting for next attempt.
+- `TIMEOUT`: Exceeded execution time.
+- `PARTIAL_SUCCESS`: Some sub-tasks failed.
+- `MANUAL_ACTION_REQUIRED`: Max retries exceeded.
+- `CANCELLED`: Interrupted.
+# Admin Flows
+
+## Content Publishing Flow
+1. Admin navigates to `/admin/content`.
+2. Admin selects a section to edit (e.g., Homepage Hero, Announcement Bar).
+3. Admin inputs text (in Bangla and English) and uploads images.
+4. System uploads images to Object Storage and returns URL.
+5. Admin clicks 'Preview'.
+6. Admin clicks 'Publish' -> Database updates `content_blocks` table.
+7. Storefront immediately reflects changes (cache invalidated if applicable).
+
+## Failure / Recovery Flow (Webhooks & Automation)
+1. Webhook endpoint receives event (e.g., Payment Success).
+2. If processing fails (e.g., DB deadlock, Network timeout):
+   - Event logged in `webhook_events` as FAILED.
+   - Automation Job created for retry.
+3. Automation Job retries with exponential backoff (e.g., 1m, 5m, 15m).
+4. If max retries reached -> Status MANAUL_ACTION_REQUIRED.
+5. Admin views `/admin/operations` and sees Alert.
+6. Admin manually resolves discrepancy (e.g., marks Order as Paid after checking Gateway dashboard) and dismisses alert.
+
+## Inventory Adjustment & Audit Flow
+1. Admin navigates to `/admin/inventory`.
+2. Admin selects Product/Variant.
+3. Admin clicks 'Adjust Stock'.
+4. Admin enters quantity (+/-) and mandatory Reason (e.g., "Damage", "Restock").
+5. System creates `inventory_transactions` record linked to Admin ID (auditable).
+6. System updates `inventory_items` available quantity.
+7. High-volume adjustments flag a notification for SUPER_ADMIN review.
+
+## Order Reconciliation Flow
+1. Admin navigates to `/admin/finance/reconciliation`.
+2. System compares local Payment records (PAID) against Gateway API Settlement records.
+3. System flags mismatches (e.g., Order marked UNPAID but Gateway shows PAID, or vice versa).
+4. Admin selects a mismatch case.
+5. Admin clicks "Force Sync with Gateway".
+6. System verifies via server-to-server call and resolves state, appending an Audit Log.
+
+## Manual Refund Processing Flow
+1. Admin navigates to `/admin/refunds`.
+2. Admin selects an approved Return or a Cancelled paid order.
+3. Admin selects Refund Method (Original Gateway, Bank Transfer, Store Credit).
+4. Admin inputs reference number/transaction ID.
+5. System creates `refunds` record and marks Payment as `REFUNDED` or `PARTIALLY_REFUNDED`.
+6. Notification sent to Customer.
+# KISHOLOY Design System
+
+## Brand Core
+- **Name:** KISHOLOY (কিশলয়) - Translates to "New Leaf" or "Young Shoot"
+- **Vibe:** Premium, trustworthy, organic, modern.
+
+## Color Palette
+The color palette avoids default generic blues/purples and opts for an earthy, grounded, and highly legible scheme suitable for a premium Bangladeshi e-commerce experience.
+
+- **Primary (Pine Green):** Represents growth, trust, and the "new leaf" brand identity.
+  - Base: `#115e59` (Tailwind `teal-800`)
+  - Hover/Dark: `#134e4a` (Tailwind `teal-900`)
+- **Neutrals (Warm Stone):** Replaces harsh standard grays with warm, earthy stone tones to feel organic and premium.
+  - Backgrounds: `#fafaf9` (Tailwind `stone-50`)
+  - Surface: `#ffffff` (White)
+  - Text (Primary): `#1c1917` (Tailwind `stone-900`)
+  - Text (Secondary): `#57534e` (Tailwind `stone-500`)
+  - Borders: `#e7e5e4` (Tailwind `stone-200`)
+- **Semantics:**
+  - Success: `#166534` (Green 800) on `#dcfce7` (Green 100)
+  - Error: `#991b1b` (Red 800) on `#fee2e2` (Red 100)
+  - Warning: `#92400e` (Amber 800) on `#fef3c7` (Amber 100)
+
+## Typography
+- **Headings (English):** `Playfair Display` - A high-contrast serif font providing a premium, editorial feel for product titles and section headers.
+- **Body (English):** `Plus Jakarta Sans` - A highly legible, modern sans-serif for UI elements, descriptions, and buttons.
+- **Bangla Font:** `Hind Siliguri` - Ensures native, highly legible, and beautifully rendered Bengali script across both headings and body text.
+- *Mathematical Scaling:*
+  - H1: 2.25rem (36px)
+  - H2: 1.5rem (24px)
+  - Body: 1rem (16px) with 1.5 line-height
+
+## Shapes & Radii
+- **Radii:** Avoid extreme pill-shapes unless for specific badges.
+  - Interactive elements (Buttons, Inputs): `6px` (`rounded-md`)
+  - Containers/Cards: `8px` (`rounded-lg`) or `12px` (`rounded-xl`)
+- **Shadows:** Kept subtle and crisp. No large, soft glowing dropshadows. Focus on borders for definition, using `shadow-sm` for floating elements.
+
+## UI Component Systems
+- **Buttons:** Solid primary, subdued secondary, crisp outlines. Horizontal padding is 2x vertical padding.
+- **Inputs:** Clean, structured with clear focus rings (`ring-2 ring-primary-800`).
+- **Cards:** Flat design, utilizing white backgrounds against `stone-50` with subtle `stone-200` borders instead of heavy shadows.
+- **Status:** Defined badge system for Order/Payment states.
+# Information Architecture
+
+## Sitemap
+- / (Homepage - Dynamic Content Blocks)
+- /shop (Product Listing, Filtering, Pagination)
+- /product/:slug (Product Detail, Variations, Images, Related Products)
+- /category/:slug (Category View, Sub-categories)
+- /cart (Shopping Cart, Dynamic Totals)
+- /checkout (Checkout Flow - Information, Shipping, Payment)
+- /order-confirmation/:id (Order Success & Summary)
+- /track-order (Public Order Tracking via Phone + Order ID)
+- /account (Customer Dashboard - Protected)
+  - /account/orders (History, Status, Reorder)
+  - /account/returns (Initiate/Track Returns)
+  - /account/addresses (Address Book)
+  - /account/settings (Profile, Password)
+- /pages/:slug (Static/Policy Pages - CMS Managed)
+
+## Admin Sitemap
+- /admin (Dashboard - KPI metrics, Alerts)
+- /admin/products (List, Add, Edit, Variations, Media)
+- /admin/categories (Tree view, Edit)
+- /admin/inventory (Stock ledger, Adjustments, Low stock alerts)
+- /admin/orders (Process, Print Documents, Cancel)
+- /admin/customers (Profiles, Order History, Segmentation)
+- /admin/payments (Transaction logs, Webhook hits)
+- /admin/shipments (Courier integration, Labels, Tracking)
+- /admin/returns (RMA processing, Inspections)
+- /admin/refunds (Refund processing, Gateway sync)
+- /admin/finance (Expenses, Settlement, Profit estimations)
+- /admin/reports (Sales, Products, Customers exports)
+- /admin/operations (Automation Jobs, Failed Webhooks, API Logs)
+- /admin/content (Homepage Blocks, Banners, Policies, Menus)
+- /admin/settings (Tax, Courier Config, Payment Config, Store Info)
+- /admin/users (RBAC, Admin Roles)
+- /admin/audit (System Audit Logs)
+- /admin/backup (Trigger Backup, View History)
+
+## Customer Navigation
+- **Primary:** Home, Shop, Categories (Dynamic dropdown/Mega-menu), Track Order.
+- **Utility:** Language Toggle (EN/BN), Global Search, Mini-Cart, Account/Login.
+- **Footer:** About Us, Contact, Privacy Policy, Terms & Conditions, Return Policy, Social Links.
+
+## Admin Navigation
+- **Core Operations:** Dashboard, Orders, Products, Inventory, Customers.
+- **Fulfillment & Finance:** Shipments, Payments, Returns, Refunds, Finance, Reconciliation.
+- **System & CMS:** Content Management, Reports, Users/Roles, Settings, Audit Logs, Backups/DR.
+# Risk Register
+
+| Risk | Impact | Mitigation |
+|------|--------|------------|
+| Payment Gateway Webhook Failure | High | Implement retry mechanism, robust error logging, and manual reconciliation tools. |
+| Inventory Overselling | High | Use database transactions and pessimistic locking for stock reservations. |
+| Compliance Changes (VAT/Tax) | Medium | Make tax profiles configurable via Admin rather than hardcoding. |
+| Courier API Changes | Medium | Use adapter pattern for couriers to easily swap or update implementations. |
+| Token Expiration / Auth Issues | Medium | Implement robust session management and clear error states for unauthorized actions. |
+# Architecture Decision Log
+
+## 1. Stack Selection
+- **Frontend:** React 19 (Vite) + Tailwind CSS 4.
+- **Backend:** Express.js (Node.js).
+- **Database:** PostgreSQL (using Drizzle ORM or Prisma).
+
+## 2. Payment Architecture
+- Separate payment success from redirect; rely on IPN/Webhook for confirmation.
+- Implement a generic `PaymentService` interface.
+
+## 3. Localization
+- Bilingual (Bangla/English) support via i18n context.
+- Bangla-specific web fonts for optimal rendering.
+
+## 4. State Management
+- React Context for lightweight global state (Auth, Cart, UI).
+- Server state using SWR or React Query if needed, otherwise fetch directly.
+
+## 5. Security & Validation
+- Validate all financial and cart operations on the backend.
+- Role-Based Access Control (RBAC) middleware for admin routes.

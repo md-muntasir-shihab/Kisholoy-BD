@@ -1,0 +1,46 @@
+@import "tailwindcss";
+
+@import url('https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap');
+
+@theme {
+  --color-primary-50: #f0fdfa;
+  --color-primary-100: #ccfbf1;
+  --color-primary-200: #99f6e4;
+  --color-primary-300: #5eead4;
+  --color-primary-400: #2dd4bf;
+  --color-primary-500: #14b8a6;
+  --color-primary-600: #0d9488;
+  --color-primary-700: #0f766e;
+  --color-primary-800: #115e59;
+  --color-primary-900: #134e4a;
+  --color-primary-950: #042f2e;
+
+  --font-sans: "Plus Jakarta Sans", "Hind Siliguri", sans-serif;
+  --font-serif: "Playfair Display", "Hind Siliguri", serif;
+  --font-bangla: "Hind Siliguri", sans-serif;
+}
+
+@media print {
+  body {
+    background: white !important;
+    color: black !important;
+  }
+  .no-print {
+    display: none !important;
+  }
+  .printable-invoice-container {
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: white !important;
+    box-shadow: none !important;
+    border: none !important;
+  }
+  @page {
+    size: A4 portrait;
+    margin: 12mm;
+  }
+}

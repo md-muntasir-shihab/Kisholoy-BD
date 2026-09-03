@@ -1,0 +1,6 @@
+{
+  "name": "KISHOLOY | কিশলয়",
+  "description": "Premium Bangladesh e-commerce storefront and unified operational admin control center.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
