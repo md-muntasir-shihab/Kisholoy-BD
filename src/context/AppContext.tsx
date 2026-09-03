@@ -1,14 +1,15 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { 
-  Language, Role, Product, Category, CartItem, Order, OrderStatus, 
+  Language, ThemeMode, Role, Product, Category, CartItem, Order, OrderStatus, 
   Customer, InventoryTransaction, ExpenseRecord, AutomationJob, 
   AuditLog, SiteContent, SettlementRecord, SettlementStatus, ContentRevision,
   BatchRestockPayload,
   WarehouseHub, WarehouseStockItem, StockTransferOrder, RoutingRuleConfig,
   PickList, DispatchManifest, FulfillmentRoutingDecision,
   CustomerAddress, WishlistItem, CustomerReturnRequest, CustomerProfile, CustomerLoyaltyWallet,
-  CustomerNotification
+  CustomerNotification, CustomCourierConfig
 } from '../types';
+import { logAuthEvent } from '../utils/telemetryLogger';
 import { 
   INITIAL_PRODUCTS, INITIAL_CATEGORIES, INITIAL_ORDERS, 
   INITIAL_CUSTOMERS, INITIAL_CONTENT, INITIAL_AUDIT_LOGS, 
@@ -25,6 +26,10 @@ interface AppContextType {
   setLanguage: (lang: Language) => void;
   currentRole: Role;
   setCurrentRole: (role: Role) => void;
+  themeMode: ThemeMode;
+  setThemeMode: (mode: ThemeMode) => void;
+  isDarkMode: boolean;
+  toggleDarkMode: () => void;
   
   // Products & Categories
   products: Product[];
@@ -48,6 +53,7 @@ interface AppContextType {
   
   // Orders
   orders: Order[];
+  refreshOrders: () => Promise<void>;
   syncServerOrder: (order: Order) => void;
   createOrder: (orderData: {
     customer: { name: string; phone: string; email?: string };
@@ -63,10 +69,23 @@ interface AppContextType {
     orderStatus?: Order['orderStatus'];
   }) => Order;
   updateOrderStatus: (orderId: string, newStatus: OrderStatus, note?: string) => void;
-  dispatchCourier: (orderId: string, courierName: 'Steadfast' | 'Pathao') => void;
+  dispatchCourier: (orderId: string, courierName: string, customTrackingId?: string) => void;
+
+  // Visual Custom Couriers Management
+  customCouriers: CustomCourierConfig[];
+  addCustomCourier: (courier: Omit<CustomCourierConfig, 'id'>) => void;
+  updateCustomCourier: (id: string, updates: Partial<CustomCourierConfig>) => void;
+  deleteCustomCourier: (id: string) => void;
+  toggleCustomCourier: (id: string) => void;
+
+  // Hubs & Fulfillment Mode (Optional vs Mandatory)
+  isFulfillmentOptional: boolean;
+  setIsFulfillmentOptional: (val: boolean) => void;
   
   // Customers
   customers: Customer[];
+  updateCustomerStatus: (id: string, status: 'ACTIVE' | 'BLOCKED', reason?: string) => Promise<boolean>;
+  addAdminCustomer: (customerData: { name: string; phone: string; email?: string; address?: string; district?: string; thana?: string }) => Promise<Customer | null>;
   
   // Inventory
   inventoryTransactions: InventoryTransaction[];
@@ -119,6 +138,8 @@ interface AppContextType {
   // Customer Account Portal & Wishlists (Phase 15)
   currentCustomerId: string;
   setCurrentCustomerId: (id: string) => void;
+  loginCustomer: (customerId: string, profile?: CustomerProfile) => void;
+  logoutCustomer: () => void;
   customerProfile: CustomerProfile | null;
   savedAddresses: CustomerAddress[];
   wishlist: WishlistItem[];
@@ -149,6 +170,53 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [language, setLanguage] = useState<Language>('EN');
   const [currentRole, setCurrentRole] = useState<Role>('SUPER_ADMIN');
+  const [themeMode, setThemeMode] = useState<ThemeMode>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('themeMode') as ThemeMode;
+      if (saved && (saved === 'light' || saved === 'dark' || saved === 'system')) return saved;
+      const legacySaved = localStorage.getItem('theme');
+      if (legacySaved === 'dark') return 'dark';
+      if (legacySaved === 'light') return 'light';
+    }
+    return 'system';
+  });
+
+  const [isDarkMode, setIsDarkMode] = useState<boolean>(false);
+
+  useEffect(() => {
+    const applyTheme = () => {
+      let activeDark = false;
+      if (themeMode === 'dark') {
+        activeDark = true;
+      } else if (themeMode === 'light') {
+        activeDark = false;
+      } else {
+        activeDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+      }
+
+      setIsDarkMode(activeDark);
+      if (activeDark) {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+      localStorage.setItem('themeMode', themeMode);
+      localStorage.setItem('theme', activeDark ? 'dark' : 'light');
+    };
+
+    applyTheme();
+
+    if (themeMode === 'system' && window.matchMedia) {
+      const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+      const handleChange = () => applyTheme();
+      mediaQuery.addEventListener('change', handleChange);
+      return () => mediaQuery.removeEventListener('change', handleChange);
+    }
+  }, [themeMode]);
+
+  const toggleDarkMode = () => {
+    setThemeMode(prev => (prev === 'dark' ? 'light' : 'dark'));
+  };
   
   const [products, setProducts] = useState<Product[]>(INITIAL_PRODUCTS);
   const [categories, setCategories] = useState<Category[]>(INITIAL_CATEGORIES);
@@ -263,6 +331,165 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       console.error(e);
     }
   }, [cart]);
+
+  // Initial Courier Partners (Built-in + Default Custom Partners)
+  const INITIAL_CUSTOM_COURIERS: CustomCourierConfig[] = [
+    {
+      id: 'courier-steadfast',
+      name: 'Steadfast Courier',
+      code: 'steadfast',
+      phone: '09678-045045',
+      trackingUrlTemplate: 'https://steadfast.com.bd/t/{trackingId}',
+      defaultInsideDhakaFee: 60,
+      defaultOutsideDhakaFee: 120,
+      codPercentageFee: 1.0,
+      isActive: true,
+      isBuiltIn: true,
+      notes: 'Primary courier partner across 64 districts in Bangladesh with doorstep delivery and API booking.'
+    },
+    {
+      id: 'courier-pathao',
+      name: 'Pathao Courier',
+      code: 'pathao',
+      phone: '09610-003030',
+      trackingUrlTemplate: 'https://pathao.com/courier/tracking/?consignment_id={trackingId}',
+      defaultInsideDhakaFee: 60,
+      defaultOutsideDhakaFee: 130,
+      codPercentageFee: 1.0,
+      isActive: true,
+      isBuiltIn: true,
+      notes: 'Fast intra-city express in Dhaka metropolitan zone and nation-wide network.'
+    },
+    {
+      id: 'courier-redx',
+      name: 'RedX Logistics',
+      code: 'redx',
+      phone: '09612-223344',
+      trackingUrlTemplate: 'https://redx.com.bd/track/{trackingId}',
+      defaultInsideDhakaFee: 70,
+      defaultOutsideDhakaFee: 130,
+      codPercentageFee: 1.0,
+      isActive: true,
+      isBuiltIn: true,
+      notes: 'Wide divisional logistics coverage with return management.'
+    },
+    {
+      id: 'courier-paperfly',
+      name: 'Paperfly',
+      code: 'paperfly',
+      phone: '09666-774433',
+      trackingUrlTemplate: 'https://paperfly.com.bd/tracking/{trackingId}',
+      defaultInsideDhakaFee: 60,
+      defaultOutsideDhakaFee: 120,
+      codPercentageFee: 1.0,
+      isActive: true,
+      isBuiltIn: true,
+      notes: 'Thana and union level door-to-door delivery network.'
+    },
+    {
+      id: 'courier-sundarban',
+      name: 'Sundarban Courier Service',
+      code: 'sundarban',
+      phone: '01979-994400',
+      trackingUrlTemplate: 'https://sundarbancourierltd.com/tracking?id={trackingId}',
+      defaultInsideDhakaFee: 80,
+      defaultOutsideDhakaFee: 140,
+      codPercentageFee: 1.5,
+      isActive: true,
+      isBuiltIn: false,
+      notes: 'Oldest legacy branch-to-branch parcel service in Bangladesh.'
+    },
+    {
+      id: 'courier-sa-paribahan',
+      name: 'SA Paribahan',
+      code: 'sa_paribahan',
+      phone: '01711-556677',
+      trackingUrlTemplate: 'https://saparibahan.com/track?cn={trackingId}',
+      defaultInsideDhakaFee: 90,
+      defaultOutsideDhakaFee: 150,
+      codPercentageFee: 2.0,
+      isActive: true,
+      isBuiltIn: false,
+      notes: 'Specializes in high-value parcel delivery and heavy bulk orders.'
+    }
+  ];
+
+  const [customCouriers, setCustomCouriers] = useState<CustomCourierConfig[]>(() => {
+    try {
+      const saved = localStorage.getItem('kisholoy_custom_couriers');
+      return saved ? JSON.parse(saved) : INITIAL_CUSTOM_COURIERS;
+    } catch {
+      return INITIAL_CUSTOM_COURIERS;
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('kisholoy_custom_couriers', JSON.stringify(customCouriers));
+    } catch (e) {
+      console.error('Error saving custom couriers', e);
+    }
+  }, [customCouriers]);
+
+  const addCustomCourier = (courier: Omit<CustomCourierConfig, 'id'>) => {
+    const newCourier: CustomCourierConfig = {
+      ...courier,
+      id: `courier-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+      createdAt: new Date().toISOString()
+    };
+    setCustomCouriers(prev => [...prev, newCourier]);
+    addAuditLog('ADD_COURIER', 'Shipment', newCourier.name, `Added courier partner ${newCourier.name} (${newCourier.code})`);
+    showToast(`Added courier partner: ${newCourier.name}`);
+  };
+
+  const updateCustomCourier = (id: string, updates: Partial<CustomCourierConfig>) => {
+    setCustomCouriers(prev => prev.map(c => c.id === id ? { ...c, ...updates } : c));
+    addAuditLog('UPDATE_COURIER', 'Shipment', id, `Updated courier partner configuration`);
+    showToast('Courier partner settings updated');
+  };
+
+  const deleteCustomCourier = (id: string) => {
+    const target = customCouriers.find(c => c.id === id);
+    if (target?.isBuiltIn) {
+      showToast('Built-in courier partners cannot be deleted; you may deactivate them instead.');
+      return;
+    }
+    setCustomCouriers(prev => prev.filter(c => c.id !== id));
+    addAuditLog('DELETE_COURIER', 'Shipment', id, `Deleted custom courier ${target?.name || id}`);
+    showToast(`Removed courier partner ${target?.name || ''}`);
+  };
+
+  const toggleCustomCourier = (id: string) => {
+    setCustomCouriers(prev => prev.map(c => {
+      if (c.id === id) {
+        const nextState = !c.isActive;
+        addAuditLog('TOGGLE_COURIER', 'Shipment', c.name, `${nextState ? 'Activated' : 'Deactivated'} courier ${c.name}`);
+        showToast(`${c.name} is now ${nextState ? 'Active' : 'Disabled'}`);
+        return { ...c, isActive: nextState };
+      }
+      return c;
+    }));
+  };
+
+  // Fulfillment Hub Routing Optional vs Mandatory Mode
+  const [isFulfillmentOptional, setIsFulfillmentOptionalState] = useState<boolean>(() => {
+    try {
+      const saved = localStorage.getItem('kisholoy_fulfillment_optional');
+      return saved !== null ? JSON.parse(saved) : true;
+    } catch {
+      return true;
+    }
+  });
+
+  const setIsFulfillmentOptional = (val: boolean) => {
+    setIsFulfillmentOptionalState(val);
+    try {
+      localStorage.setItem('kisholoy_fulfillment_optional', JSON.stringify(val));
+    } catch (e) {
+      console.error(e);
+    }
+    showToast(val ? 'Multi-Hub routing is now OPTIONAL (Direct Dispatch Preferred)' : 'Enterprise Multi-Hub routing is now ACTIVE');
+  };
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -615,6 +842,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return newOrder;
   };
 
+  const refreshOrders = async () => {
+    try {
+      const res = await fetch('/api/orders');
+      const data = await res.json();
+      if (data?.success && Array.isArray(data.orders)) {
+        setOrders(data.orders);
+      }
+    } catch (err) {
+      console.error('Failed to refresh orders:', err);
+    }
+  };
+
   const updateOrderStatus = (orderId: string, newStatus: OrderStatus, note?: string) => {
     setOrders(prev => prev.map(order => {
       if (order.id === orderId) {
@@ -644,9 +883,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }));
 
     addAuditLog('UPDATE_ORDER_STATUS', 'Order', orderId, `Changed status to ${newStatus}`);
-    showToast(`Order status updated to ${newStatus}`);
 
-    // Multi-Channel Automated Notification Trigger (SMS, WhatsApp, Email, In-App)
+    // Multi-Channel Automated Gateway Notification Trigger (SMS, WhatsApp, Email, In-App)
     const targetOrder = orders.find(o => o.id === orderId);
     if (targetOrder) {
       let eventKey = 'ORDER_CONFIRMATION';
@@ -656,37 +894,68 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       else if (newStatus === 'CANCELLED') eventKey = 'ORDER_CANCELLED';
       else if (newStatus === 'RETURNED') eventKey = 'RETURN_APPROVED';
 
-      fetch('/api/notifications/dispatch-event', {
+      const codAmt = targetOrder.balanceDueCod ?? (targetOrder.paymentMethod === 'COD' ? targetOrder.total : 0);
+
+      // Call server endpoint for status sync & automated notification dispatch
+      fetch(`/api/orders/${encodeURIComponent(orderId)}/status`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          eventKey,
-          data: {
-            orderNumber: targetOrder.orderNumber,
-            customerName: targetOrder.customer.name,
-            customerPhone: targetOrder.customer.phone,
-            customerEmail: targetOrder.customer.email,
-            customerId: targetOrder.customer.id || currentCustomerId,
-            totalAmount: targetOrder.total,
-            paymentMethod: targetOrder.paymentMethod,
-            courierName: targetOrder.courier?.provider || (targetOrder.shippingAddress.division === 'Dhaka' ? 'Pathao Courier' : 'Steadfast Courier'),
-            trackingId: targetOrder.courier?.trackingId || targetOrder.trackingNumber || 'TRK-98210',
-            trackingUrl: `/track/${targetOrder.orderNumber}`
-          }
+          status: newStatus,
+          note: note || `Order status updated to ${newStatus}`,
+          operator: currentRole
         })
       })
       .then(res => res.ok ? res.json() : null)
       .then(data => {
-        if (data?.success && targetOrder.customer.id === currentCustomerId) {
-          fetchCustomerNotifications();
+        if (data?.success) {
+          if (data.notificationsDispatched > 0) {
+            showToast(`Status set to ${newStatus} & notification sent via SMS/WhatsApp to ${targetOrder.customer.phone}`);
+          } else {
+            showToast(`Order status updated to ${newStatus}`);
+          }
+          if (targetOrder.customer.id === currentCustomerId) {
+            fetchCustomerNotifications();
+          }
+        } else {
+          // Fallback direct dispatch if server order status route returns standard response
+          fetch('/api/notifications/dispatch-event', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              eventKey,
+              data: {
+                orderNumber: targetOrder.orderNumber,
+                customerName: targetOrder.customer.name,
+                customerPhone: targetOrder.customer.phone,
+                customerEmail: targetOrder.customer.email,
+                customerId: targetOrder.customer.id || currentCustomerId,
+                totalAmount: targetOrder.total,
+                paymentMethod: targetOrder.paymentMethod,
+                courierName: targetOrder.courier?.provider || (targetOrder.shippingAddress.division === 'Dhaka' ? 'Pathao Courier' : 'Steadfast Courier'),
+                trackingId: targetOrder.courier?.trackingId || 'TRK-98210',
+                trackingUrl: `https://kisholoy.com.bd/track/${targetOrder.orderNumber}`,
+                codAmount: codAmt
+              }
+            })
+          }).catch(e => console.error('Fallback notification error', e));
+          showToast(`Order status updated to ${newStatus}`);
         }
       })
-      .catch(e => console.error('Notification dispatch event error', e));
+      .catch(() => {
+        showToast(`Order status updated to ${newStatus}`);
+      });
+    } else {
+      showToast(`Order status updated to ${newStatus}`);
     }
   };
 
-  const dispatchCourier = (orderId: string, courierName: 'Steadfast' | 'Pathao') => {
-    const trackingCode = `${courierName.substring(0, 2).toUpperCase()}-${Math.floor(10000000 + Math.random() * 90000000)}`;
+  const dispatchCourier = (orderId: string, courierName: string, customTrackingId?: string) => {
+    const courierObj = customCouriers.find(c => c.name.toLowerCase() === courierName.toLowerCase() || c.code.toLowerCase() === courierName.toLowerCase());
+    const prefix = (courierObj?.code || courierName.substring(0, 3)).toUpperCase().replace(/[^A-Z]/g, '') || 'TRK';
+    const trackingCode = customTrackingId && customTrackingId.trim() 
+      ? customTrackingId.trim() 
+      : `${prefix}-${Math.floor(10000000 + Math.random() * 90000000)}`;
     const consignmentCode = `CID-${Math.floor(100000 + Math.random() * 900000)}`;
 
     setOrders(prev => prev.map(order => {
@@ -695,19 +964,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           ...order,
           orderStatus: 'READY_TO_SHIP',
           courier: {
-            provider: courierName,
+            provider: courierObj?.name || courierName,
             trackingId: trackingCode,
             consignmentId: consignmentCode,
             status: 'CREATED',
             dispatchedAt: new Date().toISOString(),
-            estimatedDelivery: '2026-09-02'
+            estimatedDelivery: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
           },
           timeline: [
             ...order.timeline,
             {
               status: 'READY_TO_SHIP',
               timestamp: new Date().toISOString(),
-              note: `Booked delivery with ${courierName}. Tracking: ${trackingCode}`,
+              note: `Booked delivery with ${courierObj?.name || courierName}. Tracking: ${trackingCode}`,
               updatedBy: currentRole
             }
           ]
@@ -716,8 +985,47 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return order;
     }));
 
-    addAuditLog('COURIER_DISPATCH', 'Order', orderId, `Dispatched with ${courierName} (${trackingCode})`);
-    showToast(`Courier consignment booked: ${trackingCode}`);
+    addAuditLog('COURIER_DISPATCH', 'Order', orderId, `Dispatched with ${courierObj?.name || courierName} (${trackingCode})`);
+
+    const targetOrder = orders.find(o => o.id === orderId);
+    if (targetOrder) {
+      const courierProvider = courierObj?.name || courierName;
+      const codAmt = targetOrder.balanceDueCod ?? (targetOrder.paymentMethod === 'COD' ? targetOrder.total : 0);
+
+      fetch('/api/notifications/dispatch-event', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          eventKey: 'ORDER_SHIPPED',
+          data: {
+            orderNumber: targetOrder.orderNumber,
+            customerName: targetOrder.customer.name,
+            customerPhone: targetOrder.customer.phone,
+            customerEmail: targetOrder.customer.email,
+            customerId: targetOrder.customer.id,
+            totalAmount: targetOrder.total,
+            paymentMethod: targetOrder.paymentMethod,
+            courierName: courierProvider,
+            trackingId: trackingCode,
+            trackingUrl: `https://kisholoy.com.bd/track/${targetOrder.orderNumber}`,
+            codAmount: codAmt
+          }
+        })
+      })
+      .then(res => res.ok ? res.json() : null)
+      .then(data => {
+        if (data?.success) {
+          showToast(`Consignment booked (${trackingCode}) & confirmation SMS/WhatsApp sent to ${targetOrder.customer.phone}`);
+        } else {
+          showToast(`Courier consignment booked: ${trackingCode}`);
+        }
+      })
+      .catch(() => {
+        showToast(`Courier consignment booked: ${trackingCode}`);
+      });
+    } else {
+      showToast(`Courier consignment booked: ${trackingCode}`);
+    }
   };
 
   const addExpense = (expense: Omit<ExpenseRecord, 'id'>) => {
@@ -1197,6 +1505,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Customer Account Portal & Wishlist Handlers (Phase 15)
   // -------------------------------------------------------------
   const loadCustomerData = async (custId: string) => {
+    if (!custId) {
+      setCustomerProfile(null);
+      setSavedAddresses([]);
+      setWishlist([]);
+      setReturnRequests([]);
+      setCustomerNotifications([]);
+      setCustomerLoyalty(null);
+      return;
+    }
     try {
       // 1. Profile
       const profData = await fetchJsonSafe(`/api/customer/profile/${custId}`);
@@ -1214,14 +1531,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const retData = await fetchJsonSafe(`/api/customer/returns/${custId}`);
       if (retData?.returns) setReturnRequests(retData.returns);
 
-      // 5. Loyalty
-      const loyData = await fetchJsonSafe('/api/promotions/loyalty');
-      if (loyData?.wallets) {
-        const myWallet = loyData.wallets.find((w: any) => w.customerId === custId);
-        if (myWallet) setCustomerLoyalty(myWallet);
-      }
-
-      // 6. In-App Notifications
+      // 5. In-App Notifications
       const notifData = await fetchJsonSafe(`/api/customer/notifications/${custId}`);
       if (Array.isArray(notifData?.notifications)) {
         setCustomerNotifications(notifData.notifications);
@@ -1229,6 +1539,60 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     } catch (e) {
       console.error('Failed loading customer data:', e);
     }
+  };
+
+  const loginCustomer = (customerId: string, profile?: CustomerProfile) => {
+    setCurrentCustomerId(customerId);
+    try {
+      localStorage.setItem('kisholoy_customer_id', customerId);
+    } catch {}
+    if (profile) setCustomerProfile(profile);
+    loadCustomerData(customerId);
+    
+    // Telemetry Auth Event Logging
+    const matchedCustomer = customers.find(c => c.id === customerId);
+    logAuthEvent({
+      userId: customerId,
+      userName: profile?.name || matchedCustomer?.name || 'Customer User',
+      userPhone: profile?.phone || matchedCustomer?.phone || '01711000000',
+      userEmail: profile?.email || matchedCustomer?.email,
+      role: 'CUSTOMER',
+      eventType: 'LOGIN_SUCCESS',
+      district: (profile as any)?.district || matchedCustomer?.district || 'Dhaka',
+      device: /Mobi|Android/i.test(navigator.userAgent) ? 'Mobile (Browser)' : 'Desktop (Browser)',
+      status: 'SUCCESS'
+    });
+  };
+
+  const logoutCustomer = () => {
+    const custId = currentCustomerId;
+    const matchedCustomer = customers.find(c => c.id === custId);
+    
+    // Telemetry Auth Event Logging
+    if (custId) {
+      logAuthEvent({
+        userId: custId,
+        userName: customerProfile?.name || matchedCustomer?.name || 'Customer User',
+        userPhone: customerProfile?.phone || matchedCustomer?.phone || '01711000000',
+        role: 'CUSTOMER',
+        eventType: 'LOGOUT',
+        district: (customerProfile as any)?.district || matchedCustomer?.district || 'Dhaka',
+        device: /Mobi|Android/i.test(navigator.userAgent) ? 'Mobile (Browser)' : 'Desktop (Browser)',
+        status: 'SUCCESS'
+      });
+    }
+
+    setCurrentCustomerId('');
+    setCustomerProfile(null);
+    setSavedAddresses([]);
+    setWishlist([]);
+    setReturnRequests([]);
+    setCustomerNotifications([]);
+    setCustomerLoyalty(null);
+    try {
+      localStorage.removeItem('kisholoy_customer_id');
+    } catch {}
+    showToast('Logged out of customer account.');
   };
 
   const unreadNotificationsCount = customerNotifications.filter(n => !n.isRead).length;
@@ -1448,6 +1812,63 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  const updateCustomerStatus = async (id: string, status: 'ACTIVE' | 'BLOCKED', reason?: string): Promise<boolean> => {
+    try {
+      const res = await fetch(`/api/customers/${id}/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status, reason, operator: currentRole })
+      });
+      if (res.ok) {
+        setCustomers(prev => prev.map(c => c.id === id ? { ...c, status } : c));
+        showToast(`Customer status updated to ${status}`);
+        return true;
+      }
+      return false;
+    } catch (e) {
+      console.error(e);
+      // Fallback optimistic update
+      setCustomers(prev => prev.map(c => c.id === id ? { ...c, status } : c));
+      showToast(`Customer status updated to ${status}`);
+      return true;
+    }
+  };
+
+  const addAdminCustomer = async (customerData: { name: string; phone: string; email?: string; address?: string; district?: string; thana?: string }): Promise<Customer | null> => {
+    try {
+      const res = await fetch('/api/customers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(customerData)
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.customer) {
+          setCustomers(prev => [data.customer, ...prev]);
+          showToast(`Customer ${data.customer.name} registered successfully`);
+          return data.customer;
+        }
+      }
+      return null;
+    } catch (e) {
+      console.error(e);
+      const fallbackCustomer: Customer = {
+        id: `cust-${Date.now().toString().slice(-4)}`,
+        name: customerData.name,
+        phone: customerData.phone,
+        email: customerData.email || `${customerData.phone.replace(/\D/g, '')}@customer.kisholoy.com`,
+        joinedDate: new Date().toISOString().slice(0, 10),
+        totalOrders: 0,
+        totalSpent: 0,
+        defaultAddress: customerData.address ? `${customerData.address}, ${customerData.thana || ''}, ${customerData.district || 'Dhaka'}` : 'Dhaka, Bangladesh',
+        status: 'ACTIVE'
+      };
+      setCustomers(prev => [fallbackCustomer, ...prev]);
+      showToast(`Customer ${fallbackCustomer.name} registered successfully`);
+      return fallbackCustomer;
+    }
+  };
+
   return (
     <AppContext.Provider
       value={{
@@ -1455,6 +1876,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setLanguage,
         currentRole,
         setCurrentRole,
+        themeMode,
+        setThemeMode,
+        isDarkMode,
+        toggleDarkMode,
         products,
         setProducts,
         categories,
@@ -1472,11 +1897,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         cartCount,
         cartSubtotal,
         orders,
+        refreshOrders,
         syncServerOrder,
         createOrder,
         updateOrderStatus,
         dispatchCourier,
         customers,
+        updateCustomerStatus,
+        addAdminCustomer,
         inventoryTransactions,
         adjustInventory,
         adjustStock: adjustInventory,
@@ -1515,8 +1943,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         generateDispatchManifest,
         handoverManifest,
         routeOrderSimulation,
+        customCouriers,
+        addCustomCourier,
+        updateCustomCourier,
+        deleteCustomCourier,
+        toggleCustomCourier,
+        isFulfillmentOptional,
+        setIsFulfillmentOptional,
         currentCustomerId,
         setCurrentCustomerId,
+        loginCustomer,
+        logoutCustomer,
         customerProfile,
         savedAddresses,
         wishlist,

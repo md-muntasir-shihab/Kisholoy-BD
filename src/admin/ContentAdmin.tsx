@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { SiteContent, ContentRevision } from '../types';
+import { BrandLogo } from '../components/brand/BrandLogo';
 
 type CmsSection = 
   | 'brand' 
@@ -344,13 +345,258 @@ export function ContentAdmin() {
                   </div>
 
                   <div>
-                    <label className="font-bold text-stone-700 block mb-1">Logo URL</label>
+                    <label className="font-bold text-stone-700 block mb-1">Favicon URL</label>
                     <input
                       type="url"
-                      value={draft.logoUrl || ''}
-                      onChange={(e) => setDraft({ ...draft, logoUrl: e.target.value })}
+                      value={draft.faviconUrl || ''}
+                      placeholder="https://..."
+                      onChange={(e) => setDraft({ ...draft, faviconUrl: e.target.value })}
                       className="w-full p-2.5 border border-stone-300 rounded-lg text-xs"
                     />
+                  </div>
+                </div>
+
+                {/* Comprehensive Visual Logo Configuration */}
+                <div className="p-5 rounded-xl border border-stone-200 bg-stone-50/70 space-y-4">
+                  <div className="flex items-center justify-between border-b border-stone-200 pb-3">
+                    <div>
+                      <h4 className="text-sm font-bold text-stone-900 flex items-center gap-2">
+                        <ImageIcon className="w-4 h-4 text-teal-800" />
+                        Storefront Brand Logo & Emblem Studio
+                      </h4>
+                      <p className="text-[11px] text-stone-500">Upload your brand logo image, select vector emblem motifs, or choose elegant artisan typography.</p>
+                    </div>
+
+                    <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded bg-teal-100 text-teal-900">
+                      Live Storefront Identity
+                    </span>
+                  </div>
+
+                  {/* Logo Display Mode Selector */}
+                  <div className="grid grid-cols-1 sm:grid-cols-4 gap-2 text-xs">
+                    {[
+                      { id: 'BOTH_IMAGE_AND_TEXT', label: 'Image + Brand Name', desc: 'Logo image on left with stylized title & motto' },
+                      { id: 'IMAGE', label: 'Pure Image Logo', desc: 'Standalone logo graphic without extra text' },
+                      { id: 'EMBLEM_AND_TEXT', label: 'Emblem Motif + Name', desc: 'Curated Bangladeshi craft vector icon & title' },
+                      { id: 'TEXT', label: 'Pure Typography', desc: 'High-contrast luxury bilingual font styling' },
+                    ].map((mode) => (
+                      <button
+                        key={mode.id}
+                        type="button"
+                        onClick={() => setDraft({ ...draft, logoType: mode.id as any })}
+                        className={`p-3 rounded-lg border text-left transition-all ${
+                          (draft.logoType || 'BOTH_IMAGE_AND_TEXT') === mode.id
+                            ? 'border-teal-800 bg-teal-50/80 text-teal-950 font-semibold ring-1 ring-teal-800'
+                            : 'border-stone-200 bg-white text-stone-700 hover:border-stone-300'
+                        }`}
+                      >
+                        <div className="font-bold text-xs">{mode.label}</div>
+                        <div className="text-[10px] text-stone-500 mt-0.5">{mode.desc}</div>
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Image Logo Upload & URL Options */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs pt-2">
+                    <div className="space-y-2">
+                      <label className="font-bold text-stone-700 block">
+                        Primary Logo Image (Light Navbar Background)
+                      </label>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={draft.logoUrl || ''}
+                          placeholder="Paste image URL (https://...)"
+                          onChange={(e) => setDraft({ ...draft, logoUrl: e.target.value })}
+                          className="flex-1 p-2.5 border border-stone-300 rounded-lg text-xs"
+                        />
+                        <label className="px-3 py-2 bg-stone-900 text-white rounded-lg cursor-pointer hover:bg-stone-800 inline-flex items-center gap-1.5 text-xs font-semibold flex-shrink-0">
+                          <Upload className="w-3.5 h-3.5" />
+                          <span>Upload</span>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) {
+                                const reader = new FileReader();
+                                reader.onload = () => {
+                                  setDraft({ ...draft, logoUrl: reader.result as string });
+                                  showToast('Logo image uploaded to draft!');
+                                };
+                                reader.readAsDataURL(file);
+                              }
+                            }}
+                          />
+                        </label>
+                      </div>
+                      {draft.logoUrl && (
+                        <button
+                          type="button"
+                          onClick={() => setDraft({ ...draft, logoUrl: '' })}
+                          className="text-[11px] text-rose-600 hover:underline flex items-center gap-1"
+                        >
+                          <Trash2 className="w-3 h-3" /> Clear Primary Logo
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="font-bold text-stone-700 block">
+                        Dark / Footer Logo Image (Optional)
+                      </label>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={draft.logoDarkUrl || ''}
+                          placeholder="Dark background variant URL (Optional)"
+                          onChange={(e) => setDraft({ ...draft, logoDarkUrl: e.target.value })}
+                          className="flex-1 p-2.5 border border-stone-300 rounded-lg text-xs"
+                        />
+                        <label className="px-3 py-2 bg-stone-800 text-stone-200 rounded-lg cursor-pointer hover:bg-stone-700 inline-flex items-center gap-1.5 text-xs font-semibold flex-shrink-0">
+                          <Upload className="w-3.5 h-3.5" />
+                          <span>Upload</span>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) {
+                                const reader = new FileReader();
+                                reader.onload = () => {
+                                  setDraft({ ...draft, logoDarkUrl: reader.result as string });
+                                  showToast('Dark variant logo uploaded to draft!');
+                                };
+                                reader.readAsDataURL(file);
+                              }
+                            }}
+                          />
+                        </label>
+                      </div>
+                      {draft.logoDarkUrl && (
+                        <button
+                          type="button"
+                          onClick={() => setDraft({ ...draft, logoDarkUrl: '' })}
+                          className="text-[11px] text-rose-600 hover:underline flex items-center gap-1"
+                        >
+                          <Trash2 className="w-3 h-3" /> Clear Dark Logo
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Logo Sizing & Emblem Styles */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs pt-2">
+                    <div>
+                      <div className="flex justify-between items-center mb-1">
+                        <label className="font-bold text-stone-700">Logo Height (Pixels)</label>
+                        <span className="font-mono text-stone-500 font-semibold">{draft.logoHeight || 40}px</span>
+                      </div>
+                      <input
+                        type="range"
+                        min="28"
+                        max="68"
+                        step="2"
+                        value={draft.logoHeight || 40}
+                        onChange={(e) => setDraft({ ...draft, logoHeight: parseInt(e.target.value, 10) })}
+                        className="w-full accent-teal-800"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="font-bold text-stone-700 block mb-1">Emblem Vector Motif</label>
+                      <select
+                        value={draft.logoEmblemStyle || 'leaf_sprout'}
+                        onChange={(e) => setDraft({ ...draft, logoEmblemStyle: e.target.value as any })}
+                        className="w-full p-2.5 border border-stone-300 rounded-lg bg-white"
+                      >
+                        <option value="leaf_sprout">🌿 Golden Leaf & Sprout (Kisholoy Crest)</option>
+                        <option value="jamdani_flower">🌸 Dhakai Jamdani Floral Medallion</option>
+                        <option value="terracotta_seal">🏺 Cumilla Terracotta Heritage Seal</option>
+                        <option value="heritage_loom">🧵 Traditional Handloom Shuttle</option>
+                        <option value="bengal_royal">🛡️ Royal Bengal Heritage Shield</option>
+                        <option value="minimalist_k">🔤 Minimalist Bengali 'ক' Monogram</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Preset Artisan Logo Gallery */}
+                  <div className="pt-2 border-t border-stone-200">
+                    <label className="font-bold text-stone-700 block mb-2 text-xs">
+                      Instant Artisan Logo Presets (Click to apply):
+                    </label>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                      {[
+                        {
+                          name: 'Heritage Jamdani Icon',
+                          url: 'https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&q=80&w=200',
+                          emblem: 'jamdani_flower'
+                        },
+                        {
+                          name: 'Terracotta Pottery Mark',
+                          url: 'https://images.unsplash.com/photo-1615529182904-14819c35db37?auto=format&fit=crop&q=80&w=200',
+                          emblem: 'terracotta_seal'
+                        },
+                        {
+                          name: 'Artisan Workshop Emblem',
+                          url: 'https://images.unsplash.com/photo-1583391733956-3750e0ff4e8b?auto=format&fit=crop&q=80&w=200',
+                          emblem: 'heritage_loom'
+                        },
+                        {
+                          name: 'Organic Green Leaf',
+                          url: 'https://images.unsplash.com/photo-1576092768241-dec231879fc3?auto=format&fit=crop&q=80&w=200',
+                          emblem: 'leaf_sprout'
+                        }
+                      ].map((preset, idx) => (
+                        <button
+                          key={idx}
+                          type="button"
+                          onClick={() => {
+                            setDraft({
+                              ...draft,
+                              logoUrl: preset.url,
+                              logoEmblemStyle: preset.emblem as any,
+                              logoType: 'BOTH_IMAGE_AND_TEXT'
+                            });
+                            showToast(`Applied ${preset.name} preset!`);
+                          }}
+                          className="flex items-center gap-2 p-2 border border-stone-200 rounded-lg hover:border-teal-800 hover:bg-teal-50/50 text-left transition-colors bg-white text-xs"
+                        >
+                          <img src={preset.url} alt="" className="w-7 h-7 rounded object-cover flex-shrink-0" />
+                          <span className="text-[11px] font-medium text-stone-800 leading-tight">{preset.name}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Real-time Dual Theme Preview */}
+                  <div className="mt-4 pt-3 border-t border-stone-200">
+                    <span className="text-[10px] font-bold text-stone-600 uppercase tracking-wider block mb-2">
+                      Live Storefront Brand Logo Preview:
+                    </span>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {/* Navbar Light Preview */}
+                      <div className="p-4 rounded-xl border border-stone-200 bg-white shadow-2xs flex flex-col justify-center items-center text-center">
+                        <span className="text-[10px] text-stone-400 font-semibold mb-2 uppercase tracking-wider">
+                          Header / Navbar Preview (Light Mode)
+                        </span>
+                        <div className="py-2">
+                          <BrandLogo variant="light" linkToHome={false} size="md" />
+                        </div>
+                      </div>
+
+                      {/* Footer Dark Preview */}
+                      <div className="p-4 rounded-xl border border-stone-800 bg-stone-900 shadow-2xs flex flex-col justify-center items-center text-center">
+                        <span className="text-[10px] text-stone-400 font-semibold mb-2 uppercase tracking-wider">
+                          Footer Preview (Dark Mode)
+                        </span>
+                        <div className="py-2">
+                          <BrandLogo variant="dark" linkToHome={false} size="md" />
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>

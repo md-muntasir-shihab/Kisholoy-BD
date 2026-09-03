@@ -23,7 +23,7 @@ import { marketingService } from './server/marketingService';
 import { securityEngine } from './server/securityEngine';
 import { backupEngine } from './server/backupEngine';
 import { supplierEngine } from './server/supplierEngine';
-import { Order, FlashDeal, Role, RateLimitTier, Customer } from './src/types';
+import { Order, FlashDeal, Role, RateLimitTier, Customer, OrderSourceChannel } from './src/types';
 
 async function startServer() {
   const app = express();
@@ -173,11 +173,21 @@ async function startServer() {
       });
 
       const isAutoBlocked = fraudRisk.recommendation === 'BLOCK';
+      const orderSource: OrderSourceChannel = req.body.orderSource || 'WEB';
+      const channelDetails = req.body.channelDetails;
+      const advancePayment = req.body.advancePayment;
+      const advancePaymentAmount = advancePayment?.amount || req.body.advancePaymentAmount || 0;
+      const balanceDueCod = req.body.balanceDueCod ?? Math.max(0, calculation.grandTotal - advancePaymentAmount);
 
       const newOrder: Order = {
         id: orderId,
         orderNumber,
         createdAt: new Date().toISOString(),
+        orderSource,
+        channelDetails,
+        advancePayment,
+        advancePaymentAmount,
+        balanceDueCod,
         customer: {
           id: `cust-${Date.now()}`,
           name: customer.name.trim(),
@@ -211,10 +221,10 @@ async function startServer() {
         discount: calculation.discount,
         total: calculation.grandTotal,
         paymentMethod: paymentMethod || 'COD',
-        paymentStatus: isAutoBlocked ? 'CANCELLED' : (paymentMethod === 'COD' ? 'UNPAID' : 'PENDING'),
+        paymentStatus: isAutoBlocked ? 'CANCELLED' : (advancePayment?.isPaid ? 'PARTIALLY_PAID' : (paymentMethod === 'COD' ? 'UNPAID' : 'PENDING')),
         settlementStatus: isAutoBlocked ? 'CANCELLED' : 'PENDING',
-        orderStatus: isAutoBlocked ? 'CANCELLED' : 'PENDING',
-        verificationStatus: isAutoBlocked ? 'REJECTED' : 'UNVERIFIED',
+        orderStatus: isAutoBlocked ? 'CANCELLED' : (req.body.orderStatus || 'PENDING'),
+        verificationStatus: isAutoBlocked ? 'REJECTED' : (req.body.verificationStatus || (orderSource !== 'WEB' ? 'PHONE_VERIFIED' : 'UNVERIFIED')),
         fraudRisk,
         courier: {
           provider: isAutoBlocked ? 'Manual' : 'Steadfast',
@@ -227,8 +237,8 @@ async function startServer() {
             timestamp: new Date().toISOString(),
             note: isAutoBlocked
               ? `Auto-cancelled by Fraud Engine: High risk (${fraudRisk.reasons.join('; ')})`
-              : `Order placed securely via ${paymentMethod || 'COD'}. Verified Total: ৳${calculation.grandTotal}. Risk Score: ${fraudRisk.riskScore} (${fraudRisk.riskRating}).`,
-            updatedBy: 'SYSTEM_API'
+              : `Order placed via ${orderSource}${channelDetails?.operatorName ? ` by agent ${channelDetails.operatorName}` : ''}. Verified Total: ৳${calculation.grandTotal}. Advance: ৳${advancePaymentAmount}. COD Due: ৳${balanceDueCod}.`,
+            updatedBy: channelDetails?.operatorName ? `AGENT_${channelDetails.operatorName}` : 'SYSTEM_API'
           }
         ]
       };
@@ -319,6 +329,34 @@ async function startServer() {
   });
 
   // -------------------------------------------------------------
+  // Admin & System Order Fetching Endpoint
+  // -------------------------------------------------------------
+  app.get('/api/orders', (req, res) => {
+    try {
+      // Ensure all orders have an authoritative fraud risk assessment
+      const orders = serverDb.orders.map(o => {
+        if (!o.fraudRisk) {
+          o.fraudRisk = fraudEngine.evaluateOrderRisk({
+            phone: o.customer.phone || '',
+            email: o.customer.email,
+            address: o.shippingAddress?.address || '',
+            district: o.shippingAddress?.district || 'Dhaka',
+            division: o.shippingAddress?.division || 'Dhaka',
+            thana: o.shippingAddress?.thana || 'Central',
+            paymentMethod: o.paymentMethod || 'COD',
+            total: o.total || 0,
+            items: o.items || []
+          });
+        }
+        return o;
+      });
+      res.json({ success: true, orders });
+    } catch (e: any) {
+      res.status(500).json({ success: false, error: e.message });
+    }
+  });
+
+  // -------------------------------------------------------------
   // 4. Order Tracking Endpoint
   // -------------------------------------------------------------
   app.get('/api/orders/track', (req, res) => {
@@ -338,6 +376,61 @@ async function startServer() {
     }
 
     return res.json({ success: true, order });
+  });
+
+  // -------------------------------------------------------------
+  // Order Status Update Endpoint & Automated Gateway Dispatch
+  // -------------------------------------------------------------
+  app.post('/api/orders/:id/status', async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { status, note, operator } = req.body;
+
+      if (!status) {
+        return res.status(400).json({ error: 'Status is required' });
+      }
+
+      const updatedOrder = serverDb.updateOrderStatus(id, status, note, operator || 'ADMIN');
+      if (!updatedOrder) {
+        return res.status(404).json({ error: 'Order not found' });
+      }
+
+      // Automatically dispatch confirmation notification via configured gateways
+      let eventKey: any = null;
+      if (status === 'SHIPPED') eventKey = 'ORDER_SHIPPED';
+      else if (status === 'OUT_FOR_DELIVERY') eventKey = 'OUT_FOR_DELIVERY';
+      else if (status === 'DELIVERED') eventKey = 'ORDER_DELIVERED';
+      else if (status === 'CANCELLED') eventKey = 'ORDER_CANCELLED';
+      else if (status === 'RETURNED') eventKey = 'RETURN_APPROVED';
+      else if (status === 'CONFIRMED') eventKey = 'ORDER_CONFIRMATION';
+
+      let dispatchedLogs: any[] = [];
+      if (eventKey) {
+        const codAmt = updatedOrder.balanceDueCod ?? (updatedOrder.paymentMethod === 'COD' ? updatedOrder.total : 0);
+        dispatchedLogs = await notificationService.dispatchAutomatedEvent(eventKey, {
+          orderNumber: updatedOrder.orderNumber,
+          customerName: updatedOrder.customer.name,
+          customerPhone: updatedOrder.customer.phone,
+          customerEmail: updatedOrder.customer.email,
+          customerId: updatedOrder.customer.id,
+          totalAmount: updatedOrder.total,
+          paymentMethod: updatedOrder.paymentMethod,
+          courierName: updatedOrder.courier?.provider || (updatedOrder.shippingAddress.division === 'Dhaka' ? 'Pathao Courier' : 'Steadfast Courier'),
+          trackingId: updatedOrder.courier?.trackingId || 'TRK-98210',
+          trackingUrl: `https://kisholoy.com.bd/track/${updatedOrder.orderNumber}`,
+          codAmount: codAmt
+        });
+      }
+
+      return res.json({
+        success: true,
+        order: updatedOrder,
+        notificationsDispatched: dispatchedLogs.length,
+        dispatchedLogs
+      });
+    } catch (err: any) {
+      return res.status(500).json({ success: false, error: err.message });
+    }
   });
 
   // -------------------------------------------------------------
@@ -424,12 +517,16 @@ async function startServer() {
 
   // Fraud Risk Check Endpoint
   app.post('/api/orders/fraud-check', (req, res) => {
-    const { customerPhone, total, paymentMethod, district } = req.body;
-    const assessment = serverDb.evaluateOrderFraudRisk({
-      customerPhone: customerPhone || '',
+    const { customerPhone, total, paymentMethod, district, email, address, division, thana } = req.body;
+    const assessment = fraudEngine.evaluateOrderRisk({
+      phone: customerPhone || '',
+      email: email || '',
+      address: address || '',
+      district: district || 'Dhaka',
+      division: division || 'Dhaka',
+      thana: thana || 'Central',
       total: Number(total) || 0,
-      paymentMethod: paymentMethod || 'COD',
-      district: district || 'Dhaka'
+      paymentMethod: paymentMethod || 'COD'
     });
     return res.json({ success: true, assessment });
   });
@@ -541,25 +638,76 @@ async function startServer() {
   });
 
   // -------------------------------------------------------------
-  // 6. Courier & Logistics Webhooks
+  // 6. Courier & Logistics (Steadfast & Pathao APIs)
   // -------------------------------------------------------------
+  app.get('/api/courier/config', (req, res) => {
+    try {
+      const config = courierService.getCourierConfigStatus();
+      return res.json({ success: true, config });
+    } catch (err: any) {
+      return res.status(500).json({ error: err.message });
+    }
+  });
+
   app.post('/api/courier/book', async (req, res) => {
     try {
-      const { orderId, courierProvider } = req.body;
+      const { 
+        orderId, 
+        courierProvider, 
+        codAmount, 
+        weightKg, 
+        note, 
+        deliveryType, 
+        storeId,
+        recipientAddress,
+        recipientPhone,
+        recipientName
+      } = req.body;
+      
       const order = serverDb.getOrderById(orderId);
       if (!order) return res.status(404).json({ error: 'Order not found' });
+
+      // Determine COD amount (if advance paid, balance due, or specified)
+      let finalCod = codAmount !== undefined 
+        ? Number(codAmount) 
+        : (order.paymentMethod === 'COD' 
+            ? (order.balanceDueCod !== undefined ? order.balanceDueCod : Math.max(0, order.total - (order.advancePayment?.amount || order.advancePaymentAmount || 0)))
+            : 0);
 
       const booking = await courierService.bookConsignment({
         orderId: order.id,
         orderNumber: order.orderNumber,
-        recipientName: order.customer.name,
-        recipientPhone: order.customer.phone,
-        recipientAddress: order.shippingAddress.address,
-        codAmount: order.paymentMethod === 'COD' ? order.total : 0,
-        courierProvider: courierProvider || 'Steadfast'
+        recipientName: recipientName || order.customer.name,
+        recipientPhone: recipientPhone || order.customer.phone,
+        recipientAddress: recipientAddress || `${order.shippingAddress.address}, ${order.shippingAddress.thana || ''}, ${order.shippingAddress.district || ''}`,
+        recipientDistrict: order.shippingAddress.district,
+        recipientThana: order.shippingAddress.thana,
+        codAmount: finalCod,
+        weightKg: weightKg || 0.5,
+        itemDescription: order.items.map(i => `${i.title} (x${i.quantity})`).join(', ').substring(0, 200),
+        note: note || `Order ${order.orderNumber} - KISHOLOY`,
+        courierProvider: courierProvider || 'Steadfast',
+        deliveryType: deliveryType || 'STANDARD',
+        storeId: storeId
       });
 
-      return res.json({ success: true, booking });
+      return res.json({ 
+        success: true, 
+        booking,
+        order: serverDb.getOrderById(orderId)
+      });
+    } catch (err: any) {
+      return res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.get('/api/courier/track/:id', async (req, res) => {
+    try {
+      const tracking = await courierService.trackOrder(req.params.id);
+      if (!tracking) {
+        return res.status(404).json({ error: 'Tracking information not found for the requested order or consignment' });
+      }
+      return res.json({ success: true, tracking });
     } catch (err: any) {
       return res.status(500).json({ error: err.message });
     }
@@ -976,6 +1124,13 @@ async function startServer() {
     if (!order) return res.status(404).json({ error: 'Order not found' });
     serverDb.addAuditLog('APPROVE_RETURN', 'Order', orderId, 'Approved RMA and marked for restock');
     
+    // Auto-adjust supplier eligible sale if linked
+    try {
+      supplierEngine.adjustReturnedOrder(orderId, { reason: 'Customer Return Approved' }, 'RMA System');
+    } catch (err) {
+      console.error('Failed to auto-adjust supplier return:', err);
+    }
+
     // Multi-Channel Automated Notification Trigger
     try {
       await notificationService.dispatchAutomatedEvent('RETURN_APPROVED', {
@@ -2179,6 +2334,224 @@ async function startServer() {
     }
   });
 
+  // Customer Intelligence & Central Directory Management
+  app.get('/api/customers', (req, res) => {
+    try {
+      const { segment, search, status, district, sortBy } = req.query;
+      const { scores, summaries } = marketingService.calculateRfmScores();
+      const activeBlacklists = serverDb.blacklists.filter(b => b.isActive);
+      
+      const enrichedCustomers = serverDb.customers.map(c => {
+        const rfm = scores.find(s => s.customerId === c.id);
+        const custOrders = serverDb.orders.filter(o => 
+          (o.customer?.phone && c.phone && o.customer.phone.replace(/\D/g, '') === c.phone.replace(/\D/g, '')) || 
+          (o.customer?.name || '').toLowerCase() === c.name.toLowerCase()
+        );
+        const deliveredOrders = custOrders.filter(o => o.orderStatus === 'DELIVERED' || o.courier?.status === 'DELIVERED').length;
+        const cancelledOrders = custOrders.filter(o => o.orderStatus === 'CANCELLED').length;
+        const returnedOrders = custOrders.filter(o => o.orderStatus === 'RETURNED' || o.courier?.status === 'RETURNED').length;
+        const completionRate = custOrders.length > 0 ? Math.round((deliveredOrders / custOrders.length) * 100) : 100;
+        
+        // Risk assessment
+        const isPhoneBlacklisted = activeBlacklists.some(b => b.type === 'PHONE' && b.value.replace(/\D/g, '') === c.phone.replace(/\D/g, ''));
+        const isEmailBlacklisted = c.email && activeBlacklists.some(b => b.type === 'EMAIL' && b.value.toLowerCase() === c.email.toLowerCase());
+        let riskRating: 'LOW' | 'MEDIUM' | 'HIGH' = 'LOW';
+        if (c.status === 'BLOCKED' || isPhoneBlacklisted || isEmailBlacklisted || returnedOrders >= 2) {
+          riskRating = 'HIGH';
+        } else if (cancelledOrders >= 2 || (custOrders.length > 1 && completionRate < 60)) {
+          riskRating = 'MEDIUM';
+        }
+
+        const tags = marketingService.getCustomerTags(c.id) || ['VERIFIED_BUYER'];
+        const custDistrict = (c as any).district || (c.defaultAddress ? c.defaultAddress.split(',').pop()?.trim() || 'Dhaka' : 'Dhaka');
+
+        return {
+          ...c,
+          rfm: rfm || null,
+          segment: rfm?.segment || 'NEW_CUSTOMER',
+          totalOrders: custOrders.length,
+          totalSpent: custOrders.filter(o => o.orderStatus !== 'CANCELLED').reduce((sum, o) => sum + (o.total || 0), 0),
+          deliveredOrders,
+          cancelledOrders,
+          returnedOrders,
+          completionRate,
+          riskRating,
+          tags: tags.length > 0 ? tags : ['VERIFIED_BUYER'],
+          district: custDistrict
+        };
+      });
+
+      let filtered = enrichedCustomers;
+      if (segment && segment !== 'ALL') {
+        filtered = filtered.filter(c => c.segment === segment);
+      }
+      if (status && status !== 'ALL') {
+        filtered = filtered.filter(c => c.status === status);
+      }
+      if (district && district !== 'ALL') {
+        filtered = filtered.filter(c => c.district.toLowerCase() === String(district).toLowerCase());
+      }
+      if (search && typeof search === 'string') {
+        const q = search.toLowerCase().trim();
+        filtered = filtered.filter(c => 
+          c.name.toLowerCase().includes(q) ||
+          c.phone.includes(q) ||
+          (c.email && c.email.toLowerCase().includes(q)) ||
+          c.district.toLowerCase().includes(q)
+        );
+      }
+
+      // Sorting
+      if (sortBy === 'spend-desc') filtered.sort((a, b) => b.totalSpent - a.totalSpent);
+      else if (sortBy === 'spend-asc') filtered.sort((a, b) => a.totalSpent - b.totalSpent);
+      else if (sortBy === 'orders-desc') filtered.sort((a, b) => b.totalOrders - a.totalOrders);
+      else if (sortBy === 'name-asc') filtered.sort((a, b) => a.name.localeCompare(b.name));
+
+      res.json({
+        success: true,
+        customers: filtered,
+        summaries,
+        total: filtered.length,
+        metrics: {
+          totalCustomers: serverDb.customers.length,
+          activeBuyers: serverDb.customers.filter(c => c.status === 'ACTIVE').length,
+          totalLtv: enrichedCustomers.reduce((sum, c) => sum + c.totalSpent, 0),
+          avgAov: Math.round(enrichedCustomers.reduce((sum, c) => sum + c.totalSpent, 0) / Math.max(1, enrichedCustomers.reduce((sum, c) => sum + c.totalOrders, 0))),
+          repeatRate: Math.round((enrichedCustomers.filter(c => c.totalOrders > 1).length / Math.max(1, enrichedCustomers.length)) * 100),
+          highRiskCount: enrichedCustomers.filter(c => c.riskRating === 'HIGH').length
+        }
+      });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.get('/api/customers/:id', (req, res) => {
+    try {
+      const { id } = req.params;
+      const details = marketingService.getCrmCustomerDetails(id);
+      if (!details) {
+        return res.status(404).json({ error: 'Customer not found' });
+      }
+      const addresses = serverDb.customerAddresses.filter(a => a.customerId === id);
+      const orders = serverDb.orders.filter(o => 
+        (o.customer?.phone && details.customer.phone && o.customer.phone.replace(/\D/g, '') === details.customer.phone.replace(/\D/g, '')) || 
+        (o.customer?.name || '').toLowerCase() === details.customer.name.toLowerCase()
+      );
+      res.json({
+        success: true,
+        details: {
+          ...details,
+          addresses,
+          recentOrders: orders
+        }
+      });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.patch('/api/customers/:id/status', (req, res) => {
+    try {
+      const { id } = req.params;
+      const { status, reason, operator } = req.body;
+      if (!status || !['ACTIVE', 'BLOCKED'].includes(status)) {
+        return res.status(400).json({ error: 'Valid status (ACTIVE or BLOCKED) is required' });
+      }
+      const customer = serverDb.customers.find(c => c.id === id);
+      if (!customer) {
+        return res.status(404).json({ error: 'Customer not found' });
+      }
+      const oldStatus = customer.status;
+      customer.status = status;
+      serverDb.addAuditLog(
+        status === 'BLOCKED' ? 'CUSTOMER_BLOCKED' : 'CUSTOMER_UNBLOCKED',
+        operator || 'Admin',
+        id,
+        `Customer ${customer.name} (${customer.phone}) status updated from ${oldStatus} to ${status}. Reason: ${reason || 'Manual Admin action'}`
+      );
+      res.json({ success: true, customer });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.post('/api/customers', (req, res) => {
+    try {
+      const { name, phone, email, address, district, thana } = req.body;
+      if (!name || !phone) {
+        return res.status(400).json({ error: 'Customer name and phone number are required' });
+      }
+      const id = `cust-${Date.now().toString().slice(-4)}`;
+      const newCustomer: Customer = {
+        id,
+        name: name.trim(),
+        phone: phone.trim(),
+        email: email?.trim() || `${phone.replace(/\D/g, '')}@customer.kisholoy.com`,
+        joinedDate: new Date().toISOString().slice(0, 10),
+        totalOrders: 0,
+        totalSpent: 0,
+        defaultAddress: address ? `${address}, ${thana || ''}, ${district || 'Dhaka'}`.replace(/,\s*,/g, ',') : 'Dhaka, Bangladesh',
+        status: 'ACTIVE'
+      };
+      serverDb.customers.unshift(newCustomer);
+      serverDb.addAuditLog(
+        'CREATE_CUSTOMER',
+        'Admin Staff',
+        id,
+        `Registered customer ${newCustomer.name} (${newCustomer.phone}) via CRM administration.`
+      );
+      res.status(201).json({ success: true, customer: newCustomer });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.post('/api/customers/:id/notes', (req, res) => {
+    try {
+      const { text, author } = req.body;
+      if (!text || !text.trim()) {
+        return res.status(400).json({ error: 'Note text cannot be empty' });
+      }
+      const note = marketingService.addCrmNote(req.params.id, text.trim(), author || 'Staff');
+      res.status(201).json({ success: true, note });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.post('/api/customers/:id/tags', (req, res) => {
+    try {
+      const { tag } = req.body;
+      if (!tag) {
+        return res.status(400).json({ error: 'Tag identifier is required' });
+      }
+      const tags = marketingService.toggleCustomerTag(req.params.id, tag.trim().toUpperCase());
+      res.json({ success: true, tags });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.post('/api/customers/:id/quick-communication', (req, res) => {
+    try {
+      const { channel, message, operator } = req.body;
+      const customer = serverDb.customers.find(c => c.id === req.params.id);
+      if (!customer) {
+        return res.status(404).json({ error: 'Customer not found' });
+      }
+      serverDb.addAuditLog(
+        'CUSTOMER_COMMUNICATION_DISPATCH',
+        operator || 'Staff',
+        customer.id,
+        `Dispatched ${channel || 'SMS'} communication to ${customer.name} (${customer.phone}): "${(message || '').substring(0, 50)}..."`
+      );
+      res.json({ success: true, message: `Communication recorded and logged for ${customer.name}` });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
   // 3. Abandoned Cart Recovery Engine
   app.get('/api/marketing/abandoned-carts', (req, res) => {
     try {
@@ -2818,16 +3191,337 @@ async function startServer() {
     try {
       const { email, password } = req.body;
       const clientIp = (req.headers['x-forwarded-for'] as string)?.split(',')[0].trim() || req.socket.remoteAddress || '127.0.0.1';
-      if (!email || !password) {
-        return res.status(400).json({ error: 'Supplier login email and password required.' });
+      if (!email) {
+        return res.status(400).json({ error: 'Supplier login email required.' });
       }
 
-      const result = supplierEngine.authenticateSupplierPortal(email, password, clientIp);
+      const result = supplierEngine.authenticateSupplierPortal(email, password || '', clientIp);
       if (!result.success) {
         return res.status(403).json({ error: result.error });
       }
 
       res.json(result);
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.get('/api/suppliers/portal/dashboard', (req, res) => {
+    try {
+      const supplierId = (req.query.supplierId as string) || (req.headers['x-supplier-id'] as string);
+      if (!supplierId) {
+        return res.status(400).json({ error: 'Supplier ID is required' });
+      }
+
+      const dashboard = supplierEngine.getSupplierPortalDashboard(supplierId);
+      if (!dashboard) {
+        return res.status(404).json({ error: 'Supplier account not found or access denied.' });
+      }
+
+      res.json({ success: true, ...dashboard });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.post('/api/suppliers/portal/update-profile', (req, res) => {
+    try {
+      const { supplierId, updates, operator } = req.body;
+      if (!supplierId) return res.status(400).json({ error: 'Supplier ID is required' });
+
+      const result = supplierEngine.updateSupplierPortalProfile(supplierId, updates || {}, operator || 'Supplier Admin');
+      if (!result.success) return res.status(400).json({ error: result.error });
+
+      res.json({ success: true, supplier: result.supplier, message: 'Supplier profile updated successfully' });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.post('/api/suppliers/portal/change-password', (req, res) => {
+    try {
+      const { supplierId, newPassword, operator } = req.body;
+      if (!supplierId || !newPassword) return res.status(400).json({ error: 'Supplier ID and new password required' });
+
+      const result = supplierEngine.setSupplierPortalPassword(supplierId, newPassword, operator || 'Supplier Self-Service');
+      if (!result.success) return res.status(400).json({ error: result.error });
+
+      res.json({ success: true, message: 'Password updated successfully' });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.post('/api/suppliers/:id/set-portal-password', (req, res) => {
+    try {
+      const operator = req.body.operator || 'SUPER_ADMIN';
+      const { newPassword } = req.body;
+      const result = supplierEngine.setSupplierPortalPassword(req.params.id, newPassword, operator);
+      if (!result.success) return res.status(400).json({ error: result.error });
+      res.json({ success: true, message: 'Supplier portal password set successfully' });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  // -------------------------------------------------------------
+  // Supplier Supply Chain & Settlement Management APIs
+  // -------------------------------------------------------------
+  // Agreements
+  app.get('/api/suppliers/agreements/all', (req, res) => {
+    try {
+      const agreements = supplierEngine.getAllAgreements();
+      res.json({ success: true, agreements });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.get('/api/suppliers/:id/agreements', (req, res) => {
+    try {
+      const agreements = supplierEngine.getAgreementsBySupplier(req.params.id);
+      res.json({ success: true, agreements });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.post('/api/suppliers/:id/agreements', (req, res) => {
+    try {
+      const operator = req.body.operator || 'Finance Lead';
+      const result = supplierEngine.createAgreement({ ...req.body, supplierId: req.params.id }, operator);
+      if (!result.success) return res.status(400).json({ error: result.error });
+      res.json({ success: true, agreement: result.agreement });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.put('/api/suppliers/agreements/:id', (req, res) => {
+    try {
+      const operator = req.body.operator || 'Finance Lead';
+      const result = supplierEngine.updateAgreement(req.params.id, req.body, operator);
+      if (!result.success) return res.status(400).json({ error: result.error });
+      res.json({ success: true, agreement: result.agreement });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.delete('/api/suppliers/agreements/:id', (req, res) => {
+    try {
+      const operator = (req.query.operator as string) || 'Finance Lead';
+      const result = supplierEngine.deleteAgreement(req.params.id, operator);
+      if (!result.success) return res.status(400).json({ error: result.error });
+      res.json({ success: true, message: 'Agreement removed' });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  // Supply Batches
+  app.get('/api/suppliers/batches/all', (req, res) => {
+    try {
+      const batches = supplierEngine.getAllBatches();
+      res.json({ success: true, batches });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.get('/api/suppliers/:id/batches', (req, res) => {
+    try {
+      const batches = supplierEngine.getBatchesBySupplier(req.params.id);
+      res.json({ success: true, batches });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.post('/api/suppliers/:id/batches', (req, res) => {
+    try {
+      const operator = req.body.operator || 'Inventory Lead';
+      const result = supplierEngine.createSupplyBatch({ ...req.body, supplierId: req.params.id }, operator);
+      if (!result.success) return res.status(400).json({ error: result.error });
+      res.json({ success: true, batch: result.batch });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.put('/api/suppliers/batches/:id', (req, res) => {
+    try {
+      const operator = req.body.operator || 'Inventory Lead';
+      const result = supplierEngine.updateSupplyBatch(req.params.id, req.body, operator);
+      if (!result.success) return res.status(400).json({ error: result.error });
+      res.json({ success: true, batch: result.batch });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  // Eligible Sales Snapshots
+  app.get('/api/suppliers/eligible-sales/all', (req, res) => {
+    try {
+      const sales = supplierEngine.getAllEligibleSales();
+      res.json({ success: true, sales });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.get('/api/suppliers/:id/eligible-sales', (req, res) => {
+    try {
+      const sales = supplierEngine.getEligibleSalesBySupplier(req.params.id);
+      res.json({ success: true, sales });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.post('/api/suppliers/eligible-sales/process-order', (req, res) => {
+    try {
+      const operator = req.body.operator || 'Order Fulfillment Staff';
+      const { order } = req.body;
+      if (!order) return res.status(400).json({ error: 'Order object is required' });
+      const result = supplierEngine.processDeliveredOrder(order, operator);
+      res.json({ success: true, ...result });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.post('/api/suppliers/eligible-sales/adjust-return', (req, res) => {
+    try {
+      const operator = req.body.operator || 'Finance Staff';
+      const { orderId, returnData } = req.body;
+      if (!orderId) return res.status(400).json({ error: 'orderId is required' });
+      const result = supplierEngine.adjustReturnedOrder(orderId, returnData, operator);
+      res.json({ success: true, ...result });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.post('/api/suppliers/eligible-sales/sync-delivered', (req, res) => {
+    try {
+      const operator = req.body.operator || 'Settlement Engine Sync';
+      const deliveredOrders = serverDb.orders.filter(o => o.orderStatus === 'DELIVERED');
+      let totalProcessed = 0;
+      deliveredOrders.forEach(order => {
+        const result = supplierEngine.processDeliveredOrder(order, operator);
+        totalProcessed += result.processed;
+      });
+      const allSales = supplierEngine.getAllEligibleSales();
+      res.json({ success: true, totalProcessed, totalEligibleSales: allSales.length, sales: allSales });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  // Settlements & Payables
+  app.get('/api/suppliers/settlements/all', (req, res) => {
+    try {
+      const settlements = supplierEngine.getAllSettlements();
+      res.json({ success: true, settlements });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.get('/api/suppliers/:id/settlements', (req, res) => {
+    try {
+      const settlements = supplierEngine.getSettlementsBySupplier(req.params.id);
+      res.json({ success: true, settlements });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.get('/api/suppliers/settlements/:id', (req, res) => {
+    try {
+      const settlement = supplierEngine.getSettlementById(req.params.id);
+      if (!settlement) return res.status(404).json({ error: 'Settlement not found' });
+      res.json({ success: true, settlement });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.post('/api/suppliers/:id/settlements', (req, res) => {
+    try {
+      const operator = req.body.operator || 'Finance Lead';
+      const result = supplierEngine.createSettlement({
+        supplierId: req.params.id,
+        periodStart: req.body.periodStart,
+        periodEnd: req.body.periodEnd,
+        salesIds: req.body.salesIds
+      }, operator);
+      if (!result.success) return res.status(400).json({ error: result.error });
+      res.json({ success: true, settlement: result.settlement });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.put('/api/suppliers/settlements/:id/status', (req, res) => {
+    try {
+      const operator = req.body.operator || 'Finance Lead';
+      const { status } = req.body;
+      const result = supplierEngine.updateSettlementStatus(req.params.id, status, operator);
+      if (!result.success) return res.status(400).json({ error: result.error });
+      res.json({ success: true, settlement: result.settlement });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.post('/api/suppliers/settlements/:id/pay', (req, res) => {
+    try {
+      const operator = req.body.operator || 'Finance Lead';
+      const { amount, paymentMethod, referenceNumber, notes, mfaCode } = req.body;
+
+      if (amount >= 50000 && mfaCode) {
+        const mfaCheck = securityEngine.verifyMfaForAction(operator, mfaCode, 'SUPPLIER_PAYOUT');
+        if (!mfaCheck.success) {
+          return res.status(400).json({ error: `Payout authorization failed: ${mfaCheck.error}` });
+        }
+      }
+
+      const result = supplierEngine.recordSettlementPayment(req.params.id, {
+        amount,
+        paymentMethod,
+        referenceNumber,
+        notes
+      }, operator);
+
+      if (!result.success) return res.status(400).json({ error: result.error });
+      res.json({ success: true, settlement: result.settlement, payment: result.payment });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  // Statement & Metrics
+  app.get('/api/suppliers/:id/statement', (req, res) => {
+    try {
+      const { periodStart, periodEnd } = req.query;
+      const statement = supplierEngine.generateSupplierStatement(
+        req.params.id,
+        periodStart as string | undefined,
+        periodEnd as string | undefined
+      );
+      if (!statement) return res.status(404).json({ error: 'Supplier not found' });
+      res.json({ success: true, statement });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.get('/api/suppliers/supply-chain/metrics', (req, res) => {
+    try {
+      const metrics = supplierEngine.getSupplyChainMetrics();
+      res.json({ success: true, metrics });
     } catch (e: any) {
       res.status(500).json({ error: e.message });
     }

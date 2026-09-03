@@ -851,6 +851,10 @@ class MarketingService {
 
     return tags;
   }
+
+  getCustomerTags(customerId: string): string[] {
+    return this.customerTags[customerId] || [];
+  }
 }
 
 export const marketingService = new MarketingService();

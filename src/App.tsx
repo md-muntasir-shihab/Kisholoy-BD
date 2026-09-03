@@ -28,10 +28,10 @@ import { InventoryAdmin } from './admin/InventoryAdmin';
 import { CustomersAdmin } from './admin/CustomersAdmin';
 import { PaymentsAdmin } from './admin/PaymentsAdmin';
 import { ShipmentsAdmin } from './admin/ShipmentsAdmin';
-import { ReturnsAdmin } from './admin/ReturnsAdmin';
-import { RefundsAdmin } from './admin/RefundsAdmin';
+import { ReturnsRefundsAdmin } from './admin/ReturnsRefundsAdmin';
 import { FinanceAdmin } from './admin/FinanceAdmin';
 import { ReportsAdmin } from './admin/ReportsAdmin';
+import { AnalyticsAdmin } from './admin/AnalyticsAdmin';
 import { OperationsAdmin } from './admin/OperationsAdmin';
 import { ContentAdmin } from './admin/ContentAdmin';
 import { SettingsAdmin } from './admin/SettingsAdmin';
@@ -41,14 +41,15 @@ import { AuditAdmin } from './admin/AuditAdmin';
 import { BackupAdmin } from './admin/BackupAdmin';
 import { FraudRiskDashboard } from './admin/FraudRiskDashboard';
 import { FulfillmentAdmin } from './admin/FulfillmentAdmin';
-import { PromotionsAdmin } from './admin/PromotionsAdmin';
-import { MarketingAdmin } from './admin/MarketingAdmin';
+import { SupplierLoginPage } from './pages/supplier/SupplierLoginPage';
+import { SupplierPortalPage } from './pages/supplier/SupplierPortalPage';
+import { Navigate } from 'react-router-dom';
 import { AppProvider, useApp } from './context/AppContext';
 
 // Layout wrapper for customer-facing storefront
 function StorefrontLayout() {
   return (
-    <div className="min-h-screen flex flex-col bg-white text-stone-900 font-sans">
+    <div className="min-h-screen flex flex-col bg-white dark:bg-slate-950 text-stone-900 dark:text-slate-100 font-sans transition-colors duration-200">
       <Header />
       <main className="flex-grow flex flex-col">
         <Outlet />
@@ -102,21 +103,28 @@ export default function App() {
             <Route path="customers" element={<CustomersAdmin />} />
             <Route path="payments" element={<PaymentsAdmin />} />
             <Route path="shipments" element={<ShipmentsAdmin />} />
-            <Route path="returns" element={<ReturnsAdmin />} />
-            <Route path="refunds" element={<RefundsAdmin />} />
+            <Route path="returns" element={<ReturnsRefundsAdmin />} />
+            <Route path="refunds" element={<ReturnsRefundsAdmin />} />
             <Route path="finance" element={<FinanceAdmin />} />
             <Route path="reports" element={<ReportsAdmin />} />
+            <Route path="analytics" element={<AnalyticsAdmin />} />
             <Route path="operations" element={<OperationsAdmin />} />
             <Route path="content" element={<ContentAdmin />} />
             <Route path="settings" element={<SettingsAdmin />} />
             <Route path="users" element={<UsersAdmin />} />
-            <Route path="promotions" element={<PromotionsAdmin />} />
-            <Route path="marketing" element={<MarketingAdmin />} />
+            <Route path="promotions" element={<Navigate to="/admin" replace />} />
+            <Route path="marketing" element={<Navigate to="/admin" replace />} />
             <Route path="fraud" element={<FraudRiskDashboard />} />
             <Route path="fulfillment" element={<FulfillmentAdmin />} />
             <Route path="audit" element={<AuditAdmin />} />
             <Route path="backup" element={<BackupAdmin />} />
           </Route>
+
+          {/* Dedicated Isolated Supplier & Artisan Portal Routes */}
+          <Route path="/supplier/login" element={<SupplierLoginPage />} />
+          <Route path="/supplier" element={<SupplierPortalPage />} />
+          <Route path="/supplier-portal" element={<Navigate to="/supplier" replace />} />
+          <Route path="/supplier/*" element={<SupplierPortalPage />} />
         </Routes>
       </BrowserRouter>
     </AppProvider>

@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Filter, SlidersHorizontal, ArrowUpDown, X } from 'lucide-react';
+import { Filter, SlidersHorizontal, ArrowUpDown, X, Sparkles, Check, RotateCcw } from 'lucide-react';
 import { ProductCard } from '../components/ProductCard';
 import { useApp } from '../context/AppContext';
 
@@ -65,27 +65,32 @@ export function Shop() {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
       {/* Header Banner */}
-      <div className="border-b border-stone-200 pb-6 mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4">
+      <div className="border-b border-stone-200/90 pb-6 mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
-          <h1 className="text-3xl sm:text-4xl font-serif font-bold text-stone-900">
-            {language === 'BN' ? 'সকল পণ্য সংগ্রহ' : 'Artisanal Catalog'}
+          <div className="flex items-center gap-2 text-xs font-bold text-teal-900 uppercase tracking-widest mb-1.5">
+            <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+            <span>{language === 'BN' ? 'আসল বাংলাদেশি কারুকাজ' : 'Authentic Bangladeshi Heritage'}</span>
+          </div>
+          <h1 className="text-3xl sm:text-4xl font-serif font-black text-stone-900 tracking-tight">
+            {language === 'BN' ? 'সকল পণ্য সংগ্রহ' : 'Artisanal Collection'}
           </h1>
-          <p className="text-stone-500 text-sm mt-1">
+          <p className="text-stone-500 text-xs sm:text-sm mt-1">
             {language === 'BN' 
-              ? `${filteredProducts.length} টি পণ্য প্রদর্শিত হচ্ছে` 
-              : `Showing ${filteredProducts.length} authentic products`}
+              ? `${filteredProducts.length} টি খাঁটি পণ্য প্রদর্শিত হচ্ছে` 
+              : `Showing ${filteredProducts.length} certified heritage products`}
           </p>
         </div>
 
         {/* Sort Dropdown */}
-        <div className="flex items-center gap-2">
-          <ArrowUpDown className="w-4 h-4 text-stone-500" />
+        <div className="flex items-center gap-2.5 bg-stone-50 p-1.5 rounded-xl border border-stone-200 shadow-2xs">
+          <ArrowUpDown className="w-4 h-4 text-stone-500 ml-1.5" />
+          <span className="text-xs font-semibold text-stone-600 hidden sm:inline">{language === 'BN' ? 'সাজান:' : 'Sort by:'}</span>
           <select
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value as any)}
-            className="text-xs sm:text-sm bg-white border border-stone-300 rounded-lg px-3 py-2 text-stone-800 font-medium focus:outline-none focus:border-teal-800"
+            className="text-xs bg-white border border-stone-300 rounded-lg px-3 py-2 text-stone-900 font-semibold focus:outline-none focus:ring-2 focus:ring-teal-900/30 focus:border-teal-900 cursor-pointer shadow-2xs"
           >
-            <option value="featured">Featured / Default</option>
+            <option value="featured">Featured / curated</option>
             <option value="price-asc">Price: Low to High</option>
             <option value="price-desc">Price: High to Low</option>
             <option value="rating">Highest Rated</option>
@@ -96,10 +101,10 @@ export function Shop() {
       {/* Active Search Filter Badge */}
       {searchQuery && (
         <div className="mb-6 flex items-center gap-2">
-          <span className="text-xs text-stone-500">Searching for:</span>
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-teal-50 border border-teal-200 text-teal-900 text-xs font-semibold">
+          <span className="text-xs text-stone-500">Search results for:</span>
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-teal-50 border border-teal-200 text-teal-950 text-xs font-semibold">
             "{searchQuery}"
-            <button onClick={clearSearch} className="hover:text-red-700">
+            <button onClick={clearSearch} className="hover:text-rose-600 ml-1">
               <X className="w-3.5 h-3.5" />
             </button>
           </span>
@@ -108,22 +113,23 @@ export function Shop() {
 
       <div className="flex flex-col lg:flex-row gap-8">
         {/* Left Filter Sidebar */}
-        <aside className="lg:w-64 flex-shrink-0 space-y-6">
-          <div className="bg-stone-50 p-5 rounded-xl border border-stone-200 space-y-6">
-            <div className="flex items-center justify-between pb-3 border-b border-stone-200">
+        <aside className="lg:w-68 flex-shrink-0 space-y-6">
+          <div className="bg-white p-5 rounded-2xl border border-stone-200/90 shadow-xs space-y-6">
+            <div className="flex items-center justify-between pb-3.5 border-b border-stone-200">
               <h3 className="text-sm font-bold text-stone-900 flex items-center gap-2">
                 <SlidersHorizontal className="w-4 h-4 text-teal-900" />
-                {language === 'BN' ? 'ফিল্টার' : 'Filters'}
+                {language === 'BN' ? 'ফিল্টারসমূহ' : 'Refine Catalog'}
               </h3>
-              {(currentCategory !== 'all' || searchQuery || maxPrice < 6000) && (
+              {(currentCategory !== 'all' || searchQuery || maxPrice < 6000 || inStockOnly) && (
                 <button
                   onClick={() => {
                     setSearchParams({});
                     setMaxPrice(6000);
                     setInStockOnly(false);
                   }}
-                  className="text-xs text-teal-900 hover:underline font-semibold"
+                  className="inline-flex items-center gap-1 text-xs text-rose-600 hover:text-rose-700 font-bold"
                 >
+                  <RotateCcw className="w-3 h-3" />
                   Reset
                 </button>
               )}
@@ -131,31 +137,33 @@ export function Shop() {
 
             {/* Categories */}
             <div>
-              <label className="text-xs font-bold text-stone-700 uppercase tracking-wider block mb-2.5">
+              <label className="text-[11px] font-bold text-stone-500 uppercase tracking-wider block mb-2.5">
                 {language === 'BN' ? 'ক্যাটাগরি' : 'Category'}
               </label>
               <div className="space-y-1 text-xs">
                 <button
                   onClick={() => handleCategoryChange('all')}
-                  className={`w-full text-left px-2.5 py-1.5 rounded-md font-medium transition-colors ${
+                  className={`w-full text-left px-3 py-2 rounded-xl font-semibold transition-all flex items-center justify-between ${
                     currentCategory === 'all' 
-                      ? 'bg-teal-900 text-white' 
-                      : 'text-stone-600 hover:bg-stone-200/60'
+                      ? 'bg-teal-950 text-white shadow-xs' 
+                      : 'text-stone-700 hover:bg-stone-100'
                   }`}
                 >
-                  {language === 'BN' ? 'সকল ক্যাটাগরি' : 'All Categories'}
+                  <span>{language === 'BN' ? 'সকল ক্যাটাগরি' : 'All Categories'}</span>
+                  {currentCategory === 'all' && <Check className="w-3.5 h-3.5 text-teal-400" />}
                 </button>
                 {categories.map((c) => (
                   <button
                     key={c.id}
                     onClick={() => handleCategoryChange(c.slug)}
-                    className={`w-full text-left px-2.5 py-1.5 rounded-md font-medium transition-colors ${
+                    className={`w-full text-left px-3 py-2 rounded-xl font-semibold transition-all flex items-center justify-between ${
                       currentCategory === c.slug 
-                        ? 'bg-teal-900 text-white' 
-                        : 'text-stone-600 hover:bg-stone-200/60'
+                        ? 'bg-teal-950 text-white shadow-xs' 
+                        : 'text-stone-700 hover:bg-stone-100'
                     }`}
                   >
-                    {language === 'BN' ? c.nameBn : c.name}
+                    <span>{language === 'BN' ? c.nameBn : c.name}</span>
+                    {currentCategory === c.slug && <Check className="w-3.5 h-3.5 text-teal-400" />}
                   </button>
                 ))}
               </div>
@@ -164,10 +172,12 @@ export function Shop() {
             {/* Price Range Slider */}
             <div>
               <div className="flex justify-between items-center mb-2">
-                <label className="text-xs font-bold text-stone-700 uppercase tracking-wider">
-                  Max Price
+                <label className="text-[11px] font-bold text-stone-500 uppercase tracking-wider">
+                  Max Budget
                 </label>
-                <span className="text-xs font-bold text-teal-950">৳ {maxPrice.toLocaleString()}</span>
+                <span className="text-xs font-bold text-teal-950 bg-teal-50 px-2 py-0.5 rounded-md border border-teal-200">
+                  ৳ {maxPrice.toLocaleString()}
+                </span>
               </div>
               <input
                 type="range"
@@ -176,24 +186,24 @@ export function Shop() {
                 step="250"
                 value={maxPrice}
                 onChange={(e) => setMaxPrice(Number(e.target.value))}
-                className="w-full accent-teal-900 cursor-pointer"
+                className="w-full accent-teal-900 cursor-pointer h-1.5 bg-stone-200 rounded-lg appearance-none"
               />
-              <div className="flex justify-between text-[10px] text-stone-400 mt-1">
+              <div className="flex justify-between text-[10px] text-stone-400 font-medium mt-1.5">
                 <span>৳ 500</span>
                 <span>৳ 6,000+</span>
               </div>
             </div>
 
             {/* In Stock Checkbox */}
-            <div className="pt-2 border-t border-stone-200">
-              <label className="flex items-center gap-2 cursor-pointer text-xs font-medium text-stone-700">
+            <div className="pt-3 border-t border-stone-100">
+              <label className="flex items-center gap-2.5 cursor-pointer text-xs font-semibold text-stone-800 select-none">
                 <input
                   type="checkbox"
                   checked={inStockOnly}
                   onChange={(e) => setInStockOnly(e.target.checked)}
-                  className="rounded text-teal-900 focus:ring-teal-900 h-4 w-4"
+                  className="rounded-md border-stone-300 text-teal-900 focus:ring-teal-900 h-4 w-4 cursor-pointer"
                 />
-                <span>In Stock Only</span>
+                <span>{language === 'BN' ? 'শুধু প্রস্তুত স্টক' : 'Ready Stock Only'}</span>
               </label>
             </div>
           </div>
@@ -202,9 +212,9 @@ export function Shop() {
         {/* Product Grid Area */}
         <main className="flex-1">
           {filteredProducts.length === 0 ? (
-            <div className="text-center py-16 bg-stone-50 rounded-xl border border-dashed border-stone-300">
-              <p className="text-stone-500 font-medium mb-3">
-                {language === 'BN' ? 'কোনো পণ্য পাওয়া যায়নি।' : 'No products matched your active filters.'}
+            <div className="text-center py-20 bg-stone-50/80 rounded-2xl border border-dashed border-stone-300 p-8">
+              <p className="text-stone-600 font-medium mb-4 text-sm">
+                {language === 'BN' ? 'কোনো পণ্য খুঁজে পাওয়া যায়নি।' : 'No products matched your active filter criteria.'}
               </p>
               <button
                 onClick={() => {
@@ -212,9 +222,9 @@ export function Shop() {
                   setMaxPrice(6000);
                   setInStockOnly(false);
                 }}
-                className="px-4 py-2 bg-stone-900 text-white rounded-lg text-xs font-semibold"
+                className="px-5 py-2.5 bg-stone-900 text-white rounded-xl text-xs font-semibold hover:bg-stone-800 transition-colors shadow-xs"
               >
-                Clear all filters
+                Reset All Filters
               </button>
             </div>
           ) : (
@@ -229,3 +239,4 @@ export function Shop() {
     </div>
   );
 }
+

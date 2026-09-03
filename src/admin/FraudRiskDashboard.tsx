@@ -5,16 +5,18 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import { 
   ShieldAlert, ShieldCheck, AlertTriangle, Ban, PhoneCall, CheckCircle, 
   XCircle, Filter, Search, Plus, Trash2, ToggleLeft, ToggleRight,
   Sliders, Activity, RefreshCw, Eye, ExternalLink, Zap, Lock, DollarSign,
-  ArrowRight, Sparkles, AlertOctagon, UserX, Info
+  ArrowRight, Sparkles, AlertOctagon, UserX, Info, ShoppingCart, User
 } from 'lucide-react';
 import { 
   Order, FraudRiskAssessment, BlacklistEntry, FraudRiskSettings, 
   FraudRuleConfig, FraudStats 
 } from '../types';
+import { useApp } from '../context/AppContext';
 
 interface FraudDashboardProps {
   orders?: Order[];
@@ -25,11 +27,14 @@ export const FraudRiskDashboard: React.FC<FraudDashboardProps> = ({
   orders: propOrders,
   onOrderUpdated 
 }) => {
+  const { orders: contextOrders, refreshOrders, language, showToast, logAudit } = useApp();
+  const isBn = language === 'BN';
+  const [searchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState<'queue' | 'blacklists' | 'rules' | 'sandbox'>('queue');
   const [stats, setStats] = useState<FraudStats | null>(null);
   const [blacklists, setBlacklists] = useState<BlacklistEntry[]>([]);
   const [settings, setSettings] = useState<FraudRiskSettings | null>(null);
-  const [orders, setOrders] = useState<Order[]>(propOrders || []);
+  const [orders, setOrders] = useState<Order[]>(propOrders || contextOrders || []);
   const [loading, setLoading] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [feedbackMsg, setFeedbackMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -37,7 +42,17 @@ export const FraudRiskDashboard: React.FC<FraudDashboardProps> = ({
   // Queue Filters
   const [riskFilter, setRiskFilter] = useState<string>('ALL');
   const [verifyFilter, setVerifyFilter] = useState<string>('ALL');
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || '');
+
+  // Synchronize when search URL param changes
+  useEffect(() => {
+    const q = searchParams.get('search');
+    if (q) setSearchQuery(q);
+  }, [searchParams]);
+
+  // Blacklist Filters
+  const [blTypeFilter, setBlTypeFilter] = useState<string>('ALL');
+  const [blSearchQuery, setBlSearchQuery] = useState<string>('');
 
   // Blacklist Form Modal State
   const [showAddBlacklistModal, setShowAddBlacklistModal] = useState(false);
@@ -70,16 +85,21 @@ export const FraudRiskDashboard: React.FC<FraudDashboardProps> = ({
     setLoading(true);
     try {
       const [statsRes, blRes, setRes, ordRes] = await Promise.all([
-        fetch('/api/fraud/stats').then(r => r.json()),
-        fetch('/api/fraud/blacklists').then(r => r.json()),
-        fetch('/api/fraud/settings').then(r => r.json()),
-        fetch('/api/orders').then(r => r.json())
+        fetch('/api/fraud/stats').then(r => r.json()).catch(() => ({ success: false })),
+        fetch('/api/fraud/blacklists').then(r => r.json()).catch(() => ({ success: false })),
+        fetch('/api/fraud/settings').then(r => r.json()).catch(() => ({ success: false })),
+        fetch('/api/orders').then(r => r.json()).catch(() => ({ success: false }))
       ]);
 
       if (statsRes.success) setStats(statsRes.stats);
       if (blRes.success) setBlacklists(blRes.blacklists);
       if (setRes.success) setSettings(setRes.settings);
-      if (ordRes.success) setOrders(ordRes.orders);
+      
+      if (ordRes.success && Array.isArray(ordRes.orders) && ordRes.orders.length > 0) {
+        setOrders(ordRes.orders);
+      } else if (contextOrders && contextOrders.length > 0) {
+        setOrders(contextOrders);
+      }
     } catch (err) {
       console.error('Failed to load fraud engine data:', err);
     } finally {
@@ -90,6 +110,12 @@ export const FraudRiskDashboard: React.FC<FraudDashboardProps> = ({
   useEffect(() => {
     fetchData();
   }, []);
+
+  useEffect(() => {
+    if (contextOrders && contextOrders.length > 0) {
+      setOrders(contextOrders);
+    }
+  }, [contextOrders]);
 
   const showNotification = (type: 'success' | 'error', text: string) => {
     setFeedbackMsg({ type, text });
@@ -203,12 +229,15 @@ export const FraudRiskDashboard: React.FC<FraudDashboardProps> = ({
       });
       const data = await res.json();
       if (data.success) {
-        showNotification('success', `Order ${actionModalOrder.orderNumber} successfully updated.`);
+        showNotification('success', isBn ? `অর্ডার ${actionModalOrder.orderNumber} সফলভাবে আপডেট করা হয়েছে` : `Order ${actionModalOrder.orderNumber} successfully updated.`);
+        if (showToast) showToast(isBn ? `অর্ডার ${actionModalOrder.orderNumber} ভেরিফিকেশন প্রয়োগ করা হয়েছে` : `Verification action applied for ${actionModalOrder.orderNumber}`);
+        if (logAudit) logAudit(`FRAUD_RISK_${actionType}`, 'FraudRiskReview', actionModalOrder.orderNumber, `Applied ${actionType} verification action`);
         setActionModalOrder(null);
         setActionNotes('');
         setAdvanceTrxId('');
         setAddToBlCheck(false);
         fetchData();
+        refreshOrders();
         if (onOrderUpdated) onOrderUpdated();
       } else {
         showNotification('error', data.error || 'Action failed');
@@ -217,6 +246,34 @@ export const FraudRiskDashboard: React.FC<FraudDashboardProps> = ({
       showNotification('error', err.message);
     } finally {
       setActionSubmitting(false);
+    }
+  };
+
+  // One-click quick phone verification for table rows
+  const handleQuickVerifyPhone = async (ord: Order) => {
+    try {
+      const res = await fetch('/api/fraud/verify-order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          orderId: ord.id,
+          action: 'PHONE_VERIFIED',
+          notes: isBn ? 'অ্যাডমিন রিস্ক কিউ থেকে ফোন ভেরিফাইড করা হয়েছে' : 'Quick phone verification confirmed via Fraud Review Queue',
+          operator: 'ORDER_SECURITY_OFFICER'
+        })
+      });
+      const data = await res.json();
+      if (data.success) {
+        showNotification('success', isBn ? `অর্ডার ${ord.orderNumber} ফোন ভেরিফাইড করা হয়েছে` : `Order ${ord.orderNumber} phone status set to verified`);
+        if (showToast) showToast(isBn ? `অর্ডার ${ord.orderNumber} ফোন ভেরিফাইড` : `Order ${ord.orderNumber} phone verified`);
+        fetchData();
+        refreshOrders();
+        if (onOrderUpdated) onOrderUpdated();
+      } else {
+        showNotification('error', data.error || 'Action failed');
+      }
+    } catch (err: any) {
+      showNotification('error', err.message);
     }
   };
 
@@ -235,6 +292,46 @@ export const FraudRiskDashboard: React.FC<FraudDashboardProps> = ({
           district: sandboxDistrict,
           paymentMethod: sandboxPayment,
           total: Number(sandboxTotal) || 0
+        })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setSandboxResult(data.assessment);
+      }
+    } catch (err: any) {
+      showNotification('error', err.message);
+    } finally {
+      setSandboxEvaluating(false);
+    }
+  };
+
+  const handleRunSandboxPreset = async (preset: {
+    phone: string;
+    email: string;
+    address: string;
+    district: string;
+    total: string;
+    payment: 'COD' | 'SSLCOMMERZ' | 'BKASH';
+  }) => {
+    setSandboxPhone(preset.phone);
+    setSandboxEmail(preset.email);
+    setSandboxAddress(preset.address);
+    setSandboxDistrict(preset.district);
+    setSandboxTotal(preset.total);
+    setSandboxPayment(preset.payment);
+    setSandboxEvaluating(true);
+
+    try {
+      const res = await fetch('/api/fraud/evaluate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          phone: preset.phone,
+          email: preset.email,
+          address: preset.address,
+          district: preset.district,
+          paymentMethod: preset.payment,
+          total: Number(preset.total) || 0
         })
       });
       const data = await res.json();
@@ -551,15 +648,31 @@ export const FraudRiskDashboard: React.FC<FraudDashboardProps> = ({
                         }`}
                       >
                         <td className="py-3.5 px-4">
-                          <div className="font-semibold text-gray-900">{ord.orderNumber}</div>
+                          <Link
+                            to={`/admin/orders?search=${encodeURIComponent(ord.orderNumber)}`}
+                            className="font-semibold text-gray-900 hover:text-teal-900 hover:underline inline-flex items-center gap-1 group"
+                            title="Open Order in Orders Desk"
+                          >
+                            <span>{ord.orderNumber}</span>
+                            <ExternalLink className="w-3 h-3 text-gray-400 group-hover:text-teal-800" />
+                          </Link>
                           <div className="text-xs text-gray-400">
                             {new Date(ord.createdAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })} • {new Date(ord.createdAt).toLocaleDateString('en-GB')}
                           </div>
                         </td>
 
                         <td className="py-3.5 px-4">
-                          <div className="font-medium text-gray-900">{ord.customer.name}</div>
-                          <div className="text-xs text-gray-500 font-mono">{ord.customer.phone}</div>
+                          <Link
+                            to={`/admin/customers?search=${encodeURIComponent(ord.customer.phone || ord.customer.name)}`}
+                            className="group block"
+                            title="Inspect Customer in Directory"
+                          >
+                            <div className="font-medium text-gray-900 group-hover:text-teal-900 group-hover:underline flex items-center gap-1">
+                              <span>{ord.customer.name}</span>
+                              <ExternalLink className="w-2.5 h-2.5 opacity-0 group-hover:opacity-100 text-teal-800" />
+                            </div>
+                            <div className="text-xs text-gray-500 font-mono group-hover:text-gray-800">{ord.customer.phone}</div>
+                          </Link>
                           <div className="text-xs text-gray-400 truncate max-w-xs">{ord.shippingAddress.district}, {ord.shippingAddress.address}</div>
                         </td>
 
@@ -598,14 +711,41 @@ export const FraudRiskDashboard: React.FC<FraudDashboardProps> = ({
                         </td>
 
                         <td className="py-3.5 px-4 text-right">
-                          <div className="flex items-center justify-end gap-2">
+                          <div className="flex items-center justify-end gap-1.5">
+                            <Link
+                              to={`/admin/orders?search=${encodeURIComponent(ord.orderNumber)}`}
+                              title="Go to Orders Operational Desk"
+                              className="p-1.5 text-gray-400 hover:text-teal-900 hover:bg-teal-50 rounded-lg transition-colors"
+                            >
+                              <ShoppingCart className="w-4 h-4" />
+                            </Link>
+
+                            <Link
+                              to={`/admin/customers?search=${encodeURIComponent(ord.customer.phone)}`}
+                              title="Inspect Customer in Directory"
+                              className="p-1.5 text-gray-400 hover:text-teal-900 hover:bg-teal-50 rounded-lg transition-colors"
+                            >
+                              <User className="w-4 h-4" />
+                            </Link>
+
                             <button
                               onClick={() => setSelectedOrder(ord)}
-                              title="Inspect Full Risk Breakdown"
+                              title={isBn ? 'সম্পূর্ণ রিস্ক লেজার ও ব্যাকডাউন দেখুন' : 'Inspect Full Risk Breakdown'}
                               className="p-1.5 text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
                             >
                               <Eye className="w-4 h-4" />
                             </button>
+
+                            {(!ord.verificationStatus || ord.verificationStatus === 'UNVERIFIED') && (
+                              <button
+                                onClick={() => handleQuickVerifyPhone(ord)}
+                                title={isBn ? 'এক ক্লিকে ফোন ভেরিফাইড চিহ্নিত করুন' : 'Quick Phone Verify Order'}
+                                className="px-2 py-1 text-xs font-semibold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 rounded-md border border-emerald-200 transition-colors flex items-center gap-1"
+                              >
+                                <PhoneCall className="w-3 h-3 text-emerald-600" />
+                                <span>{isBn ? 'ফোন কনফার্ম' : 'Phone OK'}</span>
+                              </button>
+                            )}
 
                             <button
                               onClick={() => {
@@ -614,7 +754,7 @@ export const FraudRiskDashboard: React.FC<FraudDashboardProps> = ({
                               }}
                               className="px-2.5 py-1 text-xs font-semibold text-rose-700 hover:text-rose-800 bg-rose-50 hover:bg-rose-100 rounded-md border border-rose-200 transition-colors"
                             >
-                              Review & Action
+                              {isBn ? 'রিভিউ ও অ্যাকশন' : 'Review & Action'}
                             </button>
                           </div>
                         </td>
@@ -633,11 +773,15 @@ export const FraudRiskDashboard: React.FC<FraudDashboardProps> = ({
       {/* ============================================================= */}
       {activeTab === 'blacklists' && (
         <div className="bg-white rounded-b-xl border border-t-0 border-gray-200 p-6 space-y-6">
-          <div className="flex justify-between items-center">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
-              <h2 className="text-base font-bold text-gray-900">Blacklisted Entities & Active Fraud Signatures</h2>
+              <h2 className="text-base font-bold text-gray-900">
+                {isBn ? 'ব্ল্যাকলিস্টেড সত্ত্বা ও সক্রিয় ফ্রড সিগনেচার রেজিস্ট্রি' : 'Blacklisted Entities & Active Fraud Signatures'}
+              </h2>
               <p className="text-xs text-gray-500">
-                Any orders matching active entries will trigger an immediate high risk score or automatic cancellation.
+                {isBn 
+                  ? 'ব্ল্যাকলিস্টের সাথে মিল থাকা যেকোনো নতুন অর্ডার সরাসরি হাই-রিস্ক হিসেবে চিহ্নিত হবে বা বাতিল করা হবে।' 
+                  : 'Any orders matching active entries will trigger an immediate high risk score or automatic cancellation.'}
               </p>
             </div>
             <button
@@ -645,8 +789,43 @@ export const FraudRiskDashboard: React.FC<FraudDashboardProps> = ({
               className="flex items-center gap-2 px-3.5 py-1.5 text-xs font-semibold text-white bg-rose-700 hover:bg-rose-800 rounded-lg shadow-sm transition-colors"
             >
               <Plus className="w-4 h-4" />
-              Add Blacklist Entry
+              {isBn ? 'ব্ল্যাকলিস্ট এন্ট্রি যোগ করুন' : 'Add Blacklist Entry'}
             </button>
+          </div>
+
+          {/* Blacklist Filters */}
+          <div className="flex flex-col md:flex-row gap-4 justify-between items-center bg-gray-50 p-4 rounded-xl border border-gray-200">
+            <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
+              <div className="relative flex-1 md:w-64">
+                <Search className="w-4 h-4 absolute left-3 top-3 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder={isBn ? 'ফোন, আইপি বা কারণ খুঁজুন...' : 'Search phone, IP, email or reason...'}
+                  value={blSearchQuery}
+                  onChange={(e) => setBlSearchQuery(e.target.value)}
+                  className="w-full pl-9 pr-3 py-2 text-sm bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-600"
+                />
+              </div>
+
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-semibold text-gray-600">{isBn ? 'টাইপ:' : 'Type:'}</span>
+                <select
+                  value={blTypeFilter}
+                  onChange={(e) => setBlTypeFilter(e.target.value)}
+                  className="text-xs py-2 px-3 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-600"
+                >
+                  <option value="ALL">{isBn ? 'সকল টাইপ' : 'All Types'}</option>
+                  <option value="PHONE">Phone Numbers</option>
+                  <option value="IP">IP Addresses</option>
+                  <option value="EMAIL">Emails</option>
+                  <option value="ADDRESS">Addresses</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="text-xs text-gray-500 font-medium">
+              {isBn ? `মোট ${blacklists.length}টি এন্ট্রির মধ্যে দেখানো হচ্ছে` : `Showing ${blacklists.filter(bl => (blTypeFilter === 'ALL' || bl.type === blTypeFilter) && (!blSearchQuery.trim() || bl.value.toLowerCase().includes(blSearchQuery.toLowerCase()) || bl.reason.toLowerCase().includes(blSearchQuery.toLowerCase()))).length} of ${blacklists.length} entries`}
+            </div>
           </div>
 
           <div className="overflow-x-auto rounded-xl border border-gray-200">
@@ -664,7 +843,16 @@ export const FraudRiskDashboard: React.FC<FraudDashboardProps> = ({
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {blacklists.map((bl) => (
+                {blacklists
+                  .filter(bl => {
+                    if (blTypeFilter !== 'ALL' && bl.type !== blTypeFilter) return false;
+                    if (blSearchQuery.trim()) {
+                      const q = blSearchQuery.toLowerCase();
+                      return bl.value.toLowerCase().includes(q) || bl.reason.toLowerCase().includes(q);
+                    }
+                    return true;
+                  })
+                  .map((bl) => (
                   <tr key={bl.id} className="hover:bg-gray-50">
                     <td className="py-3.5 px-4">
                       <span className={`px-2 py-0.5 rounded text-xs font-semibold ${
@@ -916,10 +1104,98 @@ export const FraudRiskDashboard: React.FC<FraudDashboardProps> = ({
       {activeTab === 'sandbox' && (
         <div className="bg-white rounded-b-xl border border-t-0 border-gray-200 p-6 space-y-6">
           <div>
-            <h2 className="text-base font-bold text-gray-900">Live Risk Scoring Simulator & Rule Validator</h2>
+            <h2 className="text-base font-bold text-gray-900">
+              {isBn ? 'লাইভ রিস্ক স্কোয়ারিং সিমুলেটর ও রুল ভ্যালিডেটর' : 'Live Risk Scoring Simulator & Rule Validator'}
+            </h2>
             <p className="text-xs text-gray-500">
-              Test customer order payloads in real-time to inspect exact risk breakdown, triggered flags, and automated system decisions.
+              {isBn 
+                ? 'রিয়েল-টাইমে যেকোনো টেস্ট অর্ডারের তথ্য স্ক্যান করে রিস্ক ব্রেকডাউন, ফ্ল্যাগস এবং স্বয়ংক্রিয় ডিসিশন পরীক্ষা করুন।' 
+                : 'Test customer order payloads in real-time to inspect exact risk breakdown, triggered flags, and automated system decisions.'}
             </p>
+          </div>
+
+          {/* Preset Test Scenarios */}
+          <div className="bg-rose-50/50 p-4 rounded-xl border border-rose-200/80 space-y-2">
+            <div className="text-xs font-bold text-rose-900 flex items-center gap-1.5">
+              <Sparkles className="w-4 h-4 text-rose-600" />
+              <span>{isBn ? 'দ্রুত টেস্ট দৃশ্যপট (Instant Presets):' : 'Instant Preset Test Scenarios:'}</span>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => handleRunSandboxPreset({
+                  phone: '01711223344',
+                  email: 'customer@gmail.com',
+                  address: 'House 12, Road 4, Sector 7, Uttara',
+                  district: 'Dhaka',
+                  total: '1500',
+                  payment: 'COD'
+                })}
+                className="px-2.5 py-1 bg-white hover:bg-emerald-50 text-emerald-800 text-xs font-semibold rounded-lg border border-emerald-300 shadow-2xs transition-colors"
+              >
+                🟢 {isBn ? 'স্বাভাবিক অর্ডার (ঢাকা)' : 'Clean Order (Dhaka)'}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleRunSandboxPreset({
+                  phone: '01822334455',
+                  email: 'buyer@yahoo.com',
+                  address: 'Gulshan 2, Dhaka',
+                  district: 'Dhaka',
+                  total: '9500',
+                  payment: 'COD'
+                })}
+                className="px-2.5 py-1 bg-white hover:bg-amber-50 text-amber-800 text-xs font-semibold rounded-lg border border-amber-300 shadow-2xs transition-colors"
+              >
+                🟡 {isBn ? 'হাই COD মূল্য (>৳৮,০০০)' : 'High COD Value (>৳8k)'}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleRunSandboxPreset({
+                  phone: '01933445566',
+                  email: 'test@gmail.com',
+                  address: 'Thana Road, Bandarban Sadar',
+                  district: 'Bandarban',
+                  total: '4200',
+                  payment: 'COD'
+                })}
+                className="px-2.5 py-1 bg-white hover:bg-orange-50 text-orange-800 text-xs font-semibold rounded-lg border border-orange-300 shadow-2xs transition-colors"
+              >
+                📍 {isBn ? 'দূরবর্তী ট্রানজিট জোন (বান্দরবান)' : 'Remote Risk Zone (Bandarban)'}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleRunSandboxPreset({
+                  phone: '01711111111',
+                  email: 'blocked@gmail.com',
+                  address: 'Dhanmondi 32, Dhaka',
+                  district: 'Dhaka',
+                  total: '3000',
+                  payment: 'COD'
+                })}
+                className="px-2.5 py-1 bg-white hover:bg-rose-50 text-rose-800 text-xs font-semibold rounded-lg border border-rose-300 shadow-2xs transition-colors"
+              >
+                🚫 {isBn ? 'ব্ল্যাকলিস্টেড ফোন নম্বর' : 'Blacklisted Phone'}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleRunSandboxPreset({
+                  phone: '01644556677',
+                  email: 'tempuser@mailinator.com',
+                  address: 'House 5, Mirpur 10',
+                  district: 'Dhaka',
+                  total: '2000',
+                  payment: 'COD'
+                })}
+                className="px-2.5 py-1 bg-white hover:bg-purple-50 text-purple-800 text-xs font-semibold rounded-lg border border-purple-300 shadow-2xs transition-colors"
+              >
+                ⚡ {isBn ? 'ডিসপোজাবল ইমেইল' : 'Disposable Email'}
+              </button>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">

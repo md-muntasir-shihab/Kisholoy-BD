@@ -4,6 +4,7 @@ import {
   CheckCircle2, AlertCircle, Sparkles, Link2, LogOut, Eye, EyeOff
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
+import { logAuthEvent } from '../../utils/telemetryLogger';
 
 interface CustomerAuthModalProps {
   isOpen: boolean;
@@ -60,9 +61,30 @@ export const CustomerAuthModal: React.FC<CustomerAuthModalProps> = ({
       const data = await res.json();
       if (data.success && data.customer) {
         setCurrentCustomerId(data.customer.id);
+        logAuthEvent({
+          userId: data.customer.id,
+          userName: data.customer.name,
+          userPhone: data.customer.phone,
+          userEmail: data.customer.email,
+          role: 'CUSTOMER',
+          eventType: 'LOGIN_SUCCESS',
+          district: data.customer.district || 'Dhaka',
+          device: /Mobi|Android/i.test(navigator.userAgent) ? 'Mobile (Chrome)' : 'Desktop (Browser)',
+          status: 'SUCCESS'
+        });
         showToast(`Welcome back, ${data.customer.name}!`);
         onClose();
       } else {
+        logAuthEvent({
+          userId: 'anonymous',
+          userName: identifier,
+          userPhone: identifier,
+          role: 'GUEST',
+          eventType: 'LOGIN_FAILED',
+          district: 'Dhaka',
+          device: /Mobi|Android/i.test(navigator.userAgent) ? 'Mobile (Chrome)' : 'Desktop (Browser)',
+          status: 'FAILED'
+        });
         showToast(data.error || 'Invalid phone or password.');
       }
     } catch (err: any) {

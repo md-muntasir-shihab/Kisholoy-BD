@@ -1,17 +1,19 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { ShoppingBag, Search, Menu, X, ShieldCheck, User, Compass, PhoneCall, Heart, LogIn } from 'lucide-react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { ShoppingBag, Search, Menu, X, ShieldCheck, User, Compass, PhoneCall, Heart, LogIn, Sparkles, Sun, Moon, Laptop } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { CustomerAuthModal } from '../auth/CustomerAuthModal';
+import { BrandLogo } from '../brand/BrandLogo';
 
 export function Header() {
-  const { language, setLanguage, cartCount, siteContent, wishlist, currentCustomerId } = useApp();
+  const { language, setLanguage, cartCount, siteContent, wishlist, currentCustomerId, themeMode, setThemeMode, isDarkMode } = useApp();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [authModalMode, setAuthModalMode] = useState<'login' | 'register' | 'guest' | 'link_order'>('login');
   const navigate = useNavigate();
+  const location = useLocation();
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -24,38 +26,46 @@ export function Header() {
   const navLinks = [
     { name: language === 'BN' ? 'হোম' : 'Home', path: '/' },
     { name: language === 'BN' ? 'সকল পণ্য' : 'Shop All', path: '/shop' },
-    { name: language === 'BN' ? 'পোশাক' : 'Apparel', path: '/category/traditional-clothing' },
-    { name: language === 'BN' ? 'হস্তশিল্প' : 'Handicrafts', path: '/category/handicrafts-decor' },
-    { name: language === 'BN' ? 'অর্গানিক ফুড' : 'Organic Food', path: '/category/organic-pantry' },
+    { name: language === 'BN' ? 'পোশাক ও শাড়ি' : 'Apparel & Sarees', path: '/category/traditional-clothing' },
+    { name: language === 'BN' ? 'হস্তশিল্প ও সাজসজ্জা' : 'Handicrafts & Decor', path: '/category/handicrafts-decor' },
+    { name: language === 'BN' ? 'খাঁটি খাদ্য' : 'Organic Pantry', path: '/category/organic-pantry' },
     { name: language === 'BN' ? 'অর্ডার ট্র্যাক' : 'Track Order', path: '/track-order' }
   ];
 
   return (
-    <header className="sticky top-0 z-40 w-full border-b border-stone-200 bg-white/95 backdrop-blur-md">
+    <header className="sticky top-0 z-40 w-full border-b border-stone-200/80 bg-white/95 backdrop-blur-md transition-all shadow-xs">
       {/* Announcement Bar from CMS */}
       {siteContent.announcementBar.enabled && (
-        <div className="bg-stone-900 text-stone-100 text-xs py-2 px-4 text-center font-medium tracking-wide flex items-center justify-center gap-2">
-          <span>
+        <div className="bg-stone-950 text-stone-200 text-xs py-2 px-4 text-center font-medium tracking-wide flex items-center justify-center gap-3 border-b border-stone-800">
+          <span className="flex items-center gap-1.5">
+            <Sparkles className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" />
             {language === 'BN' 
               ? siteContent.announcementBar.textBn 
               : siteContent.announcementBar.text}
           </span>
-          <span className="hidden md:inline-block text-stone-500">|</span>
-          <span className="hidden md:inline-flex items-center gap-1 text-teal-300">
-            <PhoneCall className="w-3 h-3" /> {siteContent.contact.phone}
-          </span>
+          {siteContent.contact?.phone && (
+            <>
+              <span className="hidden md:inline-block text-stone-600">|</span>
+              <a 
+                href={`tel:${siteContent.contact.phone}`}
+                className="hidden md:inline-flex items-center gap-1 text-teal-300 hover:text-teal-200 transition-colors"
+              >
+                <PhoneCall className="w-3 h-3" /> {siteContent.contact.phone}
+              </a>
+            </>
+          )}
         </div>
       )}
 
       {/* Main Header Container */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex h-18 items-center justify-between gap-4">
+        <div className="flex h-20 items-center justify-between gap-4">
           
           {/* Mobile menu toggle */}
           <div className="flex items-center lg:hidden">
             <button 
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="text-stone-700 hover:text-stone-900 p-2 rounded-lg hover:bg-stone-100"
+              className="text-stone-700 hover:text-stone-900 p-2.5 rounded-xl hover:bg-stone-100 transition-colors"
               aria-label="Toggle menu"
             >
               {isMobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
@@ -64,59 +74,70 @@ export function Header() {
 
           {/* Logo & Brand Identity */}
           <div className="flex items-center">
-            <Link to="/" className="flex flex-col">
-              <span className="text-2xl sm:text-3xl font-serif font-black text-teal-950 tracking-tight">
-                {language === 'BN' ? siteContent.brandNameBn : siteContent.brandName}
-              </span>
-              <span className="text-[10px] uppercase font-semibold tracking-widest text-stone-500 hidden sm:block">
-                {language === 'BN' ? siteContent.mottoBn : siteContent.motto}
-              </span>
-            </Link>
+            <BrandLogo variant="light" size="md" />
           </div>
 
           {/* Desktop Navigation Links */}
-          <nav className="hidden lg:flex items-center space-x-7">
-            {navLinks.map((link) => (
-              <Link 
-                key={link.path} 
-                to={link.path} 
-                className="text-sm font-medium text-stone-700 hover:text-teal-900 transition-colors"
-              >
-                {link.name}
-              </Link>
-            ))}
+          <nav className="hidden lg:flex items-center space-x-6 xl:space-x-8">
+            {navLinks.map((link) => {
+              const isActive = location.pathname === link.path;
+              return (
+                <Link 
+                  key={link.path} 
+                  to={link.path} 
+                  className={`text-sm font-semibold transition-all py-1.5 px-1 relative ${
+                    isActive 
+                      ? 'text-teal-950 font-bold' 
+                      : 'text-stone-600 hover:text-teal-900'
+                  }`}
+                >
+                  {link.name}
+                  {isActive && (
+                    <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-teal-800 rounded-full"></span>
+                  )}
+                </Link>
+              );
+            })}
           </nav>
 
           {/* Actions & Utilities */}
-          <div className="flex items-center space-x-2 sm:space-x-3">
+          <div className="flex items-center space-x-1.5 sm:space-x-2.5">
             {/* Search Button & Overlay */}
             <div className="relative">
               <button 
                 onClick={() => setIsSearchOpen(!isSearchOpen)}
-                className="p-2 text-stone-600 hover:text-teal-900 hover:bg-stone-100 rounded-lg transition-colors"
+                className="p-2.5 text-stone-600 hover:text-teal-900 hover:bg-stone-100 rounded-xl transition-colors"
                 title="Search products"
               >
                 <Search className="h-5 w-5" />
               </button>
 
               {isSearchOpen && (
-                <div className="absolute right-0 top-12 w-72 sm:w-80 bg-white p-3 rounded-xl border border-stone-200 shadow-xl z-50 animate-in fade-in zoom-in-95 duration-150">
+                <div className="absolute right-0 top-14 w-72 sm:w-88 bg-white p-3.5 rounded-2xl border border-stone-200 shadow-2xl z-50 animate-in fade-in zoom-in-95 duration-150">
                   <form onSubmit={handleSearch} className="flex gap-2">
                     <input
                       type="text"
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
-                      placeholder={language === 'BN' ? 'পণ্য খুঁজুন...' : 'Search Jamdani, Honey, Tea...'}
-                      className="w-full text-xs px-3 py-2 border border-stone-300 rounded-lg focus:outline-none focus:border-teal-800"
+                      placeholder={language === 'BN' ? 'জামদানি, খাঁটি মধু, নকশিকাঁথা খুঁজুন...' : 'Search Jamdani, Honey, Tea, Pottery...'}
+                      className="w-full text-xs px-3.5 py-2.5 border border-stone-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-800/30 focus:border-teal-800"
                       autoFocus
                     />
                     <button
                       type="submit"
-                      className="px-3 py-2 bg-teal-900 text-white rounded-lg text-xs font-semibold hover:bg-teal-950"
+                      className="px-4 py-2.5 bg-teal-900 text-white rounded-xl text-xs font-semibold hover:bg-teal-950 shadow-xs"
                     >
                       {language === 'BN' ? 'খুঁজুন' : 'Search'}
                     </button>
                   </form>
+                  <div className="mt-2.5 pt-2 border-t border-stone-100 flex items-center gap-1.5 text-[11px] text-stone-400">
+                    <span className="font-semibold">{language === 'BN' ? 'জনপ্রিয়:' : 'Popular:'}</span>
+                    <button type="button" onClick={() => { setSearchQuery('Jamdani'); navigate('/shop?q=Jamdani'); setIsSearchOpen(false); }} className="hover:text-teal-900 underline">Jamdani</button>
+                    <span>•</span>
+                    <button type="button" onClick={() => { setSearchQuery('Honey'); navigate('/shop?q=Honey'); setIsSearchOpen(false); }} className="hover:text-teal-900 underline">Honey</button>
+                    <span>•</span>
+                    <button type="button" onClick={() => { setSearchQuery('Nakshi'); navigate('/shop?q=Nakshi'); setIsSearchOpen(false); }} className="hover:text-teal-900 underline">Nakshi</button>
+                  </div>
                 </div>
               )}
             </div>
@@ -124,17 +145,41 @@ export function Header() {
             {/* Language Switcher */}
             <button 
               onClick={() => setLanguage(language === 'EN' ? 'BN' : 'EN')}
-              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-stone-200 bg-stone-50 hover:bg-stone-100 text-xs font-bold text-stone-800 transition-colors"
+              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-stone-200 bg-stone-50 hover:bg-stone-100 text-xs font-bold text-stone-800 transition-colors shadow-2xs"
               title="Toggle Language"
             >
-              <Compass className="w-3.5 h-3.5 text-stone-600" />
+              <Compass className="w-3.5 h-3.5 text-teal-800" />
               <span>{language === 'EN' ? 'বাংলা' : 'English'}</span>
+            </button>
+
+            {/* Theme Mode Switcher (Light / Dark / System) */}
+            <button
+              onClick={() => setThemeMode(themeMode === 'light' ? 'dark' : themeMode === 'dark' ? 'system' : 'light')}
+              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-stone-200 bg-stone-50 hover:bg-stone-100 dark:bg-slate-800 dark:border-slate-700 text-xs font-bold text-stone-800 dark:text-slate-200 transition-colors shadow-2xs"
+              title={themeMode === 'light' ? 'Theme: Light' : themeMode === 'dark' ? 'Theme: Dark' : 'Theme: System Auto'}
+            >
+              {themeMode === 'light' ? (
+                <>
+                  <Sun className="w-3.5 h-3.5 text-amber-500" />
+                  <span className="hidden sm:inline">{language === 'BN' ? 'দিন' : 'Light'}</span>
+                </>
+              ) : themeMode === 'dark' ? (
+                <>
+                  <Moon className="w-3.5 h-3.5 text-indigo-400" />
+                  <span className="hidden sm:inline">{language === 'BN' ? 'রাত' : 'Dark'}</span>
+                </>
+              ) : (
+                <>
+                  <Laptop className="w-3.5 h-3.5 text-teal-500" />
+                  <span className="hidden sm:inline">{language === 'BN' ? 'অটো' : 'System'}</span>
+                </>
+              )}
             </button>
 
             {/* Wishlist Link & Badge */}
             <Link
               to="/account?tab=wishlist"
-              className="relative p-2 text-stone-600 hover:text-rose-600 hover:bg-stone-100 rounded-lg transition-colors hidden sm:inline-flex"
+              className="relative p-2.5 text-stone-600 hover:text-rose-600 hover:bg-stone-100 rounded-xl transition-colors hidden sm:inline-flex"
               title={language === 'BN' ? 'উইশলিস্ট' : 'Wishlist'}
             >
               <Heart className="h-5 w-5" />
@@ -149,23 +194,37 @@ export function Header() {
             <div className="hidden sm:flex items-center">
               <button
                 onClick={() => {
-                  setAuthModalMode('login');
-                  setAuthModalOpen(true);
+                  if (currentCustomerId) {
+                    navigate('/account');
+                  } else {
+                    setAuthModalMode('login');
+                    setAuthModalOpen(true);
+                  }
                 }}
-                className="p-2 text-stone-600 hover:text-teal-900 hover:bg-stone-100 rounded-lg transition-colors flex items-center gap-1.5 text-xs font-semibold"
-                title="Customer Sign In & Profile"
+                className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all border ${
+                  currentCustomerId 
+                    ? 'border-stone-200 bg-stone-50 text-stone-800 hover:bg-stone-100' 
+                    : 'border-teal-900/20 bg-teal-50 text-teal-950 hover:bg-teal-100/70'
+                }`}
               >
-                <User className="h-5 w-5" />
-                <span className="hidden xl:inline">
-                  {currentCustomerId ? (language === 'BN' ? 'আমার একাউন্ট' : 'Account') : (language === 'BN' ? 'সাইন ইন' : 'Sign In')}
-                </span>
+                {currentCustomerId ? (
+                  <>
+                    <User className="h-3.5 w-3.5 text-teal-800" />
+                    <span>{language === 'BN' ? 'অ্যাকাউন্ট' : 'Account'}</span>
+                  </>
+                ) : (
+                  <>
+                    <LogIn className="h-3.5 w-3.5 text-teal-800" />
+                    <span>{language === 'BN' ? 'লগইন' : 'Sign In'}</span>
+                  </>
+                )}
               </button>
             </div>
 
             {/* Cart Icon & Badge */}
             <Link 
               to="/cart" 
-              className="relative p-2 text-stone-700 hover:text-teal-900 hover:bg-stone-100 rounded-lg transition-colors"
+              className="relative p-2.5 text-stone-700 hover:text-teal-900 hover:bg-stone-100 rounded-xl transition-colors"
               title="View Cart"
             >
               <ShoppingBag className="h-5 w-5" />
@@ -179,7 +238,7 @@ export function Header() {
             {/* Admin Control Center Shortcut */}
             <Link 
               to="/admin" 
-              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-stone-900 text-white hover:bg-stone-800 text-xs font-semibold shadow-xs transition-colors"
+              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-stone-900 text-white hover:bg-stone-800 text-xs font-semibold shadow-xs transition-colors"
               title="Enter Admin Operations"
             >
               <ShieldCheck className="w-3.5 h-3.5 text-teal-400" />
@@ -241,6 +300,41 @@ export function Header() {
               <User className="h-4 w-4 text-stone-500" />
               {language === 'BN' ? 'আমার অ্যাকাউন্ট' : 'My Account'}
             </Link>
+            <div className="p-1 bg-stone-100 dark:bg-slate-800 rounded-xl flex items-center gap-1 my-1">
+              <button
+                onClick={() => setThemeMode('light')}
+                className={`flex-1 py-1.5 px-2 text-xs font-semibold rounded-lg flex items-center justify-center gap-1.5 transition-all ${
+                  themeMode === 'light'
+                    ? 'bg-white dark:bg-slate-700 text-amber-600 dark:text-amber-400 shadow-xs'
+                    : 'text-stone-600 dark:text-slate-400 hover:text-stone-900'
+                }`}
+              >
+                <Sun className="h-3.5 w-3.5" />
+                <span>{language === 'BN' ? 'দিন' : 'Light'}</span>
+              </button>
+              <button
+                onClick={() => setThemeMode('dark')}
+                className={`flex-1 py-1.5 px-2 text-xs font-semibold rounded-lg flex items-center justify-center gap-1.5 transition-all ${
+                  themeMode === 'dark'
+                    ? 'bg-stone-900 text-indigo-400 shadow-xs'
+                    : 'text-stone-600 dark:text-slate-400 hover:text-stone-900'
+                }`}
+              >
+                <Moon className="h-3.5 w-3.5" />
+                <span>{language === 'BN' ? 'রাত' : 'Dark'}</span>
+              </button>
+              <button
+                onClick={() => setThemeMode('system')}
+                className={`flex-1 py-1.5 px-2 text-xs font-semibold rounded-lg flex items-center justify-center gap-1.5 transition-all ${
+                  themeMode === 'system'
+                    ? 'bg-white dark:bg-slate-700 text-teal-600 dark:text-teal-400 shadow-xs'
+                    : 'text-stone-600 dark:text-slate-400 hover:text-stone-900'
+                }`}
+              >
+                <Laptop className="h-3.5 w-3.5" />
+                <span>{language === 'BN' ? 'অটো' : 'System'}</span>
+              </button>
+            </div>
             <Link
               to="/admin"
               className="flex items-center gap-2 px-3 py-2 text-sm font-semibold text-teal-900 bg-teal-50 border border-teal-200 rounded-lg"

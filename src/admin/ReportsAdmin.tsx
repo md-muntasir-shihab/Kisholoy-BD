@@ -37,7 +37,7 @@ export function ReportsAdmin() {
   const [activeTab, setActiveTab] = useState<'overview' | 'districts' | 'artisans' | 'inventory' | 'pnl_tax' | 'documents' | 'exports'>('overview');
   
   // Date range filters
-  const [dateRange, setDateRange] = useState<'ALL' | 'TODAY' | '7D' | '30D' | '90D' | 'YTD' | 'CUSTOM'>('30D');
+  const [dateRange, setDateRange] = useState<'ALL' | 'TODAY' | '1D' | '2D' | '5D' | '7D' | '30D' | '90D' | 'YTD' | 'CUSTOM'>('30D');
   const [customFrom, setCustomFrom] = useState<string>('');
   const [customTo, setCustomTo] = useState<string>('');
   
@@ -222,7 +222,7 @@ export function ReportsAdmin() {
 
             {/* Date Range Selector */}
             <div className="flex items-center gap-1.5 bg-stone-50 border border-stone-200 rounded-lg p-1 text-xs">
-              {(['TODAY', '7D', '30D', '90D', 'YTD', 'ALL'] as const).map(range => (
+              {(['TODAY', '2D', '5D', '7D', '30D', '90D', 'YTD', 'ALL'] as const).map(range => (
                 <button
                   key={range}
                   onClick={() => setDateRange(range)}
@@ -232,7 +232,9 @@ export function ReportsAdmin() {
                       : 'text-stone-600 hover:bg-stone-200/60'
                   }`}
                 >
-                  {range === 'TODAY' && (lang === 'BN' ? 'আজ' : 'Today')}
+                  {range === 'TODAY' && (lang === 'BN' ? '১ দিন' : '1D')}
+                  {range === '2D' && '2D'}
+                  {range === '5D' && '5D'}
                   {range === '7D' && '7D'}
                   {range === '30D' && '30D'}
                   {range === '90D' && '90D'}

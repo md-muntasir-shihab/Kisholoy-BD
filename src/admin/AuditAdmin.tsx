@@ -4,21 +4,39 @@
  * @license Apache-2.0
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   ShieldCheck, Search, Shield, Filter, AlertTriangle, RefreshCw, 
   HelpCircle, CheckCircle2, X, Download, Lock, Key, ShieldAlert,
-  FileCode, Terminal, Check, ArrowRight, Eye, ShieldX
+  FileCode, Terminal, Check, ArrowRight, Eye, ShieldX, Sparkles, FileSpreadsheet
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { AuditLog, AuditSeverity, AuditCategory, SecurityDiagnosticsSummary } from '../types';
 import { SECURITY_HELP_DEFINITIONS, SecurityFunctionHelp } from './securityHelpData';
+import { DateRangeFilterBar } from '../components/admin/DateRangeFilterBar';
+import { DateWiseDataHubModal } from '../components/admin/DateWiseDataHubModal';
+import { 
+  DateFilterConfig, 
+  filterItemsByDate, 
+  exportToExcel, 
+  exportToCsv,
+  formatDateDisplay 
+} from '../utils/dateFilterUtils';
 
 export function AuditAdmin() {
   const { auditLogs: contextAuditLogs, language, showToast } = useApp();
+  const isBn = language === 'BN';
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('ALL');
   const [severityFilter, setSeverityFilter] = useState<string>('ALL');
+  const [showDataHub, setShowDataHub] = useState(false);
+
+  // Date Filter State
+  const [dateFilter, setDateFilter] = useState<DateFilterConfig>({
+    preset: 'ALL',
+    selectedYear: new Date().getFullYear(),
+    selectedMonth: new Date().getMonth(),
+  });
   
   // Ledger from server API
   const [serverLedger, setServerLedger] = useState<AuditLog[]>([]);
@@ -136,43 +154,79 @@ export function AuditAdmin() {
 
   const effectiveLedger = serverLedger.length > 0 ? serverLedger : contextAuditLogs;
 
-  // Filtered ledger
-  const filtered = effectiveLedger.filter((log) => {
-    const q = search.toLowerCase();
-    const matchesSearch =
-      log.action.toLowerCase().includes(q) ||
-      log.operator.toLowerCase().includes(q) ||
-      (log.details || '').toLowerCase().includes(q) ||
-      (log.resource || '').toLowerCase().includes(q) ||
-      (log.ipAddress || (log as any).ip || '').toLowerCase().includes(q) ||
-      (log.currentHash || '').toLowerCase().includes(q);
+  // Filtered ledger by Date, Search, Category, and Severity
+  const filtered = useMemo(() => {
+    // 1. Filter by Date Range first
+    const dateFiltered = filterItemsByDate<AuditLog>(effectiveLedger, (l: AuditLog) => l.timestamp, dateFilter);
 
-    let matchesCategory = true;
-    if (categoryFilter !== 'ALL') {
-      if (categoryFilter === 'HIGH_VOLUME') {
-        matchesCategory = log.action.includes('HIGH_VOLUME') || (log.details || '').includes('HIGH-VOLUME');
-      } else if (categoryFilter === 'INVENTORY') {
-        matchesCategory = log.category === 'INVENTORY' || (log.resource || '').toLowerCase().includes('inventory');
-      } else if (categoryFilter === 'ORDERS') {
-        matchesCategory = log.category === 'ORDER' || (log.resource || '').toLowerCase().includes('order');
-      } else if (categoryFilter === 'FINANCIAL') {
-        matchesCategory = log.category === 'FINANCIAL' || (log.resource || '').toLowerCase().includes('finance');
-      } else if (categoryFilter === 'AUTH') {
-        matchesCategory = log.category === 'AUTH' || (log.resource || '').toLowerCase().includes('auth');
-      } else if (categoryFilter === 'RBAC') {
-        matchesCategory = log.category === 'RBAC' || (log.resource || '').toLowerCase().includes('role');
-      } else if (categoryFilter === 'SECURITY') {
-        matchesCategory = log.category === 'SECURITY' || log.severity === 'SECURITY_ALERT' || log.severity === 'CRITICAL';
+    // 2. Filter by Search, Category, and Severity
+    return dateFiltered.filter((log: AuditLog) => {
+      const q = search.toLowerCase();
+      const matchesSearch =
+        log.action.toLowerCase().includes(q) ||
+        log.operator.toLowerCase().includes(q) ||
+        (log.details || '').toLowerCase().includes(q) ||
+        (log.resource || '').toLowerCase().includes(q) ||
+        (log.ipAddress || (log as any).ip || '').toLowerCase().includes(q) ||
+        (log.currentHash || '').toLowerCase().includes(q);
+
+      let matchesCategory = true;
+      if (categoryFilter !== 'ALL') {
+        if (categoryFilter === 'HIGH_VOLUME') {
+          matchesCategory = log.action.includes('HIGH_VOLUME') || (log.details || '').includes('HIGH-VOLUME');
+        } else if (categoryFilter === 'INVENTORY') {
+          matchesCategory = log.category === 'INVENTORY' || (log.resource || '').toLowerCase().includes('inventory');
+        } else if (categoryFilter === 'ORDERS') {
+          matchesCategory = log.category === 'ORDER' || (log.resource || '').toLowerCase().includes('order');
+        } else if (categoryFilter === 'FINANCIAL') {
+          matchesCategory = log.category === 'FINANCIAL' || (log.resource || '').toLowerCase().includes('finance');
+        } else if (categoryFilter === 'AUTH') {
+          matchesCategory = log.category === 'AUTH' || (log.resource || '').toLowerCase().includes('auth');
+        } else if (categoryFilter === 'RBAC') {
+          matchesCategory = log.category === 'RBAC' || (log.resource || '').toLowerCase().includes('role');
+        } else if (categoryFilter === 'SECURITY') {
+          matchesCategory = (log.category as string) === 'SECURITY' || log.severity === 'SECURITY_ALERT' || log.severity === 'CRITICAL';
+        }
       }
-    }
 
-    let matchesSeverity = true;
-    if (severityFilter !== 'ALL') {
-      matchesSeverity = log.severity === severityFilter;
-    }
+      let matchesSeverity = true;
+      if (severityFilter !== 'ALL') {
+        matchesSeverity = log.severity === severityFilter;
+      }
 
-    return matchesSearch && matchesCategory && matchesSeverity;
-  });
+      return matchesSearch && matchesCategory && matchesSeverity;
+    });
+  }, [effectiveLedger, dateFilter, search, categoryFilter, severityFilter]);
+
+  const handleExportExcel = () => {
+    const data = filtered.map((l) => ({
+      'Timestamp': l.timestamp,
+      'Category': l.category,
+      'Severity': l.severity,
+      'Action': l.action,
+      'Operator': l.operator,
+      'IP Address': l.ipAddress || (l as any).ip || '127.0.0.1',
+      'Resource': l.resource || '',
+      'Details': l.details,
+      'Current Block Hash': l.currentHash || (l as any).blockHash || '',
+      'Previous Block Hash': l.previousHash || '',
+    }));
+    exportToExcel(data, 'Audit_Ledger', 'Kisholoy_Audit_Ledger', dateFilter);
+    showToast(isBn ? `${data.length}টি অডিট লগ এক্সেলে এক্সপোর্ট হয়েছে` : `Exported ${data.length} audit records to Excel.`);
+  };
+
+  const handleExportCsv = () => {
+    const data = filtered.map((l) => ({
+      'Timestamp': l.timestamp,
+      'Action': l.action,
+      'Category': l.category,
+      'Operator': l.operator,
+      'Details': l.details,
+      'Hash': l.currentHash || '',
+    }));
+    exportToCsv(data, 'Kisholoy_Audit_Trail', dateFilter);
+    showToast(isBn ? 'অডিট লগ CSV ফরম্যাটে ডাউনলোড হয়েছে' : 'Audit logs CSV exported.');
+  };
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
@@ -200,6 +254,14 @@ export function AuditAdmin() {
 
         <div className="flex flex-wrap items-center gap-2">
           <button
+            onClick={() => setShowDataHub(true)}
+            className="px-3 py-1.5 rounded-lg bg-stone-900 hover:bg-stone-950 text-amber-300 text-xs font-bold flex items-center gap-1.5 shadow-2xs border border-stone-800"
+          >
+            <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+            <span>{isBn ? 'মাস্টার ডেট হাব' : 'Date Hub & Export'}</span>
+          </button>
+
+          <button
             onClick={handleVerifyLedger}
             disabled={verifying}
             className="px-3 py-1.5 rounded-lg border border-teal-300 bg-teal-50 hover:bg-teal-100 text-teal-950 text-xs font-semibold flex items-center gap-1.5 shadow-2xs"
@@ -217,14 +279,33 @@ export function AuditAdmin() {
           </button>
 
           <button
+            onClick={handleExportExcel}
+            className="px-3 py-1.5 rounded-lg border border-emerald-300 bg-emerald-50 hover:bg-emerald-100 text-emerald-900 text-xs font-semibold flex items-center gap-1.5 shadow-2xs"
+          >
+            <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-700" />
+            <span>Export Excel</span>
+          </button>
+
+          <button
             onClick={handleExportJson}
             className="px-3 py-1.5 rounded-lg border border-stone-200 bg-white hover:bg-stone-50 text-xs font-semibold text-stone-700 flex items-center gap-1.5 shadow-2xs"
           >
             <Download className="w-3.5 h-3.5" />
-            <span>Export Ledger</span>
+            <span>Export JSON</span>
           </button>
         </div>
       </div>
+
+      {/* Date Range Filter Bar */}
+      <DateRangeFilterBar
+        value={dateFilter}
+        onChange={setDateFilter}
+        onOpenDataHub={() => setShowDataHub(true)}
+        totalFilteredCount={filtered.length}
+        totalUnfilteredCount={effectiveLedger.length}
+        onExportExcel={handleExportExcel}
+        onExportCsv={handleExportCsv}
+      />
 
       {/* Verification Status Banner */}
       {verificationResult && (
@@ -703,6 +784,15 @@ export function AuditAdmin() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Date-wise Master Data Hub Modal */}
+      {showDataHub && (
+        <DateWiseDataHubModal
+          isOpen={showDataHub}
+          onClose={() => setShowDataHub(false)}
+          initialDomain="AUDIT"
+        />
       )}
     </div>
   );

@@ -2,13 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { 
   User, Package, MapPin, Phone, Mail, Clock, ChevronRight, ExternalLink, 
-  Heart, Gift, RotateCcw, Plus, Trash2, Edit3, Check, Star, 
-  ShieldCheck, AlertCircle, ShoppingBag, Copy, ArrowRight, CheckCircle2,
-  Calendar, Award, Sparkles, Building, Home, HelpCircle, Truck,
-  Bell, MessageCircle, Smartphone, CheckCheck
+  Heart, RotateCcw, Plus, Trash2, Edit3, Check, Star, 
+  ShieldCheck, AlertCircle, ShoppingBag, ArrowRight, CheckCircle2,
+  Calendar, Building, Home, HelpCircle, Truck,
+  Bell, MessageCircle, Smartphone, CheckCheck, LogOut, Lock, Eye, EyeOff, Link2
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
-import { CustomerAddress, WishlistItem, CustomerReturnRequest, LoyaltyTier } from '../types';
+import { CustomerAddress, WishlistItem, CustomerReturnRequest } from '../types';
+import { CustomerOrderTimeline } from '../components/customer/CustomerOrderTimeline';
 
 export function AccountPage() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -19,11 +20,12 @@ export function AccountPage() {
     language, 
     currentCustomerId, 
     setCurrentCustomerId,
+    loginCustomer,
+    logoutCustomer,
     customerProfile, 
     savedAddresses, 
     wishlist, 
     returnRequests, 
-    customerLoyalty,
     toggleWishlist, 
     saveAddress, 
     deleteAddress, 
@@ -39,22 +41,47 @@ export function AccountPage() {
     markAllCustomerNotificationsRead
   } = useApp();
 
-  const [activeTab, setActiveTab] = useState<'orders' | 'wishlist' | 'addresses' | 'loyalty' | 'returns' | 'notifications' | 'profile'>(
-    ['orders', 'wishlist', 'addresses', 'loyalty', 'returns', 'notifications', 'profile'].includes(initialTab) ? initialTab : 'orders'
+  const [activeTab, setActiveTab] = useState<'orders' | 'wishlist' | 'addresses' | 'returns' | 'notifications' | 'profile'>(
+    ['orders', 'wishlist', 'addresses', 'returns', 'notifications', 'profile'].includes(initialTab) ? initialTab : 'orders'
   );
 
   // Sync tab with URL search parameter
   useEffect(() => {
     const tab = searchParams.get('tab');
-    if (tab && ['orders', 'wishlist', 'addresses', 'loyalty', 'returns', 'notifications', 'profile'].includes(tab)) {
+    if (tab && ['orders', 'wishlist', 'addresses', 'returns', 'notifications', 'profile'].includes(tab)) {
       setActiveTab(tab as any);
     }
   }, [searchParams]);
 
-  const handleTabChange = (tab: 'orders' | 'wishlist' | 'addresses' | 'loyalty' | 'returns' | 'notifications' | 'profile') => {
+  const handleTabChange = (tab: 'orders' | 'wishlist' | 'addresses' | 'returns' | 'notifications' | 'profile') => {
     setActiveTab(tab);
     setSearchParams({ tab });
   };
+
+  // Auth form states (when logged out)
+  const [authMode, setAuthMode] = useState<'login' | 'register' | 'link_order'>('login');
+  const [loginIdentifier, setLoginIdentifier] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
+  const [showLoginPassword, setShowLoginPassword] = useState(false);
+  const [authLoading, setAuthLoading] = useState(false);
+
+  // Register form fields
+  const [regName, setRegName] = useState('');
+  const [regPhone, setRegPhone] = useState('');
+  const [regEmail, setRegEmail] = useState('');
+  const [regPassword, setRegPassword] = useState('');
+  const [regAddress, setRegAddress] = useState('');
+  const [regDistrict, setRegDistrict] = useState('Dhaka');
+
+  // Link guest order fields
+  const [linkOrderNumber, setLinkOrderNumber] = useState('');
+  const [linkOrderPhone, setLinkOrderPhone] = useState('');
+
+  // Password change in Profile Settings
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [passwordChangeLoading, setPasswordChangeLoading] = useState(false);
 
   // Address modal states
   const [isAddressModalOpen, setIsAddressModalOpen] = useState(false);
@@ -118,6 +145,144 @@ export function AccountPage() {
       });
     }
   }, [customerProfile]);
+
+  // Handle Login
+  const handleLoginSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!loginIdentifier || !loginPassword) {
+      showToast('Please enter your mobile number/email and password.');
+      return;
+    }
+    setAuthLoading(true);
+    try {
+      const res = await fetch('/api/customer/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ identifier: loginIdentifier, password: loginPassword })
+      });
+      const data = await res.json();
+      if (data.success && data.customer) {
+        loginCustomer(data.customer.id, data.customer);
+        showToast(`Welcome back, ${data.customer.name}!`);
+      } else {
+        showToast(data.error || 'Invalid credentials.');
+      }
+    } catch (err: any) {
+      showToast(err.message || 'Login connection failed.');
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
+  // Handle Registration
+  const handleRegisterSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!regName || !regPhone || !regPassword) {
+      showToast('Name, phone number and password are required.');
+      return;
+    }
+    setAuthLoading(true);
+    try {
+      const res = await fetch('/api/customer/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          name: regName, 
+          email: regEmail, 
+          phone: regPhone, 
+          password: regPassword, 
+          address: regAddress, 
+          district: regDistrict 
+        })
+      });
+      const data = await res.json();
+      if (data.success && data.customer) {
+        loginCustomer(data.customer.id, data.customer);
+        showToast(`Account created! Welcome, ${data.customer.name}.`);
+      } else {
+        showToast(data.error || 'Registration failed.');
+      }
+    } catch (err: any) {
+      showToast(err.message || 'Registration connection failed.');
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
+  // Handle Link Guest Order
+  const handleLinkGuestOrderSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!linkOrderNumber || !linkOrderPhone) {
+      showToast('Please provide both Order Number and phone number.');
+      return;
+    }
+    setAuthLoading(true);
+    try {
+      const res = await fetch('/api/customer/auth/link-guest-order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          customerId: currentCustomerId || 'cust-1',
+          orderNumber: linkOrderNumber,
+          phone: linkOrderPhone
+        })
+      });
+      const data = await res.json();
+      if (data.success) {
+        showToast(data.message || 'Order successfully linked to your account!');
+        setLinkOrderNumber('');
+        setLinkOrderPhone('');
+      } else {
+        showToast(data.error || 'Could not find or verify this order.');
+      }
+    } catch (err: any) {
+      showToast(err.message || 'Failed to link order.');
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
+  // Handle Password Change
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!currentPassword || !newPassword) {
+      showToast('Please enter both current and new password.');
+      return;
+    }
+    if (newPassword.length < 6) {
+      showToast('New password must be at least 6 characters.');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      showToast('New password and confirmation do not match.');
+      return;
+    }
+    setPasswordChangeLoading(true);
+    try {
+      const res = await fetch('/api/customer/auth/change-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          customerId: currentCustomerId,
+          currentPassword,
+          newPassword
+        })
+      });
+      const data = await res.json();
+      if (data.success) {
+        showToast('Password changed successfully!');
+        setCurrentPassword('');
+        setNewPassword('');
+        setConfirmPassword('');
+      } else {
+        showToast(data.error || 'Password update failed.');
+      }
+    } catch (err: any) {
+      showToast(err.message || 'Failed to update password.');
+    } finally {
+      setPasswordChangeLoading(false);
+    }
+  };
 
   // Open address modal for create or edit
   const openAddressModal = (addr?: CustomerAddress) => {
@@ -215,57 +380,349 @@ export function AccountPage() {
     handleTabChange('returns');
   };
 
-  const copyReferralCode = () => {
-    if (customerLoyalty?.referralCode) {
-      navigator.clipboard?.writeText(customerLoyalty.referralCode);
-      showToast(`Referral code "${customerLoyalty.referralCode}" copied to clipboard!`);
-    }
-  };
+  // -------------------------------------------------------------
+  // VIEW: LOGGED OUT AUTHENTICATION PORTAL
+  // -------------------------------------------------------------
+  if (!currentCustomerId) {
+    return (
+      <div className="max-w-2xl mx-auto px-4 sm:px-6 py-12 sm:py-16">
+        <div className="bg-white rounded-3xl border border-stone-200 shadow-sm overflow-hidden">
+          
+          {/* Top Banner */}
+          <div className="p-6 sm:p-8 bg-stone-900 text-white text-center space-y-2">
+            <div className="w-12 h-12 rounded-2xl bg-teal-800 text-white flex items-center justify-center mx-auto shadow-sm">
+              <User className="w-6 h-6" />
+            </div>
+            <h1 className="text-xl sm:text-2xl font-serif font-bold">
+              {language === 'BN' ? 'কিশলয় গ্রাহক পোর্টাল' : 'KISHOLOY Customer Portal'}
+            </h1>
+            <p className="text-xs text-stone-300 max-w-md mx-auto">
+              {language === 'BN' 
+                ? 'আপনার অর্ডার ট্র্যাকিং, ডেলিভারি ঠিকানা এবং রিটার্ন অনুরোধ পরিচালনা করতে সাইন ইন করুন।'
+                : 'Sign in to access your order tracking, delivery addresses, wishlist, and service requests.'}
+            </p>
+          </div>
 
-  const tierBadgeColor = (tier?: LoyaltyTier) => {
-    switch (tier) {
-      case 'PLATINUM': return 'bg-purple-100 text-purple-900 border-purple-300';
-      case 'GOLD': return 'bg-amber-100 text-amber-900 border-amber-300';
-      case 'SILVER': return 'bg-slate-100 text-slate-800 border-slate-300';
-      default: return 'bg-orange-100 text-orange-900 border-orange-300';
-    }
-  };
+          {/* Mode Switcher */}
+          <div className="flex border-b border-stone-200 bg-stone-50/60 text-xs font-semibold">
+            <button
+              onClick={() => setAuthMode('login')}
+              className={`flex-1 py-3.5 text-center transition-colors border-b-2 ${
+                authMode === 'login'
+                  ? 'border-teal-900 text-teal-950 font-bold bg-white'
+                  : 'border-transparent text-stone-500 hover:text-stone-800'
+              }`}
+            >
+              {language === 'BN' ? 'সাইন ইন / লগইন' : 'Sign In'}
+            </button>
+            <button
+              onClick={() => setAuthMode('register')}
+              className={`flex-1 py-3.5 text-center transition-colors border-b-2 ${
+                authMode === 'register'
+                  ? 'border-teal-900 text-teal-950 font-bold bg-white'
+                  : 'border-transparent text-stone-500 hover:text-stone-800'
+              }`}
+            >
+              {language === 'BN' ? 'নতুন অ্যাকাউন্ট খুলুন' : 'Create Account'}
+            </button>
+            <button
+              onClick={() => setAuthMode('link_order')}
+              className={`flex-1 py-3.5 text-center transition-colors border-b-2 ${
+                authMode === 'link_order'
+                  ? 'border-teal-900 text-teal-950 font-bold bg-white'
+                  : 'border-transparent text-stone-500 hover:text-stone-800'
+              }`}
+            >
+              {language === 'BN' ? 'গেস্ট অর্ডার লিঙ্ক করুন' : 'Link Guest Order'}
+            </button>
+          </div>
 
+          <div className="p-6 sm:p-8 space-y-6 text-xs">
+            
+            {/* SIGN IN FORM */}
+            {authMode === 'login' && (
+              <form onSubmit={handleLoginSubmit} className="space-y-4">
+                <div>
+                  <label className="block text-stone-700 font-semibold mb-1">
+                    {language === 'BN' ? 'মোবাইল নম্বর অথবা ইমেইল' : 'Mobile Number or Email'}
+                  </label>
+                  <div className="relative">
+                    <Phone className="w-4 h-4 text-stone-400 absolute left-3.5 top-3" />
+                    <input
+                      type="text"
+                      required
+                      value={loginIdentifier}
+                      onChange={(e) => setLoginIdentifier(e.target.value)}
+                      placeholder="017XXXXXXXX or user@example.com"
+                      className="w-full pl-10 pr-3.5 py-2.5 bg-stone-50 border border-stone-200 rounded-xl text-stone-900 text-xs focus:bg-white focus:outline-none focus:border-teal-900 shadow-2xs"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-stone-700 font-semibold mb-1">
+                    {language === 'BN' ? 'পাসওয়ার্ড' : 'Password'}
+                  </label>
+                  <div className="relative">
+                    <Lock className="w-4 h-4 text-stone-400 absolute left-3.5 top-3" />
+                    <input
+                      type={showLoginPassword ? 'text' : 'password'}
+                      required
+                      value={loginPassword}
+                      onChange={(e) => setLoginPassword(e.target.value)}
+                      placeholder="••••••••"
+                      className="w-full pl-10 pr-10 py-2.5 bg-stone-50 border border-stone-200 rounded-xl text-stone-900 text-xs focus:bg-white focus:outline-none focus:border-teal-900 shadow-2xs"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowLoginPassword(!showLoginPassword)}
+                      className="absolute right-3.5 top-3 text-stone-400 hover:text-stone-600"
+                    >
+                      {showLoginPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Quick Demo Logins Helper */}
+                <div className="p-4 bg-stone-50 rounded-2xl border border-stone-200/80 space-y-2 text-[11px] text-stone-600">
+                  <span className="font-bold text-stone-800 block">Instant 1-Click Demo Accounts:</span>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        loginCustomer('cust-1');
+                        showToast('Logged in as Tanzil Ahmed');
+                      }}
+                      className="px-3 py-1.5 rounded-lg bg-teal-50 border border-teal-200 text-teal-900 font-semibold hover:bg-teal-100 transition-colors"
+                    >
+                      Sign In as Tanzil Ahmed (cust-1)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        loginCustomer('cust-2');
+                        showToast('Logged in as Nusrat Jahan');
+                      }}
+                      className="px-3 py-1.5 rounded-lg bg-stone-100 border border-stone-300 text-stone-800 font-semibold hover:bg-stone-200 transition-colors"
+                    >
+                      Sign In as Nusrat Jahan (cust-2)
+                    </button>
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={authLoading}
+                  className="w-full py-3 rounded-xl bg-teal-900 hover:bg-teal-950 text-white font-semibold text-xs transition-colors flex items-center justify-center gap-2 shadow-xs"
+                >
+                  <span>{authLoading ? 'Signing In...' : 'Sign In to Account'}</span>
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+              </form>
+            )}
+
+            {/* REGISTER FORM */}
+            {authMode === 'register' && (
+              <form onSubmit={handleRegisterSubmit} className="space-y-4">
+                <div>
+                  <label className="block text-stone-700 font-semibold mb-1">
+                    Full Name <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={regName}
+                    onChange={(e) => setRegName(e.target.value)}
+                    placeholder="e.g. Tanzil Ahmed"
+                    className="w-full px-3.5 py-2.5 bg-stone-50 border border-stone-200 rounded-xl text-stone-900 text-xs focus:bg-white focus:outline-none focus:border-teal-900"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-stone-700 font-semibold mb-1">
+                      Phone Number <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="tel"
+                      required
+                      value={regPhone}
+                      onChange={(e) => setRegPhone(e.target.value)}
+                      placeholder="017XXXXXXXX"
+                      className="w-full px-3.5 py-2.5 bg-stone-50 border border-stone-200 rounded-xl text-stone-900 text-xs focus:bg-white focus:outline-none focus:border-teal-900"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-stone-700 font-semibold mb-1">Email Address</label>
+                    <input
+                      type="email"
+                      value={regEmail}
+                      onChange={(e) => setRegEmail(e.target.value)}
+                      placeholder="user@example.com (optional)"
+                      className="w-full px-3.5 py-2.5 bg-stone-50 border border-stone-200 rounded-xl text-stone-900 text-xs focus:bg-white focus:outline-none focus:border-teal-900"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-stone-700 font-semibold mb-1">
+                    Password <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="password"
+                    required
+                    value={regPassword}
+                    onChange={(e) => setRegPassword(e.target.value)}
+                    placeholder="At least 6 characters"
+                    className="w-full px-3.5 py-2.5 bg-stone-50 border border-stone-200 rounded-xl text-stone-900 text-xs focus:bg-white focus:outline-none focus:border-teal-900"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-stone-700 font-semibold mb-1">Delivery Address & District</label>
+                  <input
+                    type="text"
+                    value={regAddress}
+                    onChange={(e) => setRegAddress(e.target.value)}
+                    placeholder="House, Road, Area, Dhaka"
+                    className="w-full px-3.5 py-2.5 bg-stone-50 border border-stone-200 rounded-xl text-stone-900 text-xs focus:bg-white focus:outline-none focus:border-teal-900"
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={authLoading}
+                  className="w-full py-3 rounded-xl bg-teal-900 hover:bg-teal-950 text-white font-semibold text-xs transition-colors flex items-center justify-center gap-2 shadow-xs"
+                >
+                  <span>{authLoading ? 'Creating Account...' : 'Complete Registration'}</span>
+                  <CheckCircle2 className="w-4 h-4" />
+                </button>
+              </form>
+            )}
+
+            {/* LINK GUEST ORDER */}
+            {authMode === 'link_order' && (
+              <form onSubmit={handleLinkGuestOrderSubmit} className="space-y-4">
+                <div className="p-4 rounded-2xl bg-teal-50 border border-teal-200 text-teal-950 space-y-1">
+                  <div className="font-bold flex items-center gap-1.5">
+                    <Link2 className="w-4 h-4 text-teal-800" />
+                    <span>Link a Previous Guest Order</span>
+                  </div>
+                  <p className="text-[11px] text-teal-800">
+                    Did you place an order before creating your account? Enter your Order Number and verification phone number to attach it to your profile.
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-stone-700 font-semibold mb-1">
+                    Order Number (e.g. KSH-2026-001 or ord-001)
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={linkOrderNumber}
+                    onChange={(e) => setLinkOrderNumber(e.target.value)}
+                    placeholder="KSH-2026-001"
+                    className="w-full px-3.5 py-2.5 bg-stone-50 border border-stone-200 rounded-xl text-stone-900 text-xs font-mono focus:bg-white focus:outline-none focus:border-teal-900"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-stone-700 font-semibold mb-1">
+                    Order Phone Number
+                  </label>
+                  <input
+                    type="tel"
+                    required
+                    value={linkOrderPhone}
+                    onChange={(e) => setLinkOrderPhone(e.target.value)}
+                    placeholder="017XXXXXXXX"
+                    className="w-full px-3.5 py-2.5 bg-stone-50 border border-stone-200 rounded-xl text-stone-900 text-xs focus:bg-white focus:outline-none focus:border-teal-900"
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={authLoading}
+                  className="w-full py-3 rounded-xl bg-teal-900 hover:bg-teal-950 text-white font-semibold text-xs transition-colors flex items-center justify-center gap-2 shadow-xs"
+                >
+                  <span>{authLoading ? 'Verifying & Linking...' : 'Link Order to Account'}</span>
+                  <Link2 className="w-4 h-4" />
+                </button>
+              </form>
+            )}
+
+          </div>
+
+          <div className="px-6 py-4 border-t border-stone-200 bg-stone-50 text-[11px] text-stone-500 flex justify-between items-center">
+            <span className="flex items-center gap-1.5">
+              <ShieldCheck className="w-4 h-4 text-teal-800" />
+              <span>Secure 256-bit Encrypted Customer Session</span>
+            </span>
+            <Link to="/shop" className="text-teal-900 font-semibold hover:underline">
+              Continue Shopping →
+            </Link>
+          </div>
+
+        </div>
+      </div>
+    );
+  }
+
+  // -------------------------------------------------------------
+  // VIEW: AUTHENTICATED CUSTOMER DASHBOARD
+  // -------------------------------------------------------------
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
       
-      {/* Top Banner: Persona Switcher for verification */}
+      {/* Top Banner: Persona Switcher & Logout */}
       <div className="mb-8 p-4 bg-stone-100/90 border border-stone-300/80 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <div className="p-2 rounded-xl bg-teal-900 text-white shadow-xs">
+          <div className="p-2.5 rounded-xl bg-teal-900 text-white shadow-xs">
             <User className="w-5 h-5" />
           </div>
           <div>
-            <h1 className="text-base font-bold text-stone-900">
-              {language === 'BN' ? 'গ্রাহক অ্যাকাউন্ট ও সেলফ-সার্ভিস পোর্টাল' : 'Customer Account & Self-Service Portal'}
-            </h1>
+            <div className="flex items-center gap-2">
+              <h1 className="text-base font-bold text-stone-900">
+                {language === 'BN' ? 'গ্রাহক সেলফ-সার্ভিস পোর্টাল' : 'Customer Account & Self-Service Portal'}
+              </h1>
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-900 border border-emerald-300">
+                {language === 'BN' ? 'সক্রিয় গ্রাহক' : 'Active Account'}
+              </span>
+            </div>
             <p className="text-xs text-stone-600">
               {language === 'BN' 
-                ? 'আপনার অর্ডার ট্র্যাকিং, সংরক্ষিত ডেলিভারি ঠিকানা, উইশলিস্ট ও লয়্যালটি রিওয়ার্ডস পরিচালনা করুন।'
-                : 'Manage order tracking, multi-address book, curated wishlist, and loyalty club cash points.'}
+                ? 'আপনার অর্ডার ট্র্যাকিং, সংরক্ষিত ডেলিভারি ঠিকানা, উইশলিস্ট ও রিটার্ন অনুরোধ পরিচালনা করুন।'
+                : 'Manage your order tracking, address book, curated wishlist, and return requests.'}
             </p>
           </div>
         </div>
 
-        {/* Demo persona toggle */}
-        <div className="flex items-center gap-2 text-xs">
-          <span className="text-stone-500 font-medium">Demo Customer:</span>
-          <select
-            value={currentCustomerId}
-            onChange={(e) => {
-              setCurrentCustomerId(e.target.value);
-              showToast(`Switched customer to ${e.target.value === 'cust-1' ? 'Tanzil Ahmed' : 'Nusrat Jahan'}`);
-            }}
-            className="px-3 py-1.5 bg-white border border-stone-300 rounded-lg text-xs font-semibold text-stone-800 focus:outline-none focus:border-teal-900 shadow-2xs"
+        {/* Persona Switcher & Log Out Button */}
+        <div className="flex items-center gap-2.5 text-xs w-full sm:w-auto justify-between sm:justify-end">
+          <div className="flex items-center gap-1.5">
+            <span className="text-stone-500 font-medium">Switch Customer:</span>
+            <select
+              value={currentCustomerId}
+              onChange={(e) => {
+                loginCustomer(e.target.value);
+                showToast(`Switched customer to ${e.target.value === 'cust-1' ? 'Tanzil Ahmed' : 'Nusrat Jahan'}`);
+              }}
+              className="px-3 py-1.5 bg-white border border-stone-300 rounded-lg text-xs font-semibold text-stone-800 focus:outline-none focus:border-teal-900 shadow-2xs"
+            >
+              <option value="cust-1">Tanzil Ahmed</option>
+              <option value="cust-2">Nusrat Jahan</option>
+            </select>
+          </div>
+
+          <button
+            onClick={logoutCustomer}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-800 border border-rose-200 rounded-lg text-xs font-semibold transition-colors shadow-2xs"
+            title="Sign out of account"
           >
-            <option value="cust-1">Tanzil Ahmed (Gold VIP Tier)</option>
-            <option value="cust-2">Nusrat Jahan (Silver VIP Tier)</option>
-          </select>
+            <LogOut className="w-3.5 h-3.5" />
+            <span>{language === 'BN' ? 'সাইন আউট' : 'Log Out'}</span>
+          </button>
         </div>
       </div>
 
@@ -275,27 +732,25 @@ export function AccountPage() {
         <aside className="lg:w-72 flex-shrink-0">
           <div className="bg-white rounded-2xl border border-stone-200 p-6 shadow-xs space-y-6">
             
-            {/* Customer Avatar & Tier */}
+            {/* Customer Avatar & Status */}
             <div className="flex items-center gap-3 pb-6 border-b border-stone-200">
               <div className="w-14 h-14 rounded-2xl bg-teal-900 text-white flex items-center justify-center font-bold text-xl shadow-xs">
                 {customerProfile?.name ? customerProfile.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() : 'KH'}
               </div>
               <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-1.5">
-                  <h2 className="text-base font-bold text-stone-900 truncate">
-                    {customerProfile?.name || 'Customer Account'}
-                  </h2>
-                </div>
+                <h2 className="text-base font-bold text-stone-900 truncate">
+                  {customerProfile?.name || 'Customer Account'}
+                </h2>
                 <span className="text-xs text-stone-500 font-mono block truncate">
                   {customerProfile?.phone || '+880 17XXXXXXXX'}
                 </span>
-                <div className="mt-1.5 flex items-center gap-1.5">
-                  <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border ${tierBadgeColor(customerLoyalty?.tier || customerProfile?.tier)}`}>
-                    <Sparkles className="w-2.5 h-2.5" />
-                    {customerLoyalty?.tier || customerProfile?.tier || 'BRONZE'} VIP
-                  </span>
-                  <span className="text-[11px] font-bold text-teal-900">
-                    ৳{customerLoyalty?.pointsBalance || 0} pts
+                <span className="text-[11px] text-stone-400 truncate block">
+                  {customerProfile?.email || 'customer@kisholoy.com'}
+                </span>
+                <div className="mt-1.5">
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-teal-50 text-teal-900 border border-teal-200">
+                    <CheckCircle2 className="w-2.5 h-2.5 text-teal-700" />
+                    <span>{language === 'BN' ? 'ভেরিফাইড অ্যাকাউন্ট' : 'Verified Member'}</span>
                   </span>
                 </div>
               </div>
@@ -361,25 +816,6 @@ export function AccountPage() {
               </button>
 
               <button
-                onClick={() => handleTabChange('loyalty')}
-                className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all ${
-                  activeTab === 'loyalty'
-                    ? 'bg-teal-900 text-white shadow-xs'
-                    : 'text-stone-700 hover:bg-stone-100'
-                }`}
-              >
-                <span className="flex items-center gap-2.5">
-                  <Gift className="w-4 h-4" />
-                  {language === 'BN' ? 'লয়্যালটি ও পুরস্কার' : 'Loyalty & Rewards'}
-                </span>
-                <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
-                  activeTab === 'loyalty' ? 'bg-teal-800 text-white' : 'bg-amber-100 text-amber-900'
-                }`}>
-                  {customerLoyalty?.pointsBalance || 0} pts
-                </span>
-              </button>
-
-              <button
                 onClick={() => handleTabChange('returns')}
                 className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all ${
                   activeTab === 'returns'
@@ -438,6 +874,17 @@ export function AccountPage() {
               </button>
             </nav>
 
+            {/* Logout Sidebar Action */}
+            <div className="pt-2 border-t border-stone-200">
+              <button
+                onClick={logoutCustomer}
+                className="w-full flex items-center justify-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold text-rose-700 bg-rose-50 hover:bg-rose-100 transition-colors"
+              >
+                <LogOut className="w-4 h-4" />
+                <span>{language === 'BN' ? 'অ্যাকাউন্ট থেকে সাইন আউট' : 'Sign Out of Account'}</span>
+              </button>
+            </div>
+
             {/* Need Help Box */}
             <div className="p-4 rounded-xl bg-stone-50 border border-stone-200/70 text-xs space-y-2">
               <div className="flex items-center gap-1.5 font-bold text-stone-800">
@@ -455,155 +902,144 @@ export function AccountPage() {
           </div>
         </aside>
 
-        {/* Right Main Content */}
+        {/* Right Main Content Area */}
         <main className="flex-1 min-w-0">
           
-          {/* TAB 1: ORDERS DESK */}
+          {/* TAB 1: ORDERS */}
           {activeTab === 'orders' && (
             <div className="space-y-6">
               <div className="flex items-center justify-between">
                 <div>
                   <h2 className="text-xl font-serif font-bold text-stone-900">
-                    {language === 'BN' ? 'অর্ডার হিস্ট্রি ও ডেলিভারি স্ট্যাটাস' : 'Order History & Delivery Status'}
+                    {language === 'BN' ? 'অর্ডার হিস্টোরি ও ট্র্যাকিং' : 'Order History & Real-Time Tracking'}
                   </h2>
                   <p className="text-xs text-stone-500 mt-0.5">
                     {language === 'BN' 
-                      ? 'আপনার সমস্ত বর্তমান ও অতীতের অর্ডারসমূহ এবং লাইভ ট্র্যাকিং তথ্য।'
-                      : 'Real-time order statuses, courier tracking links, and easy return requests.'}
+                      ? 'আপনার সকল অর্ডারের লাইভ কুরিয়ার স্ট্যাটাস, বিস্তারিত বিবরণ ও চালান দেখুন।' 
+                      : 'Live dispatch progression, invoice downloads, and seamless reorders.'}
                   </p>
                 </div>
                 <Link
-                  to="/shop"
-                  className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 bg-stone-900 text-white text-xs font-semibold rounded-lg hover:bg-black transition-all"
+                  to="/track-order"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-teal-900 bg-teal-50 hover:bg-teal-100 rounded-lg border border-teal-200 transition-colors"
                 >
-                  <ShoppingBag className="w-3.5 h-3.5" />
-                  <span>{language === 'BN' ? 'কেনাকাটা করুন' : 'Continue Shopping'}</span>
+                  <Truck className="w-3.5 h-3.5" />
+                  <span>{language === 'BN' ? 'কুরিয়ার ট্র্যাকার' : 'Live Courier Radar'}</span>
                 </Link>
               </div>
 
               {orders.length === 0 ? (
                 <div className="bg-white rounded-2xl border border-stone-200 p-12 text-center space-y-4">
                   <div className="w-12 h-12 rounded-full bg-stone-100 flex items-center justify-center mx-auto text-stone-400">
-                    <Package className="w-6 h-6" />
+                    <ShoppingBag className="w-6 h-6" />
                   </div>
-                  <h3 className="text-base font-bold text-stone-800">
-                    {language === 'BN' ? 'কোনো অর্ডার পাওয়া যায়নি' : 'No Orders Found'}
-                  </h3>
+                  <h3 className="text-base font-bold text-stone-800">No Orders Placed Yet</h3>
                   <p className="text-xs text-stone-500 max-w-sm mx-auto">
-                    {language === 'BN' ? 'আপনি এখনো কোনো অর্ডার করেননি।' : 'You have not placed any orders yet. Explore our handcrafted collections today.'}
+                    Explore our curated artisanal Jamdani, pure honey, pottery, and handcrafted lifestyle essentials.
                   </p>
                   <Link
                     to="/shop"
-                    className="inline-flex items-center gap-2 px-5 py-2.5 bg-teal-900 text-white rounded-xl text-xs font-semibold hover:bg-teal-950"
+                    className="inline-flex items-center gap-2 px-5 py-2.5 bg-teal-900 text-white rounded-xl text-xs font-semibold hover:bg-teal-950 transition-all shadow-xs"
                   >
-                    <span>Browse Collection</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
+                    <span>Start Shopping</span>
+                    <ArrowRight className="w-4 h-4" />
                   </Link>
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {orders.map((order) => (
-                    <div
-                      key={order.id}
-                      className="bg-white rounded-2xl border border-stone-200 p-5 sm:p-6 shadow-xs hover:shadow-md transition-all space-y-4"
-                    >
-                      {/* Order Header */}
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-stone-100 gap-3">
-                        <div className="space-y-1">
+                  {orders.map((order) => {
+                    const totalQty = order.items.reduce((acc, it) => acc + it.quantity, 0);
+                    return (
+                      <div
+                        key={order.id}
+                        className="bg-white rounded-2xl border border-stone-200 p-5 sm:p-6 shadow-xs hover:shadow-md transition-all space-y-4"
+                      >
+                        {/* Order Header */}
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-stone-100 gap-2">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="font-mono font-bold text-xs text-teal-950 bg-teal-50 px-2.5 py-1 rounded-md border border-teal-200">
+                              {order.orderNumber || order.id}
+                            </span>
+                            <span className="text-xs text-stone-500">
+                              Placed on {new Date(order.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                            </span>
+                          </div>
+
                           <div className="flex items-center gap-2">
-                            <span className="text-xs font-mono font-bold text-teal-950 bg-teal-50 px-2.5 py-0.5 rounded-md border border-teal-200">
-                              {order.orderNumber}
-                            </span>
-                            <span className="text-xs text-stone-400 font-medium">
-                              {new Date(order.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                            <span className={`text-xs font-bold px-3 py-1 rounded-full border ${
+                              order.orderStatus === 'DELIVERED' 
+                                ? 'bg-emerald-50 text-emerald-900 border-emerald-300'
+                                : order.orderStatus === 'SHIPPED'
+                                ? 'bg-blue-50 text-blue-900 border-blue-300'
+                                : order.orderStatus === 'PROCESSING' || order.orderStatus === 'CONFIRMED'
+                                ? 'bg-teal-50 text-teal-900 border-teal-300'
+                                : order.orderStatus === 'CANCELLED'
+                                ? 'bg-rose-50 text-rose-900 border-rose-300'
+                                : 'bg-amber-50 text-amber-900 border-amber-300'
+                            }`}>
+                              {order.orderStatus}
                             </span>
                           </div>
-                          <p className="text-xs text-stone-500">
-                            Payment: <span className="font-semibold text-stone-800">{order.paymentMethod}</span> ({order.paymentStatus}) • {order.items.length} item(s)
-                          </p>
                         </div>
 
-                        <div className="flex items-center gap-3">
-                          <span className={`text-xs font-bold px-3 py-1 rounded-full border ${
-                            order.orderStatus === 'DELIVERED'
-                              ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
-                              : order.orderStatus === 'SHIPPED'
-                              ? 'bg-blue-50 text-blue-800 border-blue-200'
-                              : order.orderStatus === 'PROCESSING'
-                              ? 'bg-amber-50 text-amber-800 border-amber-200'
-                              : 'bg-stone-100 text-stone-700 border-stone-200'
-                          }`}>
-                            {order.orderStatus}
-                          </span>
-                          <span className="text-base font-bold text-stone-900 font-mono">
-                            ৳ {order.total.toLocaleString()}
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Items row */}
-                      <div className="space-y-2.5">
-                        {order.items.map((item, idx) => (
-                          <div key={idx} className="flex items-center gap-3.5 p-2 rounded-xl hover:bg-stone-50 transition-colors">
-                            <img 
-                              src={item.image} 
-                              alt={item.title} 
-                              className="w-12 h-12 rounded-lg object-cover border border-stone-200/80 bg-stone-100 flex-shrink-0" 
-                            />
-                            <div className="flex-1 min-w-0">
-                              <span className="font-bold text-stone-900 text-xs sm:text-sm block truncate">
-                                {item.title}
-                              </span>
-                              <div className="flex items-center gap-3 text-xs text-stone-500 mt-0.5">
-                                <span>Qty: <strong className="text-stone-800">{item.quantity}</strong></span>
-                                <span>•</span>
-                                <span>৳ {item.price.toLocaleString()} each</span>
+                        {/* Order Items List */}
+                        <div className="space-y-3">
+                          {order.items.map((item, idx) => (
+                            <div key={idx} className="flex items-center justify-between gap-4 text-xs">
+                              <div className="flex items-center gap-3 min-w-0">
+                                <div className="w-10 h-10 rounded-lg bg-stone-100 dark:bg-slate-800 border border-stone-200 dark:border-slate-700 flex items-center justify-center font-mono font-bold text-stone-700 dark:text-slate-200 shrink-0">
+                                  {item.quantity}x
+                                </div>
+                                <div className="min-w-0">
+                                  <h4 className="font-bold text-stone-900 dark:text-slate-100 truncate">
+                                    {language === 'BN' ? item.titleBn || item.title : item.title}
+                                  </h4>
+                                  <span className="text-[11px] text-stone-500 dark:text-slate-400 block">
+                                    Unit Price: ৳{item.price.toLocaleString()} • SKU: {item.sku || 'KSH-GEN'}
+                                  </span>
+                                </div>
                               </div>
+                              <span className="font-mono font-bold text-stone-900 dark:text-slate-100 shrink-0">
+                                ৳{(item.price * item.quantity).toLocaleString()}
+                              </span>
                             </div>
-                            <span className="text-xs font-bold text-stone-900 font-mono">
-                              ৳ {(item.price * item.quantity).toLocaleString()}
-                            </span>
+                          ))}
+                        </div>
+
+                        {/* Automated Real-Time Order Timeline Visualization */}
+                        <div className="pt-2">
+                          <CustomerOrderTimeline order={order} language={language} />
+                        </div>
+
+                        {/* Order Footer & Actions */}
+                        <div className="pt-4 border-t border-stone-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                          <div className="text-stone-600">
+                            Total: <strong className="text-stone-900 font-mono font-bold text-sm">৳{order.total.toLocaleString()}</strong>
+                            <span className="text-stone-400 ml-2">({totalQty} {totalQty === 1 ? 'item' : 'items'}, {order.paymentMethod})</span>
                           </div>
-                        ))}
-                      </div>
 
-                      {/* Delivery address & Courier Info */}
-                      <div className="pt-3 border-t border-stone-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
-                        <div className="flex items-center gap-2 text-stone-600">
-                          <Truck className="w-4 h-4 text-teal-800 flex-shrink-0" />
-                          <span>
-                            Courier: <strong>{order.courier.provider}</strong>
-                            {order.courier.trackingId ? (
-                              <span className="font-mono ml-1 text-teal-900 font-bold">({order.courier.trackingId})</span>
-                            ) : (
-                              <span className="text-stone-400 ml-1">(Preparing dispatch)</span>
-                            )}
-                          </span>
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => openReturnModalForOrder(order)}
+                              className="px-3 py-1.5 text-stone-700 hover:text-stone-900 hover:bg-stone-100 rounded-lg font-semibold transition-colors flex items-center gap-1"
+                            >
+                              <RotateCcw className="w-3.5 h-3.5" />
+                              <span>{language === 'BN' ? 'রিটার্ন / এক্সচেঞ্জ' : 'Return Item'}</span>
+                            </button>
+
+                            <Link
+                              to={`/track-order?orderId=${order.orderNumber || order.id}`}
+                              className="px-3 py-1.5 bg-stone-900 hover:bg-black text-white rounded-lg font-semibold transition-colors flex items-center gap-1"
+                            >
+                              <Truck className="w-3.5 h-3.5" />
+                              <span>Track Courier</span>
+                            </Link>
+                          </div>
                         </div>
 
-                        <div className="flex flex-wrap items-center gap-2.5">
-                          {/* RMA Trigger */}
-                          <button
-                            onClick={() => openReturnModalForOrder(order)}
-                            className="px-3 py-1.5 rounded-lg border border-stone-300 text-stone-700 hover:bg-stone-100 text-xs font-medium flex items-center gap-1.5 transition-all"
-                          >
-                            <RotateCcw className="w-3.5 h-3.5 text-stone-500" />
-                            <span>Return / Exchange</span>
-                          </button>
-
-                          {/* Tracking Link */}
-                          <Link
-                            to={`/track-order?order=${order.orderNumber}`}
-                            className="px-3.5 py-1.5 rounded-lg bg-teal-900 text-white hover:bg-teal-950 text-xs font-semibold flex items-center gap-1.5 shadow-2xs transition-all"
-                          >
-                            <span>Live Track</span>
-                            <ArrowRight className="w-3.5 h-3.5" />
-                          </Link>
-                        </div>
                       </div>
-
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -615,16 +1051,16 @@ export function AccountPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <h2 className="text-xl font-serif font-bold text-stone-900">
-                    {language === 'BN' ? 'আমার পছন্দের তালিকা (Wishlist)' : 'My Curated Wishlist'}
+                    {language === 'BN' ? 'সংরক্ষিত পছন্দের তালিকা' : 'Saved Wishlist'}
                   </h2>
                   <p className="text-xs text-stone-500 mt-0.5">
-                    {language === 'BN'
-                      ? 'আপনার ভবিষ্যতের ক্রয়ের জন্য সংরক্ষিত প্রিয় পণ্যসমূহ।'
-                      : 'Saved items to buy later. Move directly to your cart at any time.'}
+                    {language === 'BN' 
+                      ? 'আপনার পছন্দের পণ্যসমূহ সংরক্ষণ করুন এবং যেকোনো সময় সহজে ব্যাগে যোগ করুন।' 
+                      : 'Keep track of curated artisanal items and easily move them to your bag.'}
                   </p>
                 </div>
-                <span className="text-xs font-bold text-rose-600 bg-rose-50 px-3 py-1 rounded-full border border-rose-200">
-                  {wishlist.length} {wishlist.length === 1 ? 'item' : 'items'}
+                <span className="text-xs font-semibold px-3 py-1 rounded-full bg-stone-100 text-stone-700">
+                  {wishlist.length} Items Saved
                 </span>
               </div>
 
@@ -633,66 +1069,58 @@ export function AccountPage() {
                   <div className="w-12 h-12 rounded-full bg-rose-50 flex items-center justify-center mx-auto text-rose-500">
                     <Heart className="w-6 h-6" />
                   </div>
-                  <h3 className="text-base font-bold text-stone-800">
-                    {language === 'BN' ? 'আপনার উইশলিস্ট খালি' : 'Your Wishlist is Empty'}
-                  </h3>
+                  <h3 className="text-base font-bold text-stone-800">Your Wishlist is Empty</h3>
                   <p className="text-xs text-stone-500 max-w-sm mx-auto">
-                    {language === 'BN' 
-                      ? 'পণ্য ব্রাউজ করার সময় হার্ট আইকনে ক্লিক করে পছন্দের তালিকায় সংরক্ষণ করুন।'
-                      : 'Save your favorite heritage sarees, organic pantry items, and artisanal handicrafts to buy whenever ready.'}
+                    Click the heart icon on any product in our collection to save it for later.
                   </p>
                   <Link
                     to="/shop"
-                    className="inline-flex items-center gap-2 px-5 py-2.5 bg-teal-900 text-white rounded-xl text-xs font-semibold hover:bg-teal-950"
+                    className="inline-flex items-center gap-2 px-5 py-2.5 bg-teal-900 text-white rounded-xl text-xs font-semibold hover:bg-teal-950 transition-all"
                   >
-                    <span>Explore Products</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
+                    <span>Browse Catalog</span>
+                    <ArrowRight className="w-4 h-4" />
                   </Link>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                   {wishlist.map((item) => {
-                    const fullProd = products.find(p => p.id === item.productId);
+                    const prod = products.find(p => p.id === item.productId);
                     return (
                       <div
                         key={item.id}
                         className="bg-white rounded-2xl border border-stone-200 overflow-hidden shadow-xs hover:shadow-md transition-all flex flex-col justify-between"
                       >
                         <div>
-                          <div className="relative aspect-square bg-stone-100 overflow-hidden">
-                            <img 
-                              src={item.image} 
-                              alt={item.productTitle} 
-                              className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform" 
+                          <div className="h-44 bg-stone-100 relative overflow-hidden">
+                            <img
+                              src={item.image || 'https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&q=80&w=600'}
+                              alt={item.productTitle}
+                              className="w-full h-full object-cover"
+                              referrerPolicy="no-referrer"
                             />
                             <button
                               onClick={() => toggleWishlist(item.productId)}
-                              className="absolute top-3 right-3 p-2 bg-white/90 hover:bg-rose-50 text-rose-600 rounded-full shadow-xs transition-colors"
+                              className="absolute top-2.5 right-2.5 p-2 rounded-full bg-white/90 text-rose-600 hover:bg-white shadow-xs transition-colors"
                               title="Remove from wishlist"
                             >
                               <Trash2 className="w-4 h-4" />
                             </button>
-                            <div className="absolute bottom-3 left-3">
-                              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-white/95 text-stone-800 border border-stone-200">
-                                {item.category}
-                              </span>
-                            </div>
+                            <span className="absolute bottom-2.5 left-2.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-black/60 text-white backdrop-blur-xs">
+                              {item.category}
+                            </span>
                           </div>
 
-                          <div className="p-4 space-y-2">
-                            <Link to={`/product/${fullProd?.slug || item.productId}`} className="hover:text-teal-900">
-                              <h3 className="text-xs sm:text-sm font-bold text-stone-900 line-clamp-2 leading-snug">
-                                {language === 'BN' && item.productTitleBn ? item.productTitleBn : item.productTitle}
-                              </h3>
-                            </Link>
-
-                            <div className="flex items-baseline gap-2">
-                              <span className="text-sm font-bold text-stone-900 font-mono">
-                                ৳ {item.price.toLocaleString()}
+                          <div className="p-4 space-y-1.5">
+                            <h3 className="font-bold text-stone-900 text-xs line-clamp-2">
+                              {language === 'BN' ? item.productTitleBn || item.productTitle : item.productTitle}
+                            </h3>
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-bold font-mono text-teal-950">
+                                ৳{item.price.toLocaleString()}
                               </span>
-                              {item.originalPrice && (
+                              {item.originalPrice && item.originalPrice > item.price && (
                                 <span className="text-xs text-stone-400 line-through font-mono">
-                                  ৳ {item.originalPrice.toLocaleString()}
+                                  ৳{item.originalPrice.toLocaleString()}
                                 </span>
                               )}
                             </div>
@@ -702,15 +1130,15 @@ export function AccountPage() {
                         <div className="p-4 pt-0">
                           <button
                             onClick={() => {
-                              if (fullProd) {
-                                addToCart(fullProd, 1);
-                                showToast(`Added "${item.productTitle}" to cart!`);
+                              if (prod) {
+                                addToCart(prod);
+                                showToast(`${prod.title} added to bag!`);
                               }
                             }}
-                            className="w-full py-2.5 px-4 rounded-xl bg-teal-900 hover:bg-teal-950 text-white text-xs font-semibold flex items-center justify-center gap-2 shadow-2xs active:scale-98 transition-all"
+                            className="w-full py-2 bg-stone-900 hover:bg-black text-white text-xs font-semibold rounded-xl transition-colors flex items-center justify-center gap-1.5 shadow-2xs"
                           >
                             <ShoppingBag className="w-3.5 h-3.5" />
-                            <span>{language === 'BN' ? 'কার্টে যোগ করুন' : 'Move to Cart'}</span>
+                            <span>Add to Cart</span>
                           </button>
                         </div>
                       </div>
@@ -721,7 +1149,7 @@ export function AccountPage() {
             </div>
           )}
 
-          {/* TAB 3: SAVED ADDRESSES */}
+          {/* TAB 3: ADDRESSES */}
           {activeTab === 'addresses' && (
             <div className="space-y-6">
               <div className="flex items-center justify-between">
@@ -731,16 +1159,16 @@ export function AccountPage() {
                   </h2>
                   <p className="text-xs text-stone-500 mt-0.5">
                     {language === 'BN' 
-                      ? 'চেকআউটের সময় ১-ক্লিকে ব্যবহারের জন্য আপনার ঠিকানা সংরক্ষণ করুন।'
-                      : 'Store multiple home, office, and regional addresses for fast 1-click checkout.'}
+                      ? 'বাসা, অফিস বা উপহার পাঠানোর ঠিকানা সংরক্ষণ ও পরিচালনা করুন।'
+                      : 'Manage multi-location shipping profiles for faster express checkout.'}
                   </p>
                 </div>
                 <button
                   onClick={() => openAddressModal()}
-                  className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-teal-900 text-white rounded-xl text-xs font-semibold hover:bg-teal-950 shadow-2xs transition-all"
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-teal-900 text-white rounded-xl text-xs font-semibold hover:bg-teal-950 transition-all shadow-xs"
                 >
                   <Plus className="w-4 h-4" />
-                  <span>{language === 'BN' ? 'নতুন ঠিকানা যোগ করুন' : 'Add New Address'}</span>
+                  <span>{language === 'BN' ? 'নতুন ঠিকানা' : 'Add New Address'}</span>
                 </button>
               </div>
 
@@ -748,227 +1176,65 @@ export function AccountPage() {
                 {savedAddresses.map((addr) => (
                   <div
                     key={addr.id}
-                    className={`bg-white rounded-2xl border p-5 shadow-xs transition-all flex flex-col justify-between space-y-4 ${
-                      addr.isDefault ? 'border-teal-800 ring-1 ring-teal-800' : 'border-stone-200'
+                    className={`bg-white rounded-2xl border p-5 space-y-3 relative transition-all ${
+                      addr.isDefault ? 'border-teal-800 ring-1 ring-teal-800/20 shadow-xs' : 'border-stone-200'
                     }`}
                   >
-                    <div>
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center gap-2">
-                          <span className={`p-1.5 rounded-lg ${
-                            addr.label === 'Home' ? 'bg-teal-50 text-teal-900' : addr.label === 'Office' ? 'bg-blue-50 text-blue-900' : 'bg-stone-100 text-stone-800'
-                          }`}>
-                            {addr.label === 'Home' ? <Home className="w-3.5 h-3.5" /> : addr.label === 'Office' ? <Building className="w-3.5 h-3.5" /> : <MapPin className="w-3.5 h-3.5" />}
-                          </span>
-                          <span className="font-bold text-xs text-stone-900 uppercase tracking-wider">
-                            {addr.label}
-                          </span>
-                        </div>
-
-                        {addr.isDefault ? (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-teal-100 text-teal-900">
-                            <Check className="w-3 h-3" />
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="px-2.5 py-0.5 rounded-md text-[10px] font-bold bg-stone-100 text-stone-800 uppercase tracking-wider">
+                          {addr.label}
+                        </span>
+                        {addr.isDefault && (
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-teal-100 text-teal-900">
                             Default
                           </span>
-                        ) : (
-                          <button
-                            onClick={() => setDefaultAddress(addr.id)}
-                            className="text-[11px] font-semibold text-stone-500 hover:text-teal-900"
-                          >
-                            Set as Default
-                          </button>
                         )}
                       </div>
 
-                      <h3 className="font-bold text-sm text-stone-900">{addr.recipientName}</h3>
-                      <p className="text-xs text-stone-600 mt-1 leading-relaxed">{addr.addressLine}</p>
-                      <p className="text-xs text-stone-600">
-                        {addr.upazilaOrArea ? `${addr.upazilaOrArea}, ` : ''}{addr.district} - {addr.postalCode || '1200'}, {addr.division}
-                      </p>
-                      <p className="text-xs text-stone-700 font-mono mt-2 font-medium">
-                        Phone: {addr.phone}
-                        {addr.altPhone && <span className="text-stone-400"> • Alt: {addr.altPhone}</span>}
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => openAddressModal(addr)}
+                          className="p-1.5 text-stone-400 hover:text-stone-700 hover:bg-stone-100 rounded-lg transition-colors"
+                          title="Edit address"
+                        >
+                          <Edit3 className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={() => deleteAddress(addr.id)}
+                          className="p-1.5 text-stone-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
+                          title="Delete address"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="space-y-1 text-xs">
+                      <h4 className="font-bold text-stone-900">{addr.recipientName}</h4>
+                      <p className="text-stone-600 font-mono">{addr.phone}</p>
+                      <p className="text-stone-600 leading-relaxed pt-1">
+                        {addr.addressLine}, {addr.upazilaOrArea}, {addr.district} - {addr.postalCode}
                       </p>
                     </div>
 
-                    <div className="pt-3 border-t border-stone-100 flex items-center justify-end gap-2">
-                      <button
-                        onClick={() => openAddressModal(addr)}
-                        className="px-3 py-1.5 rounded-lg border border-stone-200 text-stone-700 hover:bg-stone-50 text-xs font-semibold flex items-center gap-1"
-                      >
-                        <Edit3 className="w-3.5 h-3.5" />
-                        <span>Edit</span>
-                      </button>
-                      <button
-                        onClick={() => {
-                          if (confirm('Are you sure you want to delete this address?')) {
-                            deleteAddress(addr.id);
-                          }
-                        }}
-                        className="px-3 py-1.5 rounded-lg border border-stone-200 text-rose-600 hover:bg-rose-50 text-xs font-semibold flex items-center gap-1"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                        <span>Delete</span>
-                      </button>
-                    </div>
+                    {!addr.isDefault && (
+                      <div className="pt-2 border-t border-stone-100 flex justify-end">
+                        <button
+                          onClick={() => setDefaultAddress(addr.id)}
+                          className="text-xs text-teal-900 font-semibold hover:underline"
+                        >
+                          Set as Default Address
+                        </button>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
             </div>
           )}
 
-          {/* TAB 4: LOYALTY CLUB & CASH POINTS */}
-          {activeTab === 'loyalty' && (
-            <div className="space-y-6">
-              <div>
-                <h2 className="text-xl font-serif font-bold text-stone-900">
-                  {language === 'BN' ? 'কিশলয় লয়্যালটি ক্লাব ও রিওয়ার্ডস' : 'KISHOLOY VIP Loyalty Club'}
-                </h2>
-                <p className="text-xs text-stone-500 mt-0.5">
-                  {language === 'BN' 
-                    ? 'প্রতিটি কেনাকাটায় পয়েন্ট অর্জন করুন এবং পরবর্তী অর্ডারে সরাসরি টাকা হিসেবে ব্যবহার করুন (১ পয়েন্ট = ১ টাকা)।'
-                    : 'Earn authoritative reward points on every order. 1 Point = ৳ 1 BDT cash credit at checkout.'}
-                </p>
-              </div>
-
-              {/* VIP Membership Card */}
-              <div className="rounded-3xl p-6 sm:p-8 bg-gradient-to-br from-stone-900 via-teal-950 to-stone-900 text-white shadow-xl relative overflow-hidden">
-                <div className="absolute top-0 right-0 -mr-8 -mt-8 w-48 h-48 rounded-full bg-teal-600/10 blur-2xl"></div>
-                
-                <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-6 pb-6 border-b border-white/10">
-                  <div>
-                    <span className="text-xs uppercase tracking-widest text-teal-300 font-bold block mb-1">
-                      KISHOLOY PRIVILEGE CLUB
-                    </span>
-                    <h3 className="text-2xl font-serif font-bold">{customerProfile?.name}</h3>
-                    <span className="text-xs text-stone-400 font-mono">Member ID: {customerProfile?.id}</span>
-                  </div>
-
-                  <div className="sm:text-right">
-                    <span className="text-xs text-stone-400 block mb-1">Current VIP Status</span>
-                    <span className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full text-xs font-extrabold bg-amber-400 text-stone-950 shadow-md">
-                      <Sparkles className="w-3.5 h-3.5" />
-                      {customerLoyalty?.tier || 'GOLD'} TIER
-                    </span>
-                    <span className="text-[11px] text-teal-300 block mt-1 font-mono">
-                      {customerLoyalty?.tier === 'PLATINUM' ? '2.0x' : customerLoyalty?.tier === 'GOLD' ? '1.5x' : customerLoyalty?.tier === 'SILVER' ? '1.2x' : '1.0x'} Points Multiplier
-                    </span>
-                  </div>
-                </div>
-
-                <div className="relative z-10 grid grid-cols-2 sm:grid-cols-4 gap-4 pt-6">
-                  <div>
-                    <span className="text-xs text-stone-400 block">Available Points</span>
-                    <span className="text-2xl font-bold font-mono text-amber-300">
-                      {customerLoyalty?.pointsBalance || 0}
-                    </span>
-                    <span className="text-[10px] text-stone-400 block">Worth ৳{customerLoyalty?.pointsBalance || 0} BDT</span>
-                  </div>
-
-                  <div>
-                    <span className="text-xs text-stone-400 block">Lifetime Earned</span>
-                    <span className="text-2xl font-bold font-mono text-white">
-                      {customerLoyalty?.lifetimePointsEarned || 0}
-                    </span>
-                    <span className="text-[10px] text-stone-400 block">Total rewards</span>
-                  </div>
-
-                  <div>
-                    <span className="text-xs text-stone-400 block">Points Redeemed</span>
-                    <span className="text-2xl font-bold font-mono text-white">
-                      {customerLoyalty?.lifetimePointsRedeemed || 0}
-                    </span>
-                    <span className="text-[10px] text-stone-400 block">Savings realized</span>
-                  </div>
-
-                  <div>
-                    <span className="text-xs text-stone-400 block">Next Tier Progress</span>
-                    <div className="w-full bg-stone-800 rounded-full h-2 mt-2">
-                      <div className="bg-amber-400 h-2 rounded-full" style={{ width: '75%' }}></div>
-                    </div>
-                    <span className="text-[10px] text-teal-300 block mt-1">75% to Platinum VIP</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Referral Code Card */}
-              <div className="bg-white rounded-2xl border border-stone-200 p-6 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <Gift className="w-4 h-4 text-teal-900" />
-                    <h3 className="font-bold text-sm text-stone-900">Invite Friends & Family</h3>
-                  </div>
-                  <p className="text-xs text-stone-500">
-                    Share your unique referral code. When a friend places their first order, both of you receive <strong>৳ 100 bonus points</strong>.
-                  </p>
-                </div>
-
-                <div className="flex items-center gap-2 bg-stone-50 p-1.5 rounded-xl border border-stone-200">
-                  <span className="px-3 py-1 font-mono font-bold text-xs text-teal-950">
-                    {customerLoyalty?.referralCode || 'TANZIL-KISHOLOY'}
-                  </span>
-                  <button
-                    onClick={copyReferralCode}
-                    className="p-2 rounded-lg bg-teal-900 hover:bg-teal-950 text-white shadow-2xs transition-colors"
-                    title="Copy referral code"
-                  >
-                    <Copy className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              </div>
-
-              {/* Points History Ledger */}
-              <div className="bg-white rounded-2xl border border-stone-200 p-6 shadow-xs space-y-4">
-                <h3 className="font-bold text-sm text-stone-900 flex items-center gap-2">
-                  <Clock className="w-4 h-4 text-stone-500" />
-                  <span>Points Transaction History</span>
-                </h3>
-
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs">
-                    <thead>
-                      <tr className="border-b border-stone-200 text-stone-500">
-                        <th className="py-2.5 font-semibold">Date</th>
-                        <th className="py-2.5 font-semibold">Activity</th>
-                        <th className="py-2.5 font-semibold">Reference</th>
-                        <th className="py-2.5 font-semibold text-right">Points</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-stone-100 font-mono">
-                      {customerLoyalty?.transactions && customerLoyalty.transactions.length > 0 ? (
-                        customerLoyalty.transactions.map((tx) => (
-                          <tr key={tx.id} className="hover:bg-stone-50">
-                            <td className="py-3 text-stone-500">
-                              {new Date(tx.createdAt).toLocaleDateString()}
-                            </td>
-                            <td className="py-3 font-sans font-medium text-stone-800">
-                              {tx.description}
-                            </td>
-                            <td className="py-3 text-stone-500">
-                              {tx.orderNumber || '-'}
-                            </td>
-                            <td className={`py-3 text-right font-bold ${
-                              tx.points > 0 ? 'text-emerald-700' : 'text-rose-700'
-                            }`}>
-                              {tx.points > 0 ? `+${tx.points}` : tx.points}
-                            </td>
-                          </tr>
-                        ))
-                      ) : (
-                        <tr>
-                          <td colSpan={4} className="py-4 text-center text-stone-400 font-sans">
-                            No loyalty point transactions yet.
-                          </td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* TAB 5: RETURNS & RMA */}
+          {/* TAB 4: RETURNS & RMA */}
           {activeTab === 'returns' && (
             <div className="space-y-6">
               <div className="flex items-center justify-between">
@@ -1066,7 +1332,7 @@ export function AccountPage() {
             </div>
           )}
 
-          {/* TAB 6: NOTIFICATIONS & ALERTS */}
+          {/* TAB 5: NOTIFICATIONS & ALERTS */}
           {activeTab === 'notifications' && (
             <div className="space-y-6">
               <div className="bg-white rounded-2xl border border-stone-200 p-6 sm:p-8 shadow-xs">
@@ -1152,63 +1418,31 @@ export function AccountPage() {
                               ) : notif.channel === 'SMS' ? (
                                 <Smartphone className="w-4 h-4" />
                               ) : (
-                                <Bell className="w-4 h-4" />
+                                <Mail className="w-4 h-4" />
                               )}
                             </div>
-
                             <div className="space-y-1">
-                              <div className="flex items-center gap-2 flex-wrap">
-                                <h4 className="text-xs font-bold text-stone-900">
-                                  {language === 'BN' ? notif.titleBn : notif.title}
-                                </h4>
-                                {!notif.isRead && (
-                                  <span className="w-2 h-2 rounded-full bg-teal-600 inline-block" />
-                                )}
-                                <span className="text-[10px] px-1.5 py-0.2 rounded font-mono font-bold bg-stone-100 text-stone-600">
+                              <div className="flex items-center gap-2">
+                                <h4 className="font-bold text-xs">{notif.title}</h4>
+                                <span className="text-[10px] px-2 py-0.2 rounded-full font-mono bg-stone-100 text-stone-600">
                                   {notif.channel}
                                 </span>
                               </div>
-
-                              <p className="text-xs text-stone-600 leading-relaxed whitespace-pre-line">
-                                {language === 'BN' ? notif.messageBn : notif.message}
-                              </p>
-
-                              <div className="flex items-center gap-4 pt-1 text-[11px] text-stone-400">
-                                <span className="flex items-center gap-1 font-mono">
-                                  <Clock className="w-3 h-3" />
-                                  {new Date(notif.createdAt).toLocaleString(language === 'BN' ? 'bn-BD' : 'en-US', {
-                                    dateStyle: 'medium',
-                                    timeStyle: 'short'
-                                  })}
-                                </span>
-                                {notif.orderNumber && (
-                                  <span className="font-mono text-stone-600">
-                                    Order: {notif.orderNumber}
-                                  </span>
-                                )}
-                              </div>
+                              <p className="text-xs text-stone-600 leading-relaxed">{notif.message}</p>
+                              <span className="text-[10px] text-stone-400 block">
+                                {new Date(notif.createdAt).toLocaleString()}
+                              </span>
                             </div>
                           </div>
 
-                          <div className="flex items-center gap-2 shrink-0">
-                            {notif.actionUrl && (
-                              <Link
-                                to={notif.actionUrl}
-                                className="px-2.5 py-1 bg-stone-900 hover:bg-stone-800 text-white rounded text-[11px] font-semibold transition-colors"
-                              >
-                                {language === 'BN' ? 'বিস্তারিত' : 'View'}
-                              </Link>
-                            )}
-                            {!notif.isRead && (
-                              <button
-                                onClick={() => markCustomerNotificationRead(notif.id)}
-                                className="p-1.5 text-stone-400 hover:text-teal-900 rounded"
-                                title="Mark as read"
-                              >
-                                <Check className="w-3.5 h-3.5" />
-                              </button>
-                            )}
-                          </div>
+                          {!notif.isRead && (
+                            <button
+                              onClick={() => markCustomerNotificationRead(notif.id)}
+                              className="text-[11px] text-teal-900 font-semibold hover:underline shrink-0"
+                            >
+                              Mark Read
+                            </button>
+                          )}
                         </div>
                       </div>
                     ))
@@ -1218,79 +1452,82 @@ export function AccountPage() {
             </div>
           )}
 
-          {/* TAB 7: PROFILE SETTINGS */}
+          {/* TAB 6: PROFILE SETTINGS */}
           {activeTab === 'profile' && (
-            <div className="bg-white rounded-2xl border border-stone-200 p-6 sm:p-8 shadow-xs space-y-6">
+            <div className="bg-white rounded-2xl border border-stone-200 p-6 sm:p-8 shadow-xs space-y-8">
               <div>
                 <h2 className="text-xl font-serif font-bold text-stone-900">
-                  {language === 'BN' ? 'ব্যক্তিগত তথ্য ও প্রোফাইল সেটিংস' : 'Personal Information & Preferences'}
+                  {language === 'BN' ? 'ব্যক্তিগত তথ্য ও নিরাপত্তা সেটিংস' : 'Profile & Account Security'}
                 </h2>
                 <p className="text-xs text-stone-500 mt-0.5">
-                  {language === 'BN' ? 'আপনার নাম, যোগাযোগ তথ্য এবং বিজ্ঞপ্তি সেটিংস হালনাগাদ করুন।' : 'Update your personal details and delivery notification preferences.'}
+                  {language === 'BN' 
+                    ? 'আপনার নাম, মোবাইল নম্বর, যোগাযোগ পছন্দ ও পাসওয়ার্ড পরিবর্তন করুন।'
+                    : 'Manage your contact information, delivery notification preferences, and account credentials.'}
                 </p>
               </div>
 
-              <form onSubmit={handleSaveProfile} className="space-y-6">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 text-xs sm:text-sm">
+              {/* Personal Information Form */}
+              <form onSubmit={handleSaveProfile} className="space-y-6 text-xs">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="text-xs font-bold text-stone-700 block mb-1.5">Full Name *</label>
+                    <label className="text-stone-700 font-bold block mb-1">Full Name *</label>
                     <input
                       type="text"
                       required
                       value={profileForm.name}
                       onChange={(e) => setProfileForm({ ...profileForm, name: e.target.value })}
-                      className="w-full p-2.5 bg-stone-50 border border-stone-300 rounded-xl focus:bg-white focus:outline-none focus:border-teal-800"
+                      className="w-full p-2.5 bg-stone-50 border border-stone-300 rounded-xl focus:bg-white focus:outline-none focus:border-teal-900"
                     />
                   </div>
 
                   <div>
-                    <label className="text-xs font-bold text-stone-700 block mb-1.5">Primary Mobile Number</label>
-                    <input
-                      type="text"
-                      disabled
-                      value={customerProfile?.phone || '+880 1712345678'}
-                      className="w-full p-2.5 bg-stone-100 border border-stone-300 rounded-xl text-stone-500 font-mono cursor-not-allowed"
-                    />
-                    <span className="text-[10px] text-stone-400 mt-1 block">Registered identifier (locked for security)</span>
-                  </div>
-
-                  <div>
-                    <label className="text-xs font-bold text-stone-700 block mb-1.5">Email Address</label>
+                    <label className="text-stone-700 font-bold block mb-1">Email Address</label>
                     <input
                       type="email"
                       value={profileForm.email}
                       onChange={(e) => setProfileForm({ ...profileForm, email: e.target.value })}
-                      className="w-full p-2.5 bg-stone-50 border border-stone-300 rounded-xl focus:bg-white focus:outline-none focus:border-teal-800"
+                      className="w-full p-2.5 bg-stone-50 border border-stone-300 rounded-xl focus:bg-white focus:outline-none focus:border-teal-900"
                     />
                   </div>
 
                   <div>
-                    <label className="text-xs font-bold text-stone-700 block mb-1.5">Alternative Mobile (Optional)</label>
+                    <label className="text-stone-700 font-bold block mb-1">Primary Mobile Phone</label>
                     <input
                       type="tel"
-                      placeholder="+880 18XXXXXXXX"
+                      disabled
+                      value={customerProfile?.phone || ''}
+                      className="w-full p-2.5 bg-stone-100 border border-stone-300 rounded-xl text-stone-500 font-mono cursor-not-allowed"
+                    />
+                    <span className="text-[10px] text-stone-400 mt-0.5 block">Primary phone linked to authenticated account.</span>
+                  </div>
+
+                  <div>
+                    <label className="text-stone-700 font-bold block mb-1">Alternate Phone</label>
+                    <input
+                      type="tel"
                       value={profileForm.alternatePhone}
                       onChange={(e) => setProfileForm({ ...profileForm, alternatePhone: e.target.value })}
-                      className="w-full p-2.5 bg-stone-50 border border-stone-300 rounded-xl focus:bg-white focus:outline-none focus:border-teal-800"
+                      placeholder="+880 18XXXXXXXX"
+                      className="w-full p-2.5 bg-stone-50 border border-stone-300 rounded-xl focus:bg-white focus:outline-none focus:border-teal-900"
                     />
                   </div>
 
                   <div>
-                    <label className="text-xs font-bold text-stone-700 block mb-1.5">Date of Birth</label>
+                    <label className="text-stone-700 font-bold block mb-1">Date of Birth</label>
                     <input
                       type="date"
                       value={profileForm.dateOfBirth}
                       onChange={(e) => setProfileForm({ ...profileForm, dateOfBirth: e.target.value })}
-                      className="w-full p-2.5 bg-stone-50 border border-stone-300 rounded-xl focus:bg-white focus:outline-none focus:border-teal-800"
+                      className="w-full p-2.5 bg-stone-50 border border-stone-300 rounded-xl focus:bg-white focus:outline-none focus:border-teal-900"
                     />
                   </div>
 
                   <div>
-                    <label className="text-xs font-bold text-stone-700 block mb-1.5">Gender</label>
+                    <label className="text-stone-700 font-bold block mb-1">Gender</label>
                     <select
                       value={profileForm.gender}
                       onChange={(e) => setProfileForm({ ...profileForm, gender: e.target.value as any })}
-                      className="w-full p-2.5 bg-stone-50 border border-stone-300 rounded-xl focus:bg-white focus:outline-none focus:border-teal-800"
+                      className="w-full p-2.5 bg-stone-50 border border-stone-300 rounded-xl focus:bg-white focus:outline-none focus:border-teal-900"
                     >
                       <option value="PREFER_NOT_TO_SAY">Prefer not to say</option>
                       <option value="MALE">Male</option>
@@ -1300,10 +1537,10 @@ export function AccountPage() {
                   </div>
                 </div>
 
-                {/* Notifications & Language preferences */}
-                <div className="pt-6 border-t border-stone-200 space-y-4">
-                  <h3 className="text-xs font-bold text-stone-800 uppercase tracking-wider">
-                    Notification & Language Preferences
+                {/* Communication Preferences */}
+                <div className="pt-4 border-t border-stone-200 space-y-3">
+                  <h3 className="font-bold text-sm text-stone-900">
+                    {language === 'BN' ? 'যোগাযোগ ও মেসেজিং পছন্দসমূহ' : 'Communication & Dispatch Preferences'}
                   </h3>
 
                   <div className="space-y-3">
@@ -1316,10 +1553,10 @@ export function AccountPage() {
                       />
                       <div>
                         <span className="text-xs font-bold text-stone-800 block">
-                          {language === 'BN' ? 'এসএমএস কুরিয়ার ট্র্যাকিং আপডেট' : 'SMS Courier Tracking Updates'}
+                          {language === 'BN' ? 'এসএমএস অর্ডার নোটিফিকেশন' : 'SMS Order & Courier Alerts'}
                         </span>
                         <span className="text-[11px] text-stone-500 block">
-                          {language === 'BN' ? 'পার্সেল বুকিং, ট্র্যাকিং নম্বর এবং পিকআপের তাৎক্ষণিক এসএমএস পান' : 'Instant SMS when order is booked with Steadfast/Pathao with live tracking code'}
+                          {language === 'BN' ? 'অর্ডার গ্রহণ, প্যাকেজিং ও কুরিয়ার ট্র্যাকিং নম্বর এসএমএসে গ্রহণ করুন' : 'Instant SMS when order is packed and assigned to Steadfast / Pathao courier'}
                         </span>
                       </div>
                     </label>
@@ -1333,10 +1570,10 @@ export function AccountPage() {
                       />
                       <div>
                         <span className="text-xs font-bold text-stone-800 block">
-                          {language === 'BN' ? 'হোয়াটসঅ্যাপ ইন্টারেক্টিভ নোটিফিকেশন' : 'WhatsApp Interactive Notifications'}
+                          {language === 'BN' ? 'হোয়াটসঅ্যাপ মেসেজ ও ফটো প্রুফ' : 'WhatsApp Delivery Confirmation'}
                         </span>
                         <span className="text-[11px] text-stone-500 block">
-                          {language === 'BN' ? 'হোয়াটসঅ্যাপে অর্ডারের ছবি, কুরিয়ার লিংক এবং সরাসরি বাটন আপডেট পান' : 'Rich updates with order invoice PDF, dispatch photos, and quick tracking buttons'}
+                          {language === 'BN' ? 'প্যাকেজ ডিসপ্যাচ ও প্রাক-ডেলিভারি নোটিশ সরাসরি আপনার হোয়াটসঅ্যাপে' : 'Receive package dispatch notice directly on WhatsApp'}
                         </span>
                       </div>
                     </label>
@@ -1367,34 +1604,17 @@ export function AccountPage() {
                       />
                       <div>
                         <span className="text-xs font-bold text-stone-800 block">
-                          {language === 'BN' ? 'ভিআইপি ও প্রমোশনাল অফার (BTRC সময়সূচি অনুযায়ী)' : 'VIP Promotions & Vouchers (BTRC Compliant)'}
+                          {language === 'BN' ? 'প্রমোশনাল ও বিশেষ অফার (BTRC সময়সূচি অনুযায়ী)' : 'Promotional & Seasonal Offers (BTRC Compliant)'}
                         </span>
                         <span className="text-[11px] text-stone-500 block">
                           {language === 'BN' ? 'সকাল ৮টা থেকে রাত ১০টার মধ্যে এক্সক্লুসিভ ডিসকাউন্ট কুপন কোড পান' : 'Delivered only between 8:00 AM and 10:00 PM in accordance with BTRC regulations'}
                         </span>
                       </div>
                     </label>
-
-                    <label className="flex items-center gap-3 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={profileForm.newsletterSubscribed}
-                        onChange={(e) => setProfileForm({ ...profileForm, newsletterSubscribed: e.target.checked })}
-                        className="w-4 h-4 rounded text-teal-900 border-stone-300 focus:ring-teal-900"
-                      />
-                      <div>
-                        <span className="text-xs font-bold text-stone-800 block">
-                          {language === 'BN' ? 'কিশলয় হেরিটেজ ডাইজেস্ট' : 'Kisholoy Artisanal Heritage Digest'}
-                        </span>
-                        <span className="text-[11px] text-stone-500 block">
-                          {language === 'BN' ? 'ঐতিহ্যবাহী তাঁত ও কারুশিল্পের গল্প এবং নতুন কালেকশনের সাপ্তাহিক সংকলন' : 'Weekly curation of artisanal stories, craft history, and seasonal collection previews'}
-                        </span>
-                      </div>
-                    </label>
                   </div>
                 </div>
 
-                <div className="pt-4 flex justify-end">
+                <div className="pt-2 flex justify-end">
                   <button
                     type="submit"
                     className="px-6 py-2.5 bg-teal-900 hover:bg-teal-950 text-white font-semibold text-xs rounded-xl shadow-xs transition-all"
@@ -1403,6 +1623,68 @@ export function AccountPage() {
                   </button>
                 </div>
               </form>
+
+              {/* Password Change Section */}
+              <div className="pt-6 border-t border-stone-200 space-y-4">
+                <div>
+                  <h3 className="font-bold text-sm text-stone-900 flex items-center gap-2">
+                    <Lock className="w-4 h-4 text-stone-600" />
+                    <span>{language === 'BN' ? 'পাসওয়ার্ড পরিবর্তন' : 'Change Account Password'}</span>
+                  </h3>
+                  <p className="text-[11px] text-stone-500 mt-0.5">
+                    {language === 'BN' 
+                      ? 'আপনার অ্যাকাউন্টের নিরাপত্তা নিশ্চিত করতে নিয়মিত পাসওয়ার্ড পরিবর্তন করুন।' 
+                      : 'Ensure your account security by updating your password regularly.'}
+                  </p>
+                </div>
+
+                <form onSubmit={handleChangePassword} className="space-y-4 max-w-md text-xs">
+                  <div>
+                    <label className="block text-stone-700 font-semibold mb-1">Current Password</label>
+                    <input
+                      type="password"
+                      required
+                      value={currentPassword}
+                      onChange={(e) => setCurrentPassword(e.target.value)}
+                      placeholder="••••••••"
+                      className="w-full px-3.5 py-2.5 bg-stone-50 border border-stone-200 rounded-xl focus:bg-white focus:outline-none focus:border-teal-900"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-stone-700 font-semibold mb-1">New Password</label>
+                    <input
+                      type="password"
+                      required
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      placeholder="At least 6 characters"
+                      className="w-full px-3.5 py-2.5 bg-stone-50 border border-stone-200 rounded-xl focus:bg-white focus:outline-none focus:border-teal-900"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-stone-700 font-semibold mb-1">Confirm New Password</label>
+                    <input
+                      type="password"
+                      required
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      placeholder="Re-enter new password"
+                      className="w-full px-3.5 py-2.5 bg-stone-50 border border-stone-200 rounded-xl focus:bg-white focus:outline-none focus:border-teal-900"
+                    />
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={passwordChangeLoading}
+                    className="px-5 py-2.5 bg-stone-900 hover:bg-black text-white font-semibold text-xs rounded-xl shadow-xs transition-colors"
+                  >
+                    {passwordChangeLoading ? 'Updating...' : 'Update Password'}
+                  </button>
+                </form>
+              </div>
+
             </div>
           )}
 

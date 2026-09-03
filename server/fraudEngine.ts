@@ -370,6 +370,20 @@ export class FraudEngine {
     order.verificationStatus = params.action;
     order.verificationNotes = params.notes;
 
+    if (!order.fraudRisk) {
+      order.fraudRisk = this.evaluateOrderRisk({
+        phone: order.customer.phone || '',
+        email: order.customer.email,
+        address: order.shippingAddress?.address || '',
+        district: order.shippingAddress?.district || 'Dhaka',
+        division: order.shippingAddress?.division || 'Dhaka',
+        thana: order.shippingAddress?.thana || 'Central',
+        paymentMethod: order.paymentMethod || 'COD',
+        total: order.total || 0,
+        items: order.items || []
+      });
+    }
+
     if (params.action === 'PHONE_VERIFIED') {
       if (order.fraudRisk) {
         order.fraudRisk.riskScore = Math.max(10, order.fraudRisk.riskScore - 30);

@@ -18,16 +18,23 @@ import {
   SupplierPurchaseOrder, 
   SupplierPayment, 
   SupplierOverviewMetrics, 
-  SupplierStatus 
+  SupplierStatus,
+  SupplierDetailResponse
 } from '../types';
 import { SUPPLIER_HELP_DEFINITIONS, SupplierFunctionHelp } from './supplierHelpData';
 import { BulkSupplierImportModal } from './BulkSupplierImportModal';
 import { SupplierPortalModal } from '../components/admin/SupplierPortalModal';
+import { AdvancedSupplierLedgerModal } from '../components/admin/AdvancedSupplierLedgerModal';
+import { SupplierAgreementsView } from '../components/admin/SupplierAgreementsView';
+import { SupplyBatchesView } from '../components/admin/SupplyBatchesView';
+import { SupplierSettlementsView } from '../components/admin/SupplierSettlementsView';
+import { SupplierStatementModal } from '../components/admin/SupplierStatementModal';
 
 export function SuppliersAdmin() {
   const { currentRole, language, showToast, products } = useApp();
-  const [activeTab, setActiveTab] = useState<'suppliers' | 'pos' | 'payments' | 'portal'>('suppliers');
+  const [activeTab, setActiveTab] = useState<'suppliers' | 'agreements' | 'batches' | 'pos' | 'payments' | 'settlements' | 'portal'>('suppliers');
   const [previewPortalSupplier, setPreviewPortalSupplier] = useState<Supplier | null>(null);
+  const [statementSupplierId, setStatementSupplierId] = useState<string | null>(null);
 
   // Safe currency formatter and toast notifier
   const formatPrice = (amount?: number | null) => {
@@ -54,11 +61,7 @@ export function SuppliersAdmin() {
   const [createSupplierOpen, setCreateSupplierOpen] = useState(false);
   const [bulkImportOpen, setBulkImportOpen] = useState(false);
   const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(null);
-  const [supplierDetail, setSupplierDetail] = useState<{
-    supplier: Supplier;
-    purchaseOrders: SupplierPurchaseOrder[];
-    payments: SupplierPayment[];
-  } | null>(null);
+  const [supplierDetail, setSupplierDetail] = useState<SupplierDetailResponse | null>(null);
 
   // New Supplier Form
   const [newCompanyName, setNewCompanyName] = useState('');
@@ -131,6 +134,9 @@ export function SuppliersAdmin() {
       const data = await res.json();
       if (data.success) {
         setSupplierDetail(data);
+        if (data.supplier) {
+          setSelectedSupplier(data.supplier);
+        }
       }
     } catch (err) {
       console.error('Failed to fetch supplier detail:', err);
@@ -512,69 +518,169 @@ export function SuppliersAdmin() {
           </span>
         </button>
 
-        <div
-          role="tab"
-          onClick={() => setActiveTab('pos')}
-          className={`px-4 py-2.5 text-xs font-semibold border-b-2 flex items-center gap-2 transition-colors whitespace-nowrap cursor-pointer ${
-            activeTab === 'pos'
-              ? 'border-teal-900 text-teal-950 font-bold bg-stone-50/50'
-              : 'border-transparent text-stone-500 hover:text-stone-700'
-          }`}
-        >
-          <Truck className="w-4 h-4 text-teal-700" />
-          <span>{language === 'BN' ? 'ক্রয়াদেশ ও স্টক গ্রহণ' : 'Purchase Orders'}</span>
+        <div className="flex items-center">
           <button
             type="button"
-            onClick={(e) => { e.stopPropagation(); setActiveHelp(SUPPLIER_HELP_DEFINITIONS.purchase_orders); }}
-            className="text-stone-400 hover:text-teal-700 ml-1 p-0.5 rounded hover:bg-stone-100"
+            onClick={() => setActiveTab('agreements')}
+            className={`px-3.5 py-2.5 text-xs font-semibold border-b-2 flex items-center gap-2 transition-colors whitespace-nowrap ${
+              activeTab === 'agreements'
+                ? 'border-teal-900 text-teal-950 font-bold bg-stone-50/50'
+                : 'border-transparent text-stone-500 hover:text-stone-700'
+            }`}
+          >
+            <FileText className="w-4 h-4 text-teal-700" />
+            <span>{language === 'BN' ? 'বাণিজ্যিক চুক্তি' : 'Agreements'}</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveHelp(SUPPLIER_HELP_DEFINITIONS.supplier_agreements)}
+            className="text-stone-400 hover:text-teal-700 p-1 rounded hover:bg-stone-100"
+            title="Explain Agreements"
+          >
+            <HelpCircle className="w-3.5 h-3.5" />
+          </button>
+        </div>
+
+        <div className="flex items-center">
+          <button
+            type="button"
+            onClick={() => setActiveTab('batches')}
+            className={`px-3.5 py-2.5 text-xs font-semibold border-b-2 flex items-center gap-2 transition-colors whitespace-nowrap ${
+              activeTab === 'batches'
+                ? 'border-teal-900 text-teal-950 font-bold bg-stone-50/50'
+                : 'border-transparent text-stone-500 hover:text-stone-700'
+            }`}
+          >
+            <Warehouse className="w-4 h-4 text-teal-700" />
+            <span>{language === 'BN' ? 'সাপ্লাই ব্যাচ ও ইনভেন্টরি' : 'Supply Batches'}</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveHelp(SUPPLIER_HELP_DEFINITIONS.supply_batches)}
+            className="text-stone-400 hover:text-teal-700 p-1 rounded hover:bg-stone-100"
+            title="Explain Supply Batches"
+          >
+            <HelpCircle className="w-3.5 h-3.5" />
+          </button>
+        </div>
+
+        <div className="flex items-center">
+          <button
+            type="button"
+            onClick={() => setActiveTab('settlements')}
+            className={`px-3.5 py-2.5 text-xs font-semibold border-b-2 flex items-center gap-2 transition-colors whitespace-nowrap ${
+              activeTab === 'settlements'
+                ? 'border-teal-900 text-teal-950 font-bold bg-stone-50/50'
+                : 'border-transparent text-stone-500 hover:text-stone-700'
+            }`}
+          >
+            <DollarSign className="w-4 h-4 text-emerald-700" />
+            <span>{language === 'BN' ? 'সেটেলমেন্ট ও প্রদেয়' : 'Settlements & Payables'}</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveHelp(SUPPLIER_HELP_DEFINITIONS.settlement_calculation)}
+            className="text-stone-400 hover:text-teal-700 p-1 rounded hover:bg-stone-100"
+            title="Explain Settlements"
+          >
+            <HelpCircle className="w-3.5 h-3.5" />
+          </button>
+        </div>
+
+        <div className="flex items-center">
+          <button
+            type="button"
+            onClick={() => setActiveTab('pos')}
+            className={`px-3.5 py-2.5 text-xs font-semibold border-b-2 flex items-center gap-2 transition-colors whitespace-nowrap ${
+              activeTab === 'pos'
+                ? 'border-teal-900 text-teal-950 font-bold bg-stone-50/50'
+                : 'border-transparent text-stone-500 hover:text-stone-700'
+            }`}
+          >
+            <Truck className="w-4 h-4 text-teal-700" />
+            <span>{language === 'BN' ? 'ক্রয়াদেশ ও স্টক গ্রহণ' : 'Purchase Orders'}</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveHelp(SUPPLIER_HELP_DEFINITIONS.purchase_orders)}
+            className="text-stone-400 hover:text-teal-700 p-1 rounded hover:bg-stone-100"
             title="Explain Purchase Orders"
           >
             <HelpCircle className="w-3.5 h-3.5" />
           </button>
         </div>
 
-        <div
-          role="tab"
-          onClick={() => setActiveTab('payments')}
-          className={`px-4 py-2.5 text-xs font-semibold border-b-2 flex items-center gap-2 transition-colors whitespace-nowrap cursor-pointer ${
-            activeTab === 'payments'
-              ? 'border-teal-900 text-teal-950 font-bold bg-stone-50/50'
-              : 'border-transparent text-stone-500 hover:text-stone-700'
-          }`}
-        >
-          <DollarSign className="w-4 h-4 text-emerald-700" />
-          <span>{language === 'BN' ? 'পেমেন্ট ও ভাউচার' : 'Payment Vouchers'}</span>
+        <div className="flex items-center">
           <button
             type="button"
-            onClick={(e) => { e.stopPropagation(); setActiveHelp(SUPPLIER_HELP_DEFINITIONS.payment_vouchers); }}
-            className="text-stone-400 hover:text-teal-700 ml-1 p-0.5 rounded hover:bg-stone-100"
+            onClick={() => setActiveTab('payments')}
+            className={`px-3.5 py-2.5 text-xs font-semibold border-b-2 flex items-center gap-2 transition-colors whitespace-nowrap ${
+              activeTab === 'payments'
+                ? 'border-teal-900 text-teal-950 font-bold bg-stone-50/50'
+                : 'border-transparent text-stone-500 hover:text-stone-700'
+            }`}
+          >
+            <DollarSign className="w-4 h-4 text-emerald-700" />
+            <span>{language === 'BN' ? 'পেমেন্ট ও ভাউচার' : 'Payment Vouchers'}</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveHelp(SUPPLIER_HELP_DEFINITIONS.payment_vouchers)}
+            className="text-stone-400 hover:text-teal-700 p-1 rounded hover:bg-stone-100"
             title="Explain Payment Vouchers"
           >
             <HelpCircle className="w-3.5 h-3.5" />
           </button>
         </div>
 
-        <div
-          role="tab"
-          onClick={() => setActiveTab('portal')}
-          className={`px-4 py-2.5 text-xs font-semibold border-b-2 flex items-center gap-2 transition-colors whitespace-nowrap cursor-pointer ${
-            activeTab === 'portal'
-              ? 'border-teal-900 text-teal-950 font-bold bg-stone-50/50'
-              : 'border-transparent text-stone-500 hover:text-stone-700'
-          }`}
-        >
-          <Lock className="w-4 h-4 text-amber-700" />
-          <span>{language === 'BN' ? 'আইসোলেটেড ভেন্ডর পোর্টাল' : 'Isolated Portal Access'}</span>
+        <div className="flex items-center">
           <button
             type="button"
-            onClick={(e) => { e.stopPropagation(); setActiveHelp(SUPPLIER_HELP_DEFINITIONS.isolated_portal); }}
-            className="text-stone-400 hover:text-teal-700 ml-1 p-0.5 rounded hover:bg-stone-100"
+            onClick={() => setActiveTab('portal')}
+            className={`px-3.5 py-2.5 text-xs font-semibold border-b-2 flex items-center gap-2 transition-colors whitespace-nowrap ${
+              activeTab === 'portal'
+                ? 'border-teal-900 text-teal-950 font-bold bg-stone-50/50'
+                : 'border-transparent text-stone-500 hover:text-stone-700'
+            }`}
+          >
+            <Lock className="w-4 h-4 text-amber-700" />
+            <span>{language === 'BN' ? 'আইসোলেটেড ভেন্ডর পোর্টাল' : 'Isolated Portal Access'}</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveHelp(SUPPLIER_HELP_DEFINITIONS.isolated_portal)}
+            className="text-stone-400 hover:text-teal-700 p-1 rounded hover:bg-stone-100"
             title="Explain Isolated Portal"
           >
             <HelpCircle className="w-3.5 h-3.5" />
           </button>
         </div>
       </div>
+
+      {/* Tab: Commercial Agreements */}
+      {activeTab === 'agreements' && (
+        <SupplierAgreementsView
+          suppliers={suppliers}
+          onOpenHelp={setActiveHelp}
+        />
+      )}
+
+      {/* Tab: Supply Batches */}
+      {activeTab === 'batches' && (
+        <SupplyBatchesView
+          suppliers={suppliers}
+          onOpenHelp={setActiveHelp}
+        />
+      )}
+
+      {/* Tab: Settlements & Payables */}
+      {activeTab === 'settlements' && (
+        <SupplierSettlementsView
+          suppliers={suppliers}
+          onOpenHelp={setActiveHelp}
+          onOpenStatement={(suppId) => setStatementSupplierId(suppId)}
+        />
+      )}
 
       {/* Tab 1: Suppliers Directory */}
       {activeTab === 'suppliers' && (
@@ -733,36 +839,58 @@ export function SuppliersAdmin() {
       {/* Tab 4: Isolated Vendor Portal */}
       {activeTab === 'portal' && (
         <div className="bg-white rounded-b-xl border border-t-0 border-stone-200 p-6 shadow-xs space-y-6">
-          <div className="bg-stone-50 border border-stone-200 rounded-xl p-5 flex items-start gap-4">
-            <Lock className="w-5 h-5 text-teal-600 mt-0.5" />
-            <div className="space-y-1">
-              <h4 className="text-sm font-bold text-stone-900">Quarantined Self-Service Vendor Portal</h4>
-              <p className="text-xs text-stone-600 leading-relaxed">
-                To guarantee zero-trust security and absolute customer data isolation, suppliers DO NOT share user accounts or session tokens with internal staff. 
-                Supplier login is strictly isolated and feature-flagged. When disabled, vendor credentials cannot authenticate to any API.
-              </p>
-              <div className="pt-2 flex items-center gap-3">
-                <span className="text-[11px] font-bold text-stone-500 uppercase tracking-wider">Architecture Guarantee:</span>
-                <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-                  <CheckCircle2 className="w-3 h-3" /> No Internal Admin Access
-                </span>
-                <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-                  <CheckCircle2 className="w-3 h-3" /> No Customer PII Exposure
-                </span>
+          <div className="bg-stone-50 border border-stone-200 rounded-xl p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="flex items-start gap-4">
+              <Lock className="w-5 h-5 text-teal-600 mt-0.5 flex-shrink-0" />
+              <div className="space-y-1">
+                <h4 className="text-sm font-bold text-stone-900">Dedicated Isolated Supplier & Artisan Portal</h4>
+                <p className="text-xs text-stone-600 leading-relaxed">
+                  To guarantee zero-trust security and absolute customer data isolation, suppliers authenticate via their own isolated vendor portal at <code className="bg-stone-200 px-1 py-0.5 rounded font-mono text-stone-900">/supplier/login</code>. 
+                  They can view real-time delivered sales revenue, supply batch stocks, PO invoices, settlement cycles, and verified payout vouchers.
+                </p>
+                <div className="pt-2 flex flex-wrap items-center gap-3">
+                  <span className="text-[11px] font-bold text-stone-500 uppercase tracking-wider">Architecture Guarantee:</span>
+                  <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                    <CheckCircle2 className="w-3 h-3" /> No Internal Admin Access
+                  </span>
+                  <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                    <CheckCircle2 className="w-3 h-3" /> No Customer PII Exposure
+                  </span>
+                  <span className="inline-flex items-center gap-1 text-xs font-semibold text-teal-700 bg-teal-50 px-2 py-0.5 rounded border border-teal-200">
+                    <CheckCircle2 className="w-3 h-3" /> Real-time Revenue Formulas
+                  </span>
+                </div>
               </div>
             </div>
+
+            <a
+              href="/supplier/login"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-stone-950 font-bold text-xs flex items-center justify-center gap-2 shadow-sm transition-colors flex-shrink-0"
+            >
+              <ExternalLink className="w-4 h-4" />
+              <span>Launch Live Supplier Portal</span>
+            </a>
           </div>
 
           <div className="space-y-3">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-stone-500">Feature-Flag Status per Supplier</h4>
+            <h4 className="text-xs font-bold uppercase tracking-wider text-stone-500">Feature-Flag Status & Vendor Access per Supplier</h4>
             <div className="border border-stone-200 rounded-lg divide-y divide-stone-100">
               {suppliers.map(s => (
-                <div key={s.id} className="p-4 flex items-center justify-between hover:bg-stone-50 transition-colors">
+                <div key={s.id} className="p-4 flex flex-col md:flex-row md:items-center justify-between gap-3 hover:bg-stone-50 transition-colors">
                   <div>
-                    <div className="font-bold text-stone-900 text-xs">{s.companyName}</div>
-                    <div className="text-[11px] text-stone-400 font-mono">{s.email} • Code: {s.code}</div>
+                    <div className="font-bold text-stone-900 text-xs flex items-center gap-2">
+                      <span>{s.companyName}</span>
+                      <span className="text-[10px] text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.2 rounded font-mono">
+                        {s.code}
+                      </span>
+                    </div>
+                    <div className="text-[11px] text-stone-500 font-mono mt-0.5">
+                      Login Email: <strong className="text-stone-800">{s.portalAccess?.loginEmail || s.email}</strong> • Default Password: <code className="text-stone-600 font-mono">kisholoy2026</code>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-4">
+                  <div className="flex flex-wrap items-center gap-2">
                     <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${
                       s.portalAccess?.enabled 
                         ? 'bg-teal-50 text-teal-700 border border-teal-200' 
@@ -770,24 +898,37 @@ export function SuppliersAdmin() {
                     }`}>
                       {s.portalAccess?.enabled ? 'PORTAL ACTIVE' : 'PORTAL LOCKED'}
                     </span>
-                    {s.portalAccess?.enabled && (
-                      <button
-                        onClick={() => setPreviewPortalSupplier(s)}
-                        className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-teal-900 text-white hover:bg-teal-950 flex items-center gap-1"
-                      >
-                        <Eye className="w-3.5 h-3.5" />
-                        <span>Launch Portal View</span>
-                      </button>
-                    )}
+                    
+                    <button
+                      onClick={() => {
+                        // Store session and open live portal directly
+                        localStorage.setItem('ksh_supplier_token', `ksh-sup-token-${s.id}-${Date.now()}`);
+                        localStorage.setItem('ksh_supplier_user', JSON.stringify(s));
+                        window.open('/supplier', '_blank');
+                      }}
+                      className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-stone-900 text-white hover:bg-stone-800 flex items-center gap-1 shadow-xs"
+                    >
+                      <ExternalLink className="w-3.5 h-3.5 text-amber-400" />
+                      <span>Open Live Vendor Hub</span>
+                    </button>
+
+                    <button
+                      onClick={() => setPreviewPortalSupplier(s)}
+                      className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-stone-100 text-stone-700 hover:bg-stone-200 flex items-center gap-1 border border-stone-200"
+                    >
+                      <Eye className="w-3.5 h-3.5" />
+                      <span>Admin Preview</span>
+                    </button>
+
                     <button
                       onClick={() => handleTogglePortal(s.id, Boolean(s.portalAccess?.enabled))}
                       className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
                         s.portalAccess?.enabled
                           ? 'bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200'
-                          : 'bg-stone-900 text-white hover:bg-stone-800'
+                          : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200'
                       }`}
                     >
-                      {s.portalAccess?.enabled ? 'Disable Portal' : 'Enable Portal'}
+                      {s.portalAccess?.enabled ? 'Disable Access' : 'Enable Access'}
                     </button>
                   </div>
                 </div>
@@ -797,131 +938,24 @@ export function SuppliersAdmin() {
         </div>
       )}
 
-      {/* Supplier Detail Drawer / Modal */}
+      {/* Advanced Supplier Ledger & Procurement Control Center */}
       {selectedSupplier && supplierDetail && (
-        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex justify-end animate-in fade-in duration-150">
-          <div className="w-full max-w-2xl bg-white h-full shadow-2xl overflow-y-auto p-6 space-y-6 flex flex-col">
-            <div className="flex items-center justify-between border-b border-stone-200 pb-4">
-              <div>
-                <div className="text-xs font-mono text-stone-400">{selectedSupplier.code}</div>
-                <h2 className="text-lg font-bold font-serif text-stone-900">{selectedSupplier.companyName}</h2>
-              </div>
-              <button
-                onClick={() => { setSelectedSupplier(null); setSupplierDetail(null); }}
-                className="p-2 text-stone-400 hover:text-stone-700 rounded-lg hover:bg-stone-100"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            {/* Financial Ledger Metric Bar */}
-            <div className="grid grid-cols-3 gap-3 bg-stone-50 p-4 rounded-xl border border-stone-200 text-center">
-              <div>
-                <div className="text-[11px] text-stone-500 font-medium">Total Purchased</div>
-                <div className="text-sm font-bold font-mono text-stone-900 mt-1">
-                  {formatPrice(selectedSupplier.totalPurchased)}
-                </div>
-              </div>
-              <div>
-                <div className="text-[11px] text-stone-500 font-medium">Total Paid</div>
-                <div className="text-sm font-bold font-mono text-emerald-700 mt-1">
-                  {formatPrice(selectedSupplier.totalPaid)}
-                </div>
-              </div>
-              <div>
-                <div className="text-[11px] text-stone-500 font-medium">Outstanding Due</div>
-                <div className="text-sm font-bold font-mono text-amber-700 mt-1">
-                  {formatPrice(selectedSupplier.totalDue)}
-                </div>
-              </div>
-            </div>
-
-            {/* Purchase Orders Section */}
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <h3 className="text-xs font-bold uppercase tracking-wider text-stone-600">
-                  Procurement Orders ({supplierDetail.purchaseOrders.length})
-                </h3>
-              </div>
-
-              {supplierDetail.purchaseOrders.length === 0 ? (
-                <div className="text-center py-6 text-stone-400 text-xs border border-dashed border-stone-200 rounded-lg">
-                  No purchase orders issued to this vendor yet.
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {supplierDetail.purchaseOrders.map(po => (
-                    <div key={po.id} className="p-3.5 rounded-lg border border-stone-200 bg-white space-y-2">
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="font-mono font-bold text-stone-900">{po.poNumber}</span>
-                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                          po.status === 'RECEIVED'
-                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                            : po.status === 'ISSUED'
-                            ? 'bg-teal-50 text-teal-700 border border-teal-200'
-                            : 'bg-stone-100 text-stone-600'
-                        }`}>
-                          {po.status}
-                        </span>
-                      </div>
-                      <div className="text-[11px] text-stone-500">
-                        Expected: {po.expectedDeliveryDate} • Hub: {po.warehouseId}
-                      </div>
-                      <div className="divide-y divide-stone-100 text-xs">
-                        {po.items.map((item, idx) => (
-                          <div key={idx} className="py-1 flex justify-between">
-                            <span>{item.quantity}x {item.productName}</span>
-                            <span className="font-mono">{formatPrice(item.totalCost)}</span>
-                          </div>
-                        ))}
-                      </div>
-                      <div className="pt-2 border-t border-stone-100 flex items-center justify-between">
-                        <div className="text-xs font-bold font-mono">
-                          Total: {formatPrice(po.totalAmount)}
-                        </div>
-                        {po.status === 'ISSUED' && (
-                          <button
-                            onClick={() => handleMarkPoReceived(selectedSupplier.id, po.id)}
-                            className="px-2.5 py-1 text-[11px] font-semibold text-white bg-emerald-700 hover:bg-emerald-800 rounded transition-colors flex items-center gap-1"
-                          >
-                            <Warehouse className="w-3 h-3" />
-                            <span>Mark Received & Stock In</span>
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Payment Vouchers Section */}
-            <div className="space-y-3">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-stone-600">
-                Disbursement Vouchers ({supplierDetail.payments.length})
-              </h3>
-              {supplierDetail.payments.length === 0 ? (
-                <div className="text-center py-6 text-stone-400 text-xs border border-dashed border-stone-200 rounded-lg">
-                  No payment disbursements recorded for this vendor.
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {supplierDetail.payments.map(pmt => (
-                    <div key={pmt.id} className="p-3 rounded-lg border border-stone-200 bg-stone-50 text-xs flex items-center justify-between">
-                      <div>
-                        <div className="font-bold text-stone-900">{pmt.paymentMethod}</div>
-                        <div className="text-[10px] text-stone-500 font-mono">Ref: {pmt.referenceNumber} • {new Date(pmt.disbursedAt).toLocaleDateString()}</div>
-                      </div>
-                      <div className="font-mono font-bold text-emerald-700 text-sm">
-                        {formatPrice(pmt.amount)}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
+        <AdvancedSupplierLedgerModal
+          supplier={selectedSupplier}
+          detail={supplierDetail}
+          onClose={() => { setSelectedSupplier(null); setSupplierDetail(null); }}
+          onMarkPoReceived={handleMarkPoReceived}
+          onDisbursePayment={(supp, suggestedAmount) => {
+            setPaymentSupplierId(supp.id);
+            setPaymentAmount(suggestedAmount !== undefined ? suggestedAmount : supp.totalDue);
+            setRecordPaymentOpen(true);
+          }}
+          onIssuePo={(supp) => {
+            setPoSupplierId(supp.id);
+            setCreatePoOpen(true);
+          }}
+          onRefresh={() => openSupplierDetail(selectedSupplier)}
+        />
       )}
 
       {/* Modal: Create Supplier */}
@@ -1449,6 +1483,13 @@ export function SuppliersAdmin() {
           }}
         />
       )}
+
+      {/* Official Supplier Statement Modal */}
+      <SupplierStatementModal
+        isOpen={Boolean(statementSupplierId)}
+        onClose={() => setStatementSupplierId(null)}
+        supplierId={statementSupplierId}
+      />
     </div>
   );
 }

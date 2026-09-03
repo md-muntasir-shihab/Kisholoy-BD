@@ -1,21 +1,40 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   DollarSign, TrendingUp, TrendingDown, Plus, BarChart3, 
   ArrowUpRight, Download, Filter, Trash2, CheckCircle2, 
   AlertCircle, ShieldCheck, RefreshCw, Landmark, Receipt,
-  Layers, ArrowRight, Search, FileSpreadsheet, Eye
+  Layers, ArrowRight, Search, FileSpreadsheet, Eye, Sparkles
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
-import { ExpenseRecord, SettlementRecord, SettlementStatus, FinancialSummary, ReconciliationAnomaly } from '../types';
+import { Order, ExpenseRecord, SettlementRecord, SettlementStatus, FinancialSummary, ReconciliationAnomaly } from '../types';
+import { DateRangeFilterBar } from '../components/admin/DateRangeFilterBar';
+import { DateWiseDataHubModal } from '../components/admin/DateWiseDataHubModal';
+import { 
+  DateFilterConfig, 
+  filterItemsByDate, 
+  exportToExcel, 
+  exportToCsv,
+  formatDateDisplay,
+  getDateRangeBounds
+} from '../utils/dateFilterUtils';
 
 export function FinanceAdmin() {
   const { 
     orders, products, expenses, addExpense, deleteExpense, 
     settlements, addSettlement, updateSettlementStatus, 
-    showToast, logAudit 
+    showToast, logAudit, language 
   } = useApp();
+  const isBn = language === 'BN';
 
   const [activeTab, setActiveTab] = useState<'pnl' | 'expenses' | 'settlements' | 'reconciliation'>('pnl');
+  const [showDataHub, setShowDataHub] = useState(false);
+
+  // Date Filter State
+  const [dateFilter, setDateFilter] = useState<DateFilterConfig>({
+    preset: 'ALL',
+    selectedYear: new Date().getFullYear(),
+    selectedMonth: new Date().getMonth(),
+  });
 
   // Server financial summary state
   const [summary, setSummary] = useState<FinancialSummary | null>(null);
@@ -109,33 +128,46 @@ export function FinanceAdmin() {
     fetchSummary();
   }, [orders, expenses, settlements]);
 
-  // Fallback calculations if server API is unavailable
-  const totalRevenue = summary?.grossRevenue ?? orders.reduce((sum, o) => sum + o.total, 0);
-  const totalCogs = summary?.totalCogs ?? orders.reduce((sum, o) => {
-    return sum + o.items.reduce((itemSum, it) => {
+  // Date-filtered orders, expenses and settlements
+  const dateFilteredOrders = useMemo(() => {
+    return filterItemsByDate<Order>(orders, (o: Order) => o.createdAt, dateFilter);
+  }, [orders, dateFilter]);
+
+  const dateFilteredExpenses = useMemo(() => {
+    return filterItemsByDate<ExpenseRecord>(expenses, (e: ExpenseRecord) => e.date, dateFilter);
+  }, [expenses, dateFilter]);
+
+  const dateFilteredSettlements = useMemo(() => {
+    return filterItemsByDate<SettlementRecord>(settlements, (s: SettlementRecord) => s.periodStart || (s as any).createdAt, dateFilter);
+  }, [settlements, dateFilter]);
+
+  // Recalculate metrics based on active date scope
+  const totalRevenue = dateFilteredOrders.reduce((sum, o) => sum + (o.total || 0), 0);
+  const totalCogs = dateFilteredOrders.reduce((sum, o) => {
+    return sum + (o.items || []).reduce((itemSum, it) => {
       const prod = products.find(p => p.sku === it.sku);
       const unitCost = prod?.costPrice || (it.price * 0.6);
       return itemSum + (unitCost * it.quantity);
     }, 0);
   }, 0);
 
-  const grossProfit = summary?.grossProfit ?? (totalRevenue - totalCogs);
-  const grossMarginPct = summary?.grossMarginPct ?? (totalRevenue > 0 ? (grossProfit / totalRevenue) * 100 : 0);
-  const totalOperatingExpenses = summary?.totalOperatingExpenses ?? expenses.reduce((sum, e) => sum + e.amount, 0);
-  const gatewayFeesTotal = summary?.gatewayFeesTotal ?? 604.80;
-  const netOperatingProfit = summary?.netOperatingProfit ?? (grossProfit - totalOperatingExpenses);
-  const netProfitMarginPct = summary?.netProfitMarginPct ?? (totalRevenue > 0 ? (netOperatingProfit / totalRevenue) * 100 : 0);
-  const settledFunds = summary?.settledFundsInBank ?? settlements.filter(s => s.status === 'SETTLED').reduce((sum, s) => sum + s.netPayout, 0);
-  const pendingFunds = summary?.pendingSettlements ?? settlements.filter(s => s.status !== 'SETTLED').reduce((sum, s) => sum + s.netPayout, 0);
+  const grossProfit = totalRevenue - totalCogs;
+  const grossMarginPct = totalRevenue > 0 ? (grossProfit / totalRevenue) * 100 : 0;
+  const totalOperatingExpenses = dateFilteredExpenses.reduce((sum, e) => sum + e.amount, 0);
+  const gatewayFeesTotal = dateFilteredSettlements.reduce((sum, s) => sum + (s.gatewayFee || 0), 0) || (totalRevenue * 0.02);
+  const netOperatingProfit = grossProfit - totalOperatingExpenses - gatewayFeesTotal;
+  const netProfitMarginPct = totalRevenue > 0 ? (netOperatingProfit / totalRevenue) * 100 : 0;
+  const settledFunds = dateFilteredSettlements.filter(s => s.status === 'SETTLED').reduce((sum, s) => sum + s.netPayout, 0);
+  const pendingFunds = dateFilteredSettlements.filter(s => s.status !== 'SETTLED').reduce((sum, s) => sum + s.netPayout, 0);
 
   // Unit Economics
-  const activeOrderCount = orders.filter(o => o.orderStatus !== 'CANCELLED' && o.orderStatus !== 'FAILED').length;
+  const activeOrderCount = dateFilteredOrders.filter(o => o.orderStatus !== 'CANCELLED' && o.orderStatus !== 'FAILED').length;
   const aov = activeOrderCount > 0 ? totalRevenue / activeOrderCount : 0;
   const avgGrossMarginPerOrder = activeOrderCount > 0 ? grossProfit / activeOrderCount : 0;
   const avgNetProfitPerOrder = activeOrderCount > 0 ? netOperatingProfit / activeOrderCount : 0;
 
   // Filtered Expenses
-  const filteredExpenses = expenses.filter(exp => {
+  const filteredExpenses = dateFilteredExpenses.filter(exp => {
     const matchesCategory = expenseCategoryFilter === 'ALL' || exp.category === expenseCategoryFilter;
     const matchesSearch = 
       exp.vendor.toLowerCase().includes(expenseSearchQuery.toLowerCase()) ||
@@ -337,6 +369,13 @@ export function FinanceAdmin() {
         </div>
         <div className="flex items-center gap-2">
           <button
+            onClick={() => setShowDataHub(true)}
+            className="px-3.5 py-2 bg-stone-900 hover:bg-stone-950 text-amber-300 rounded-xl text-xs font-bold flex items-center gap-2 shadow-xs transition-all border border-stone-800"
+          >
+            <Sparkles className="w-4 h-4 text-amber-400" />
+            <span>{isBn ? 'মাস্টার ডেট হাব' : 'Date Hub & Export'}</span>
+          </button>
+          <button
             onClick={fetchSummary}
             className="px-3 py-2 bg-white border border-stone-200 rounded-lg text-xs font-semibold text-stone-700 hover:bg-stone-50 flex items-center gap-1.5 shadow-xs"
           >
@@ -350,6 +389,51 @@ export function FinanceAdmin() {
           </button>
         </div>
       </div>
+
+      {/* Date Range Filter Bar for Finance */}
+      <DateRangeFilterBar
+        value={dateFilter}
+        onChange={setDateFilter}
+        onOpenDataHub={() => setShowDataHub(true)}
+        totalFilteredCount={
+          activeTab === 'expenses' ? filteredExpenses.length :
+          activeTab === 'settlements' ? dateFilteredSettlements.length :
+          dateFilteredOrders.length
+        }
+        totalUnfilteredCount={
+          activeTab === 'expenses' ? expenses.length :
+          activeTab === 'settlements' ? settlements.length :
+          orders.length
+        }
+        onExportExcel={() => {
+          if (activeTab === 'expenses') {
+            const data = filteredExpenses.map(e => ({
+              'Date': e.date,
+              'Category': e.category,
+              'Vendor': e.vendor,
+              'Reference': e.reference,
+              'Amount (BDT)': e.amount,
+              'Notes': e.notes || ''
+            }));
+            exportToExcel(data, 'Expenses', 'Kisholoy_Expenses', dateFilter);
+          } else if (activeTab === 'settlements') {
+            const data = dateFilteredSettlements.map(s => ({
+              'Batch Number': s.batchNumber,
+              'Date': s.createdAt,
+              'Gateway': s.gateway,
+              'Bank Account': s.bankAccount,
+              'Status': s.status,
+              'Gross (BDT)': s.grossAmount,
+              'Gateway Fee (BDT)': s.gatewayFee,
+              'Net Payout (BDT)': s.netPayout,
+              'UTR Ref': s.utrNumber || ''
+            }));
+            exportToExcel(data, 'Settlements', 'Kisholoy_Settlements', dateFilter);
+          } else {
+            handleExportPnLCsv();
+          }
+        }}
+      />
 
       {/* Primary KPI Ribbon */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -1111,6 +1195,15 @@ export function FinanceAdmin() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Date-wise Master Data Hub Modal */}
+      {showDataHub && (
+        <DateWiseDataHubModal
+          isOpen={showDataHub}
+          onClose={() => setShowDataHub(false)}
+          initialDomain="FINANCE"
+        />
       )}
     </div>
   );

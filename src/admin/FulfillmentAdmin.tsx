@@ -4,7 +4,7 @@ import {
   FileText, CheckCircle2, Clock, AlertTriangle, Search, Filter, 
   Plus, Edit3, Eye, Printer, PackageCheck, ShieldCheck, Box,
   ChevronRight, ArrowUpRight, BarChart3, Layers, Check, X,
-  Compass, RefreshCw, Send, UserCheck, AlertCircle, Phone, Navigation
+  Compass, RefreshCw, Send, UserCheck, AlertCircle, Phone, Navigation, SlidersHorizontal
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { 
@@ -20,6 +20,7 @@ export const FulfillmentAdmin: React.FC = () => {
     createStockTransfer, approveStockTransfer, dispatchStockTransfer, 
     receiveStockTransfer, generatePickList, togglePickItem,
     generateDispatchManifest, handoverManifest, routeOrderSimulation,
+    isFulfillmentOptional, setIsFulfillmentOptional,
     showToast 
   } = useApp();
 
@@ -279,6 +280,63 @@ export const FulfillmentAdmin: React.FC = () => {
           >
             <ArrowRightLeft className="w-4 h-4 text-stone-600" />
             {isBn ? 'নতুন স্টক ট্রান্সফার (STO)' : 'New Stock Transfer (STO)'}
+          </button>
+        </div>
+      </div>
+
+      {/* Optional Mode Banner & Direct Dispatch Preference */}
+      <div className={`p-4 rounded-xl border transition-all flex flex-col md:flex-row items-start md:items-center justify-between gap-4 ${
+        isFulfillmentOptional 
+          ? 'bg-amber-50/80 border-amber-200 text-amber-900 shadow-xs' 
+          : 'bg-teal-50/80 border-teal-200 text-teal-900 shadow-xs'
+      }`}>
+        <div className="flex items-start gap-3">
+          <div className={`p-2 rounded-lg mt-0.5 ${
+            isFulfillmentOptional ? 'bg-amber-100 text-amber-800' : 'bg-teal-100 text-teal-800'
+          }`}>
+            <SlidersHorizontal className="w-5 h-5" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="font-bold text-sm">
+                {isBn ? 'হাব ও ফুলফিলমেন্ট মোড:' : 'Hubs & Multi-Warehouse Routing Mode:'}
+              </span>
+              <span className={`px-2 py-0.5 rounded text-[11px] font-bold uppercase tracking-wider ${
+                isFulfillmentOptional ? 'bg-amber-200 text-amber-950' : 'bg-teal-200 text-teal-950'
+              }`}>
+                {isFulfillmentOptional 
+                  ? (isBn ? 'ঐচ্ছিক (সরাসরি কুরিয়ার প্রেরণ অগ্রাধিকার)' : 'OPTIONAL (Direct Dispatch Preferred)')
+                  : (isBn ? 'সক্রিয় (মাল্টি-হাব রাউটিং প্রযোজ্য)' : 'ACTIVE (Mandatory Hub Partitioning)')}
+              </span>
+            </div>
+            <p className="text-xs mt-1 text-stone-600 max-w-3xl">
+              {isFulfillmentOptional
+                ? (isBn 
+                    ? 'ফুলফিলমেন্ট হাব ব্যবস্থাপনা বর্তমানে ঐচ্ছিক করা হয়েছে। যেকোনো অর্ডার জটিল ডিপো রাউটিং বা পিকলিস্ট ছাড়াই সরাসরি "Shipments & Couriers" থেকে যেকোনো কুরিয়ারে বুকিং করে পাঠানো যাবে।' 
+                    : 'Fulfillment hub partition is optional. You can directly ship orders via Shipments & Couriers without requiring complex multi-hub assignment, split shipments, or pick list processing.')
+                : (isBn 
+                    ? 'মাল্টি-হাব রাউটিং সক্রিয় রয়েছে। বিভাগ ও এলাকা অনুযায়ী স্বয়ংক্রিয়ভাবে ওয়্যারহাউস নির্ধারিত হবে।' 
+                    : 'Enterprise multi-hub partitioning is active. Orders require hub routing and digital pick-list allocation before courier dispatch.')}
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3 shrink-0">
+          <button
+            type="button"
+            onClick={() => setIsFulfillmentOptional(!isFulfillmentOptional)}
+            className={`px-4 py-2 rounded-lg text-xs font-bold transition-all shadow-xs flex items-center gap-2 ${
+              isFulfillmentOptional
+                ? 'bg-amber-800 hover:bg-amber-900 text-white'
+                : 'bg-teal-900 hover:bg-teal-950 text-white'
+            }`}
+          >
+            <RefreshCw className="w-3.5 h-3.5" />
+            <span>
+              {isFulfillmentOptional
+                ? (isBn ? 'মাল্টি-হাব বাধ্যতামূলক করুন' : 'Enable Mandatory Hub Routing')
+                : (isBn ? 'ঐচ্ছিক করুন (সহজ মোড)' : 'Make Hubs Optional (Direct Mode)')}
+            </span>
           </button>
         </div>
       </div>

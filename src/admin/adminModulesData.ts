@@ -3,7 +3,7 @@ import {
   LayoutDashboard, ShoppingCart, ShieldAlert, Truck, Building2, Cpu, 
   RotateCcw, DollarSign, CreditCard, Package, Folders, Warehouse, 
   Users, Megaphone, Gift, BarChart3, FileText, Settings, ShieldCheck, 
-  History, Database
+  History, Database, Activity
 } from 'lucide-react';
 
 export interface AdminModuleItem {
@@ -43,8 +43,8 @@ export const ADMIN_SECTIONS_DATA: AdminSectionGroup[] = [
     titleBn: 'বিক্রয় ও দৈনিক অপারেশনস',
     summary: 'Manage incoming customer orders, fraud screening, warehouse fulfillment, dispatch couriers, returns, and daily payment reconciliations.',
     summaryBn: 'গ্রাহকদের অর্ডার গ্রহণ, প্রতারণা যাচাই, ওয়্যারহাউস প্যাকিং, কুরিয়ার হ্যান্ডওভার, রিটার্ন-রিফান্ড এবং পেমেন্ট রিকনসিলিয়েশন পরিচালনা করুন।',
-    badgeText: '10 Operational Desks',
-    badgeTextBn: '১০টি অপারেশনাল ডেস্ক',
+    badgeText: '8 Operational Desks',
+    badgeTextBn: '৮টি অপারেশনাল ডেস্ক',
     accentColor: 'teal',
     items: [
       {
@@ -130,131 +130,79 @@ export const ADMIN_SECTIONS_DATA: AdminSectionGroup[] = [
       {
         id: 'admin-nav-shipments',
         sectionId: 'sales-operations',
-        label: 'Shipments & Courier',
+        label: 'Shipments & Couriers',
         labelBn: 'কুরিয়ার ও শিপমেন্ট ট্র্যাকিং',
         path: '/admin/shipments',
         icon: Truck,
         role: 'Order Manager, Fulfillment',
         roleBn: 'অর্ডার ম্যানেজার, ফুলফিলমেন্ট',
-        tagline: 'Integration with Steadfast, Pathao, RedX, bulk booking, consignment slips, and tracking logs',
-        taglineBn: 'স্টেডফাস্ট, পাঠাও ও রেডএক্স এপিআই বুকিং, কনসাইনমেন্ট ট্র্যাকিং ও ডেলিভারি লগ',
-        description: 'Seamless dispatch gateway to leading Bangladeshi couriers. Auto-generate tracking consignment numbers, print adhesive courier labels, and track delivery progress across districts.',
-        descriptionBn: 'বাংলাদেশের শীর্ষ কুরিয়ার (স্টেডফাস্ট, পাঠাও) সার্ভিসে এক ক্লিকে পার্সেল বুকিং, ট্র্যাকিং আইডি পাওয়া, বারকোড স্টিকার প্রিন্ট ও জেলাভিত্তিক ডেলিভারি আপডেট দেখা।',
+        tagline: 'Custom courier management, Steadfast/Pathao/RedX integration, consignment dispatch, and tracking logs',
+        taglineBn: 'কাস্টম কুরিয়ার যোগ, স্টেডফাস্ট ও পাঠাও এপিআই বুকিং, কনসাইনমেন্ট ট্র্যাকিং ও ডেলিভারি লগ',
+        description: 'Seamless dispatch gateway to leading Bangladeshi couriers and custom delivery partners. Auto-generate tracking consignment numbers, print adhesive courier labels, and track delivery progress across districts.',
+        descriptionBn: 'বাংলাদেশের শীর্ষ কুরিয়ার সার্ভিস ও নিজস্ব কাস্টম কুরিয়ার পার্টনার পরিচালনা। এক ক্লিকে পার্সেল বুকিং, ট্র্যাকিং আইডি পাওয়া, বারকোড স্টিকার প্রিন্ট ও জেলাভিত্তিক ডেলিভারি আপডেট দেখা।',
         tasksEn: [
-          'Book parcels to courier APIs (Steadfast, Pathao, Paperfly)',
+          'Manage custom couriers and configure tracking URL templates',
+          'Book parcels to courier APIs (Steadfast, Pathao, RedX, or custom couriers)',
           'Generate and print shipping labels with customer phone & barcode',
-          'Track live shipment transit across Dhaka and outside-Dhaka hubs',
-          'Handle delivery exceptions, customer unreachable issues, and reschedule'
+          'Track live shipment transit across Dhaka and outside-Dhaka hubs'
         ],
         tasksBn: [
+          'পছন্দমতো যেকোনো কাস্টম কুরিয়ার যুক্ত ও কনফিগার করা',
           'কুরিয়ার সিস্টেমে এক ক্লিকে বা বাল্ক অর্ডারের পার্সেল বুকিং করা',
           'বারকোডসহ শিপিং লেবেল ও অ্যাড্রেস স্টিকার প্রিন্ট করা',
-          'সারাদেশের বিভিন্ন হাব ও রাইডার পর্যায়ে পার্সেল ট্র্যাকিং দেখা',
-          'গ্রাহক রিসিভ না করলে বা ফোন বন্ধ থাকলে ফলোআপ ও রিশিডিউল করা'
+          'সারাদেশের বিভিন্ন হাব ও রাইডার পর্যায়ে পার্সেল ট্র্যাকিং দেখা'
         ]
       },
       {
         id: 'admin-nav-fulfillment',
         sectionId: 'sales-operations',
-        label: 'Hubs & Fulfillment',
-        labelBn: 'হাব ও ওয়্যারহাউস ফুলফিলমেন্ট',
+        label: 'Hubs & Fulfillment (Optional)',
+        labelBn: 'হাব ও ওয়্যারহাউস ফুলফিলমেন্ট (ঐচ্ছিক)',
         path: '/admin/fulfillment',
         icon: Building2,
         role: 'Warehouse Staff, Admin',
         roleBn: 'ওয়্যারহাউস স্টাফ, অ্যাডমিন',
-        tagline: 'Warehouse zones, shelf bin locations, pick & pack workflow, and dispatch logs',
-        taglineBn: 'ওয়্যারহাউস জোন, তাক ও বিন লোকেশন, পিকিং-প্যাকিং এবং হাব ট্রান্সফার',
-        description: 'Manage warehouse floor logistics. Coordinate order picking lists, QC inspections, barcoded packing stations, and handover to courier sorting vans.',
-        descriptionBn: 'গুদাম ও ওয়্যারহাউসের পণ্য সাজানো, আইটেম পিকিং লিস্ট জেনারেট, মান নিয়ন্ত্রণ (QC) পরিদর্শন, শক্ত কার্টনিং এবং কুরিয়ার গাড়িতে হস্তান্তর নিশ্চিতকরণ।',
+        tagline: 'Optional multi-hub logistics, shelf bin matrices, stock transfers, and dispatch manifests',
+        taglineBn: 'ঐচ্ছিক ওয়্যারহাউস হাব, তাক ও বিন লোকেশন, স্টক ট্রান্সফার ও ডিসপ্যাচ পিক-লিস্ট',
+        description: 'Optional warehouse floor logistics. Coordinate order picking lists, QC inspections, barcoded packing stations, and handover to courier sorting vans when multi-warehouse mode is enabled.',
+        descriptionBn: 'ঐচ্ছিক গুদাম ও ওয়্যারহাউসের পণ্য ব্যবস্থাপনা। একাধিক হাবের মালামাল স্থানান্তর, আইটেম পিকিং লিস্ট জেনারেট এবং বড় আকারের অপারেশনের জন্য ওয়্যারহাউস ম্যানেজমেন্ট।',
         tasksEn: [
+          'Toggle between simple direct fulfillment and multi-hub routing',
           'Generate warehouse batch-picking lists by shelf location',
           'Conduct quality check (QC) and item barcode verification',
-          'Package products with protective air-bubbles and tamper tape',
           'Coordinate inter-hub transfers and sorting center dispatches'
         ],
         tasksBn: [
+          'সাধারণ সরাসরি কুরিয়ার পাঠানো বা মাল্টি-হাব রুট পছন্দের সুযোগ',
           'তাক ও বিন নম্বর অনুযায়ী ব্যাচ পিকিং লিস্ট বের করা',
           'পণ্য প্যাকিংয়ের পূর্বে নিখুঁত মান যাচাই (QC) সম্পন্ন করা',
-          'সিকিউরিটি সিল ও টেপ দিয়ে নিরাপদ প্যাকেট প্রস্তুত করা',
           'বিভিন্ন আঞ্চলিক হাব ও ডিপোর মধ্যে মালামাল স্থানান্তর দেখা'
-        ]
-      },
-      {
-        id: 'admin-nav-operations',
-        sectionId: 'sales-operations',
-        label: 'Operations & Queue',
-        labelBn: 'অপারেশনস ব্যাকগ্রাউন্ড কিউ',
-        path: '/admin/operations',
-        icon: Cpu,
-        role: 'System Engineer, Admin',
-        roleBn: 'সিস্টেম ইঞ্জিনিয়ার, অ্যাডমিন',
-        tagline: 'Asynchronous task queues, background workers, webhook delivery, and scheduled cron jobs',
-        taglineBn: 'ব্যাকগ্রাউন্ড টাস্ক কিউ, অটো এসএমএস নোটিফিকেশন, ওয়েবহুক ডেলিভারি ও ক্রন জব',
-        description: 'Supervise automated background processes including SMS alerts, email confirmations, courier status webhooks, inventory sync, and failed task retries.',
-        descriptionBn: 'স্বয়ংক্রিয় ব্যাকগ্রাউন্ড কাজের স্বাস্থ্য পরীক্ষা—যেমন স্বয়ংক্রিয় এসএমএস পাঠানো, কুরিয়ার ওয়েবহুক গ্রহণ, ব্যর্থ ট্রানজাকশন রিট্রাই এবং ক্রন জব মনিটরিং।',
-        tasksEn: [
-          'Inspect background job queues and retry failed tasks',
-          'Monitor SMS gateway delivery logs and customer alerts',
-          'Audit courier and payment webhook callbacks for missed events',
-          'Run scheduled maintenance, cache purges, and cleanup'
-        ],
-        tasksBn: [
-          'ব্যাকগ্রাউন্ড টাস্ক কিউ পরীক্ষা এবং ফেইল্ড জবস পুনরায় চালু করা',
-          'এসএমএস গেটওয়ে ডেলিভারি লগ ও কাস্টমার নোটিফিকেশন যাচাই',
-          'পেমেন্ট ও কুরিয়ার ওয়েবহুকের রেসপন্স স্ট্যাটাস মনিটর করা',
-          'সিস্টেম ক্যাশ রিফ্রেশ এবং শিডিউল্ড ক্লিনআপ সম্পন্ন করা'
         ]
       },
       {
         id: 'admin-nav-returns',
         sectionId: 'sales-operations',
-        label: 'Returns (RMA)',
-        labelBn: 'পণ্য রিটার্ন ও এক্সচেঞ্জ (RMA)',
+        label: 'Returns & Refunds (RMA)',
+        labelBn: 'পণ্য রিটার্ন ও রিফান্ড ডেস্ক',
         path: '/admin/returns',
         icon: RotateCcw,
-        role: 'Support, Inventory Manager',
-        roleBn: 'সাপোর্ট, ইনভেন্টরি ম্যানেজার',
-        tagline: 'Return Merchandise Authorization (RMA), defect inspection, restocking, and replacements',
-        taglineBn: 'পণ্য ফেরত অনুরোধ যাচাই, ত্রুটি পরীক্ষা, পুনরায় স্টকে যুক্ত ও এক্সচেঞ্জ ডেলিভারি',
-        description: 'Handle customer return and exchange claims systematically. Log returned items, inspect defect claims with photo evidence, approve exchanges, or route to refunds.',
-        descriptionBn: 'গ্রাহকদের পণ্য ফেরত ও বদলানোর আবেদন পরিচালনা। নষ্ট বা ভুল সাইজের পণ্য ওয়্যারহাউসে রিসিভ করা, ত্রুটি পরীক্ষা, ইনভেন্টরিতে ব্যাক করা বা নতুন পণ্য পাঠানো।',
+        role: 'Support, Inventory & Finance',
+        roleBn: 'সাপোর্ট, ইনভেন্টরি ও ফাইন্যান্স',
+        tagline: 'Unified RMA inspection, defective item verification, inventory restocking, and bKash/Nagad refund disbursements',
+        taglineBn: 'রিটার্ন আবেদন যাচাই, ওয়্যারহাউসে রিসিভ ও কোয়ালিটি টেস্ট এবং বিকাশ, নগদ ও কার্ডের রিফান্ড প্রসেসিং',
+        description: 'Integrated control center for customer return merchandise authorizations (RMA) and financial money-back reversals. Manage RMA receiving, physical inspection, restocking, and automated gateway refunds in one unified workflow.',
+        descriptionBn: 'পণ্য ফেরত ও টাকা ফেরতের সমন্বিত ডেস্ক। কাস্টমারের রিটার্ন রিকোয়েস্ট পর্যালোচনা, ওয়্যারহাউসে মাল রিসিভ, ইনভেন্টরিতে ব্যাক করা এবং বিকাশ/নগদে সরাসরি রিফান্ড দেওয়ার পূর্ণাঙ্গ ব্যবস্থা।',
         tasksEn: [
-          'Receive customer RMA tickets with proof photos and reason',
-          'Conduct warehouse receiving inspection for returned goods',
-          'Authorize replacement item dispatch or forward to refund queue',
-          'Restock undamaged goods back into active sellable inventory'
+          'Receive and review customer RMA return & exchange requests',
+          'Inspect returned items for damage, verify evidence photos, and restock goods',
+          'Authorize and disburse customer refunds via bKash, Nagad, or gateway reversals',
+          'Log formal accounting vouchers and notify customers via automated SMS'
         ],
         tasksBn: [
-          'গ্রাহকের রিটার্ন আবেদন ও পণ্যের ছবি/ভিডিও প্রমাণ পর্যালোচনা',
-          'ওয়্যারহাউসে ফেরত আসা পণ্য ফিজিক্যাল চেক ও কোয়ালিটি টেষ্ট',
-          'গ্রাহককে নতুন পণ্য এক্সচেঞ্জ পাঠানো অথবা রিফান্ডের অনুমোদন',
-          'ভালো পণ্য পুনরায় সক্রিয় ইনভেন্টরি লেজারে যুক্ত করা'
-        ]
-      },
-      {
-        id: 'admin-nav-refunds',
-        sectionId: 'sales-operations',
-        label: 'Refunds Queue',
-        labelBn: 'রিফান্ড ও মানি ব্যাক কিউ',
-        path: '/admin/refunds',
-        icon: DollarSign,
-        role: 'Finance, Super Admin',
-        roleBn: 'ফাইন্যান্স, সুপার অ্যাডমিন',
-        tagline: 'bKash, Nagad, and bank refund processing, accounting approval, and payout vouchers',
-        taglineBn: 'বিকাশ, নগদ ও ব্যাংক রিফান্ড অনুমোদন, টাকা ফেরত রসিদ ও ব্যালেন্স সমন্বয়',
-        description: 'Review authorized customer money-back requests. Execute instant bKash/Nagad reverse transactions or bank transfers with strict ledger double-entry checks.',
-        descriptionBn: 'অনুমোদিত রিফান্ড আবেদনগুলোর জন্য বিকাশ, নগদ বা ব্যাংক একাউন্টে টাকা ফেরত পাঠানো। হিসাবরক্ষণ বিভাগে ভাউচার এন্ট্রি এবং গ্রাহককে কনফার্মেশন এসএমএস প্রদান।',
-        tasksEn: [
-          'Verify refund eligibility based on returned goods inspection',
-          'Disburse payments via bKash/Nagad Merchant B2C or bank EFT',
-          'Record formal accounting vouchers and balance deductions',
-          'Notify customer with payment transaction ID (TrxID) via SMS'
-        ],
-        tasksBn: [
-          'পণ্য ফেরত পাওয়ার পর রিফান্ডের টাকার পরিমাণ যাচাই করা',
-          'বিকাশ, নগদ বা ব্যাংক ট্রান্সফারের মাধ্যমে গ্রাহককে টাকা পাঠানো',
-          'আর্থিক খতিয়ানে ডেবিট-ক্রেডিট হিসাব লিপিবদ্ধ করা',
-          'লেনদেনের ট্রানজাকশন আইডি (TrxID) সহ গ্রাহককে অবহিত করা'
+          'গ্রাহকের পণ্য ফেরত ও এক্সচেঞ্জ আবেদন পর্যালোচনা করা',
+          'ওয়্যারহাউসে ফেরত আসা পণ্য পরীক্ষা, ত্রুটি যাচাই ও স্টকে পুনঃসংযোজন',
+          'অনুমোদিত গ্রাহকদের বিকাশ, নগদ বা ব্যাংক একাউন্টে রিফান্ড টাকা প্রেরণ',
+          'লেনদেনের ভাউচার লিপিবদ্ধ এবং কাস্টমারকে ট্রানজাকশন আইডিসহ এসএমএস পাঠানো'
         ]
       },
       {
@@ -430,12 +378,12 @@ export const ADMIN_SECTIONS_DATA: AdminSectionGroup[] = [
   },
   {
     id: 'customer-management',
-    title: 'Customer Management',
-    titleBn: 'গ্রাহক ও প্রচারণা ব্যবস্থাপনা',
-    summary: 'Manage customer accounts, purchase history, lifetime value (LTV), targeted SMS marketing, coupons, and reward loyalty points.',
-    summaryBn: 'গ্রাহকদের তালিকা ও প্রোফাইল, লাইফটাইম ভ্যালু, এসএমএস প্রচারণা, ডিসকাউন্ট কুপন ও লয়্যালটি রিওয়ার্ড পরিচালনা।',
-    badgeText: '3 Relationship Desks',
-    badgeTextBn: '৩টি রিলেশনশিপ ডেস্ক',
+    title: 'Customer Management & CRM',
+    titleBn: 'গ্রাহক ও সিআরএম ব্যবস্থাপনা',
+    summary: 'Manage customer profiles, purchase records, delivery addresses, lifetime value (LTV), phone verification, and anti-abuse security alerts.',
+    summaryBn: 'গ্রাহকদের সম্পূর্ণ প্রোফাইল, কেনাকাটার রেকর্ড, সংরক্ষিত ঠিকানা, লাইফটাইম ভ্যালু ও নিরাপত্তা ঝুঁকি পরিচালনা।',
+    badgeText: '1 CRM Directory Hub',
+    badgeTextBn: '১টি সিআরএম ডিরেক্টরি হাব',
     accentColor: 'emerald',
     items: [
       {
@@ -447,73 +395,23 @@ export const ADMIN_SECTIONS_DATA: AdminSectionGroup[] = [
         icon: Users,
         role: 'Support, CRM Manager, Admin',
         roleBn: 'সাপোর্ট, সিআরএম ম্যানেজার, অ্যাডমিন',
-        tagline: 'Comprehensive customer database, delivery addresses, order frequencies, and lifetime value',
-        taglineBn: 'সকল নিবন্ধিত গ্রাহকের তথ্য, ঠিকানার বই, মোট কেনাকাটা ও কাস্টমার লাইফটাইম ভ্যালু',
-        description: 'Complete view of every customer who has purchased or registered. Inspect full order histories, verified phone numbers, preferred delivery addresses, and customer VIP tiers.',
-        descriptionBn: 'দোকানের সকল কাস্টমারের বিস্তারিত প্রোফাইল। তাদের সম্পূর্ণ কেনাকাটার রেকর্ড, ফোন ভেরিফিকেশন স্ট্যাটাস, ডেলিভারি ঠিকানা এবং বিশ্বস্ত লয়াল কাস্টমার চিহ্নিতকরণ।',
+        tagline: 'Comprehensive customer database, delivery addresses, order frequencies, fraud flags, and lifetime value',
+        taglineBn: 'সকল নিবন্ধিত গ্রাহকের তথ্য, ঠিকানার বই, মোট কেনাকাটা, প্রতারণা ঝুঁকি ও কাস্টমার লাইফটাইম ভ্যালু',
+        description: 'Complete view of every customer who has purchased or registered. Inspect full order histories, verified phone numbers, preferred delivery addresses, anti-fraud flags, and customer VIP tiers.',
+        descriptionBn: 'দোকানের সকল কাস্টমারের বিস্তারিত প্রোফাইল। তাদের সম্পূর্ণ কেনাকাটার রেকর্ড, ফোন ভেরিফিকেশন স্ট্যাটাস, ডেলিভারি ঠিকানা, নিরাপত্তা ঝুঁকি এবং বিশ্বস্ত লয়াল কাস্টমার চিহ্নিতকরণ।',
         tasksEn: [
           'Search customers by phone number, name, or city district',
           'View past order frequency, average order value (AOV), and total spend',
+          'Inspect customer fraud risk alerts, return rates, and blacklist status',
           'Review customer delivery notes, address history, and contact issues',
           'Manage customer account statuses (Active, Flagged, Restricted)'
         ],
         tasksBn: [
           'ফোন নম্বর, নাম বা জেলা দিয়ে সহজেই নির্দিষ্ট গ্রাহককে খুঁজে বের করা',
           'পূর্বে কত টাকার অর্ডার করেছেন এবং কয়টি সফলভাবে ডেলিভারি হয়েছে তা দেখা',
+          'গ্রাহকের ফ্রড ঝুঁকি অ্যালার্ট, রিটার্ন হিস্ট্রি ও ব্ল্যাকলিস্ট স্ট্যাটাস খতিয়ে দেখা',
           'গ্রাহকের সংরক্ষিত ঠিকানা ও স্পেশাল ডেলিভারি নোট পর্যালোচনা',
           'বিশ্বস্ত কাস্টমারদের ভিআইপি মর্যাদা প্রদান বা সমস্যাযুক্ত একাউন্ট ফ্ল্যাগ করা'
-        ]
-      },
-      {
-        id: 'admin-nav-marketing',
-        sectionId: 'customer-management',
-        label: 'Marketing & CRM',
-        labelBn: 'মার্কেটিং ও এসএমএস ক্যাম্পেইন',
-        path: '/admin/marketing',
-        icon: Megaphone,
-        role: 'Marketing Manager, Admin',
-        roleBn: 'মার্কেটিং ম্যানেজার, অ্যাডমিন',
-        tagline: 'Targeted SMS marketing, automated cart recovery, promotional emails, and campaign conversion telemetry',
-        taglineBn: 'টার্গেটেড এসএমএস পাঠানো, পরিত্যক্ত কার্ট রিকভারি, অফার প্রচার ও কনভার্সন বিশ্লেষণ',
-        description: 'Engage customers and boost repeat purchases. Broadcast personalized SMS promotions to segmented audiences, re-engage abandoned carts, and track marketing ROI.',
-        descriptionBn: 'গ্রাহকদের কেনাকাটায় উৎসাহিত করতে বাল্ক এসএমএস পাঠানো, যারা কার্টে পণ্য রেখে চলে গেছে তাদের ডিসকাউন্ট মেসেজ দেওয়া এবং ক্যাম্পেইনের ফলাফল বিশ্লেষণ করা।',
-        tasksEn: [
-          'Compose and send targeted Bangla/English SMS campaigns to buyer segments',
-          'Trigger automated discount reminders for abandoned shopping carts',
-          'Track campaign conversion rates, clicked links, and generated revenue',
-          'Manage customer opt-in preferences and promotional sender IDs'
-        ],
-        tasksBn: [
-          'নির্বাচিত গ্রাহকদের জন্য বাংলা বা ইংরেজিতে অফারের এসএমএস পাঠানো',
-          'অর্ডার না করে চলে যাওয়া কাস্টমারদের রিকভারি নোটিফিকেশন দেওয়া',
-          'ক্যাম্পেইন থেকে কতটি নতুন অর্ডার ও বিক্রি এসেছে তা পরিমাপ করা',
-          'গ্রাহকদের এসএমএস সাবস্ক্রিপশন ও প্রমোশনাল আইডি পরিচালনা'
-        ]
-      },
-      {
-        id: 'admin-nav-promotions',
-        sectionId: 'customer-management',
-        label: 'Promotions & Loyalty',
-        labelBn: 'ভাউচার, ডিসকাউন্ট ও লয়্যালটি',
-        path: '/admin/promotions',
-        icon: Gift,
-        role: 'Marketing, Admin',
-        roleBn: 'মার্কেটিং, অ্যাডমিন',
-        tagline: 'Discount coupon codes, tiered percentage vouchers, minimum cart thresholds, and customer reward points',
-        taglineBn: 'কুপন কোড তৈরি, ফ্ল্যাট বা পারসেন্টেজ ছাড়, মিনিমাম কার্ট লিমিট ও পয়েন্ট সিস্টেম',
-        description: 'Drive sales velocity with flexible coupon promotions. Set start/expiry dates, maximum usage limits, category restrictions, and award customer loyalty reward points.',
-        descriptionBn: 'বিক্রি বাড়াতে কুপন কোড (যেমন: EID2026, FIRST50) তৈরি। নির্দিষ্ট পরিমাণ কেনাকাটায় ছাড়, ক্যাটাগরিভিত্তিক অফার এবং পয়েন্টের মাধ্যমে লয়াল কাস্টমার রিওয়ার্ড দেওয়া।',
-        tasksEn: [
-          'Create promo codes with fixed BDT off or percentage discounts',
-          'Set expiration dates, minimum cart thresholds, and per-user usage limits',
-          'Configure product or category-exclusive promotional rules',
-          'Monitor coupon usage frequency and measure promotion profitability'
-        ],
-        tasksBn: [
-          'নির্দিষ্ট টাকার বা শতকরা ছাড়ের প্রমো কোড তৈরি করা',
-          'অফারের মেয়াদ, সর্বনিম্ন অর্ডারের লিমিট ও ব্যবহার সংখ্যা নির্ধারণ',
-          'নির্দিষ্ট ক্যাটাগরি বা পণ্যের জন্য এক্সক্লুসিভ অফার সেট করা',
-          'কোন কুপন কতবার ব্যবহার হয়েছে এবং লাভজনক কিনা তা নিরীক্ষণ'
         ]
       }
     ]
@@ -524,10 +422,36 @@ export const ADMIN_SECTIONS_DATA: AdminSectionGroup[] = [
     titleBn: 'সিস্টেম প্রশাসন ও নিরাপত্তা',
     summary: 'Enterprise controls including analytics reports, storefront CMS, payment & courier configurations, role-based staff access, audit logs, and database backups.',
     summaryBn: 'প্রতিষ্ঠানের নিরাপত্তা ও কনফিগারেশন: অ্যানালিটিক্স রিপোর্ট, সাইট কনটেন্ট ও ব্যানার CMS, স্টাফদের একাউন্ট পারমিশন, অডিট ট্রেইল এবং ব্যাকআপ।',
-    badgeText: '6 Admin Desks',
-    badgeTextBn: '৬টি অ্যাডমিন ডেস্ক',
+    badgeText: '7 Admin Desks',
+    badgeTextBn: '৭টি অ্যাডমিন ডেস্ক',
     accentColor: 'indigo',
     items: [
+      {
+        id: 'admin-nav-analytics',
+        sectionId: 'system-administration',
+        label: 'Traffic & User Analytics',
+        labelBn: 'ভিজিটর ও ইউজার অ্যানালাইসিস',
+        path: '/admin/analytics',
+        icon: Activity,
+        role: 'Super Admin, Marketing, Analyst',
+        roleBn: 'সুপার অ্যাডমিন, মার্কেটিং, অ্যানালিস্ট',
+        tagline: 'Real-time visitor telemetry, IP tracking, district-wise geographic traffic, product clickstreams, and user login/logout audits',
+        taglineBn: 'রিয়েলটাইম ভিজিটর ট্র্যাকিং, জেলাভিত্তিক ট্রাফিক, কোন প্রোডাক্টে বেশি ক্লিক পড়ছে এবং ইউজার লগইন হিস্ট্রি',
+        description: 'Comprehensive live traffic and user behavioral intelligence. Monitor active visitors, trace IP addresses and geographic locations across all 64 districts and global regions, track product views vs clicks, and inspect user session security.',
+        descriptionBn: 'লাইভ ভিজিটর ট্রাফিক ও ইউজার আচরণ বিশ্লেষণ। রিয়েলটাইমে কতজন ভিজিটর ওয়েবসাইটে আছেন, কোন দেশ ও জেলা থেকে আসছেন, কোন পণ্যে বেশি ক্লিক ও ভিউ হচ্ছে এবং ইউজারদের লগইন-লগআউট অ্যাক্টিভিটি পর্যবেক্ষণ করুন।',
+        tasksEn: [
+          'Monitor live active online visitors with real-time geographic radar',
+          'Analyze traffic breakdown across 64 Bangladesh districts & international countries',
+          'Track top viewed & most clicked products with conversion funnel metrics',
+          'Inspect real-time IP addresses, ISPs, devices, and user login/logout audit logs'
+        ],
+        tasksBn: [
+          'রিয়েলটাইমে ওয়েবসাইটে কতজন ভিজিটর আছেন তা লাইভ রাডারে পর্যবেক্ষণ করা',
+          'বাংলাদেশের ৬৪টি জেলা ও আন্তর্জাতিক ভিজিটরদের ট্রাফিক পরিসংখ্যান দেখা',
+          'কোন কোন পণ্যে সবচেয়ে বেশি ক্লিক ও ভিউ হচ্ছে তার বিশ্লেষণ জানা',
+          'ভিজিটরদের আইপি অ্যাড্রেস, জেলা, ডিভাইস ও ইউজার লগইন/লগআউট হিস্ট্রি দেখা'
+        ]
+      },
       {
         id: 'admin-nav-reports',
         sectionId: 'system-administration',

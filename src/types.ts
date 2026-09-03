@@ -1,4 +1,5 @@
 export type Language = 'EN' | 'BN';
+export type ThemeMode = 'light' | 'dark' | 'system';
 
 export type Division = 
   | 'Dhaka' 
@@ -39,6 +40,7 @@ export type PaymentStatus =
   | 'PENDING' 
   | 'AUTHORIZED' 
   | 'PAID' 
+  | 'PARTIALLY_PAID'
   | 'FAILED' 
   | 'CANCELLED' 
   | 'REFUNDED' 
@@ -85,11 +87,14 @@ export interface Product {
   price: number;
   originalPrice?: number;
   costPrice: number;
+  taxRate?: number;
+  supplierId?: string;
   sku: string;
   category: string;
   categorySlug: string;
   images: string[];
   stock: number;
+  lowStockThreshold?: number;
   rating: number;
   reviewsCount: number;
   badge?: string;
@@ -152,15 +157,71 @@ export interface OrderItem {
   variantName?: string;
 }
 
+export type OrderSourceChannel = 
+  | 'WEB' 
+  | 'WHATSAPP' 
+  | 'MESSENGER' 
+  | 'FACEBOOK' 
+  | 'INSTAGRAM' 
+  | 'PHONE' 
+  | 'DIRECT' 
+  | 'MANUAL_ADMIN';
+
+export interface OrderChannelDetails {
+  channel: OrderSourceChannel;
+  channelName?: string;
+  socialHandleOrChatId?: string;
+  conversationLink?: string;
+  operatorName?: string;
+  operatorRole?: string;
+  chatNotes?: string;
+  whatsappNumber?: string;
+  confirmedViaChat?: boolean;
+}
+
+export interface OrderAdvancePayment {
+  isPaid: boolean;
+  amount: number;
+  method: 'BKASH' | 'NAGAD' | 'ROCKET' | 'BANK' | 'CASH' | 'OTHER';
+  trxId?: string;
+  receivedAt?: string;
+  receivedBy?: string;
+  verified: boolean;
+  notes?: string;
+}
+
+export interface CustomCourierConfig {
+  id: string;
+  name: string;
+  code: string;
+  phone?: string;
+  trackingUrlTemplate: string;
+  defaultInsideDhakaFee: number;
+  defaultOutsideDhakaFee: number;
+  codPercentageFee?: number;
+  isActive: boolean;
+  isBuiltIn?: boolean;
+  apiEndpoint?: string;
+  apiKey?: string;
+  secretKey?: string;
+  notes?: string;
+  createdAt?: string;
+}
+
 export interface Order {
   id: string;
   orderNumber: string;
   createdAt: string;
+  orderSource?: OrderSourceChannel;
+  channelDetails?: OrderChannelDetails;
+  advancePayment?: OrderAdvancePayment;
   customer: {
     id: string;
     name: string;
     phone: string;
     email?: string;
+    whatsappNumber?: string;
+    socialProfile?: string;
   };
   shippingAddress: ShippingAddress;
   items: OrderItem[];
@@ -168,12 +229,13 @@ export interface Order {
   shippingFee: number;
   discount: number;
   total: number;
+  balanceDueCod?: number;
   paymentMethod: 'COD' | 'SSLCOMMERZ' | 'BKASH' | 'MANUAL';
   paymentStatus: PaymentStatus;
   settlementStatus: SettlementStatus;
   orderStatus: OrderStatus;
   courier: {
-    provider: 'Steadfast' | 'Pathao' | 'RedX' | 'Paperfly' | 'eCourier' | 'Manual';
+    provider: 'Steadfast' | 'Pathao' | 'RedX' | 'Paperfly' | 'eCourier' | 'Manual' | string;
     trackingId?: string;
     status: ShipmentStatus;
     consignmentId?: string;
@@ -189,6 +251,7 @@ export interface Order {
   appliedCouponCode?: string;
   loyaltyPointsEarned?: number;
   loyaltyPointsRedeemed?: number;
+  whatsappConfirmationSent?: boolean;
   fulfillment?: {
     assignedWarehouseId: string;
     assignedWarehouseName: string;
@@ -218,6 +281,12 @@ export interface Customer {
   totalSpent: number;
   defaultAddress: string;
   status: 'ACTIVE' | 'BLOCKED';
+  whatsappNumber?: string;
+  socialProfile?: string;
+  preferredChannel?: OrderSourceChannel;
+  source?: string;
+  district?: string;
+  thana?: string;
 }
 
 export interface InventoryTransaction {
@@ -649,6 +718,10 @@ export interface SiteContent {
   motto: string;
   mottoBn: string;
   logoUrl?: string;
+  logoDarkUrl?: string;
+  logoType?: 'TEXT' | 'IMAGE' | 'BOTH_IMAGE_AND_TEXT' | 'EMBLEM_AND_TEXT';
+  logoHeight?: number;
+  logoEmblemStyle?: 'leaf_sprout' | 'jamdani_flower' | 'terracotta_seal' | 'heritage_loom' | 'bengal_royal' | 'minimalist_k';
   faviconUrl?: string;
   tradeLicense?: string;
   announcementBar: {
@@ -1426,6 +1499,8 @@ export interface CrmCustomerDetails {
   notes: CrmCustomerNote[];
   tags: string[];
   loyaltyWallet?: CustomerLoyaltyWallet;
+  addresses?: CustomerAddress[];
+  riskRating?: 'LOW' | 'MEDIUM' | 'HIGH';
 }
 
 // =============================================================
@@ -1841,6 +1916,7 @@ export interface Supplier {
     loginEmail?: string;
     lastLoginAt?: string;
     loginIsolated: boolean; // isolated from internal staff/customer DB
+    password?: string;
   };
 
   purchaseOrdersCount?: number;
@@ -1858,6 +1934,81 @@ export interface SupplierOverviewMetrics {
   totalPaidBdt: number;
   totalOutstandingDueBdt: number;
   pendingDeliveriesCount: number;
+}
+
+export interface SourcedProductSummary {
+  productId?: string;
+  productTitle: string;
+  productTitleBn?: string;
+  sku: string;
+  category?: string;
+  image?: string;
+  totalQuantityOrdered: number;
+  totalQuantityReceived: number;
+  totalSpend: number;
+  averageUnitCost: number;
+  currentStock: number;
+  stockStatus: 'IN_STOCK' | 'LOW_STOCK' | 'OUT_OF_STOCK';
+  retailPrice: number;
+  grossMargin: number;
+  latestPoDate: string;
+  poCount: number;
+  poNumbers: string[];
+}
+
+export interface SupplierLedgerEntry {
+  id: string;
+  date: string;
+  type: 'PURCHASE_ORDER' | 'PAYMENT_VOUCHER';
+  referenceNumber: string;
+  description: string;
+  descriptionBn?: string;
+  itemsSummary?: string;
+  debit: number;
+  credit: number;
+  runningBalance: number;
+  status: string;
+  paymentMethod?: string;
+  operator?: string;
+}
+
+export interface SupplierMonthlyFinancialTrend {
+  monthKey: string; // e.g. "2025-10"
+  monthLabel: string; // e.g. "Oct '25"
+  monthLabelBn: string; // e.g. "অক্টো '২৫"
+  purchased: number;
+  paid: number;
+  netBalance: number; // purchased - paid in that month
+  cumulativeDue: number; // running due balance at month end
+  poCount: number;
+  paymentCount: number;
+}
+
+export interface SupplierFinancialSummary {
+  totalPurchased: number;
+  totalPaid: number;
+  totalDue: number;
+  totalOrdersCount: number;
+  totalItemsProcuredCount: number;
+  receivedOrdersCount: number;
+  pendingOrdersCount: number;
+  paymentFulfillmentRatio: number;
+  averageOrderValue: number;
+  earliestTransactionDate?: string;
+  latestTransactionDate?: string;
+  monthlyTrends?: SupplierMonthlyFinancialTrend[];
+}
+
+export interface SupplierDetailResponse {
+  success: boolean;
+  supplier: Supplier;
+  purchaseOrders: SupplierPurchaseOrder[];
+  payments: SupplierPayment[];
+  interactions: SupplierInteraction[];
+  sourcedProducts: SourcedProductSummary[];
+  ledgerStatement: SupplierLedgerEntry[];
+  financialSummary: SupplierFinancialSummary;
+  monthlyTrends?: SupplierMonthlyFinancialTrend[];
 }
 
 // =============================================================
@@ -1882,7 +2033,124 @@ export interface PasswordChangeRequest {
 }
 
 
+// =============================================================
+// Supplier Commercial Agreement & Supply Chain
+// =============================================================
 
+export type SupplierSettlementMethod = 'FIXED_COST' | 'PERCENTAGE_OF_SALE' | 'FIXED_AMOUNT_PER_UNIT' | 'REVENUE_SHARE';
+export type SupplierCalculationBasis = 'GROSS_SELLING_PRICE' | 'NET_SELLING_PRICE';
 
+export interface SupplierAgreement {
+  id: string;
+  supplierId: string;
+  productId?: string;
+  variantId?: string;
+  status: 'ACTIVE' | 'INACTIVE' | 'EXPIRED';
+  effectiveFrom: string;
+  effectiveTo?: string;
+  settlementMethod: SupplierSettlementMethod;
+  calculationBasis?: SupplierCalculationBasis;
+  percentage?: number;
+  fixedAmount?: number;
+  supplierCost?: number;
+  notes?: string;
+  createdAt: string;
+}
 
+export interface SupplyBatch {
+  id: string;
+  supplierId: string;
+  productId: string;
+  variantId?: string;
+  batchNumber: string;
+  quantityReceived: number;
+  quantitySold: number;
+  quantityRemaining: number;
+  quantityReturned: number;
+  quantityDamaged: number;
+  supplierCost: number;
+  referenceSellingPrice?: number;
+  settlementMethod: SupplierSettlementMethod;
+  agreementId?: string;
+  receivedDate: string;
+  expiryDate?: string;
+  status: 'ACTIVE' | 'DEPLETED' | 'ON_HOLD';
+  notes?: string;
+}
 
+export interface SupplierEligibleSale {
+  id: string;
+  orderId: string;
+  orderNumber: string;
+  productId: string;
+  variantId?: string;
+  supplyBatchId?: string;
+  quantity: number;
+  sellingPrice: number; // Unit price
+  netEligibleAmount: number; // Total amount after discount/returns
+  supplierShare: number;
+  kisholoyShare: number;
+  settlementMethodSnapshot: string;
+  calculationRuleSnapshot: string;
+  status: 'PENDING_SETTLEMENT' | 'INCLUDED_IN_SETTLEMENT' | 'ADJUSTED_RETURNED';
+  saleDate: string;
+}
+
+export interface SupplierSettlement {
+  id: string;
+  settlementNumber: string;
+  supplierId: string;
+  periodStart: string;
+  periodEnd: string;
+  grossSales: number;
+  grossSalesAmount?: number;
+  supplierShare: number;
+  supplierShareAmount?: number;
+  kisholoyShare: number;
+  returnsAdjustment: number;
+  refundAdjustment: number;
+  previousSupplierDue?: number;
+  paymentsAlreadyMade?: number;
+  currentPayable: number;
+  netPayable?: number;
+  paidAmount?: number;
+  remainingDue?: number;
+  status: 'DRAFT' | 'PENDING' | 'PARTIALLY_PAID' | 'PAID' | 'CANCELLED';
+  eligibleSalesCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SupplierStatement {
+  supplier: {
+    id: string;
+    code: string;
+    companyName: string;
+    contactPerson: string;
+    phone: string;
+    email: string;
+    address: string;
+    paymentTerms: string;
+    taxIdentificationNumber?: string;
+    tradeLicenseNumber?: string;
+  };
+  periodStart: string;
+  periodEnd: string;
+  generatedAt: string;
+  summary: {
+    totalSuppliedValue: number;
+    totalSupplierEarnings: number;
+    totalPaidOut: number;
+    currentOutstandingDue: number;
+  };
+  batches: Array<{
+    id: string;
+    batchNumber: string;
+    receivedDate: string;
+    productName: string;
+    receivedQuantity: number;
+    soldQuantity: number;
+    unitCost: number;
+  }>;
+  settlements: SupplierSettlement[];
+}

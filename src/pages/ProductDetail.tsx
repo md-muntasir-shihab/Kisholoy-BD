@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { Star, ShieldCheck, Truck, RotateCcw, Check, ShoppingBag, ArrowLeft, Heart } from 'lucide-react';
+import { Star, ShieldCheck, Truck, RotateCcw, Check, ShoppingBag, ArrowLeft, Heart, Sparkles, MapPin, Layers, Award } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { ProductCard } from '../components/ProductCard';
 
@@ -18,10 +18,14 @@ export function ProductDetail() {
 
   if (!product) {
     return (
-      <div className="max-w-7xl mx-auto px-4 py-20 text-center">
-        <h2 className="text-2xl font-bold font-serif mb-4">Product Not Found</h2>
-        <Link to="/shop" className="text-teal-900 font-semibold underline">
-          Return to Shop
+      <div className="max-w-7xl mx-auto px-4 py-24 text-center">
+        <div className="w-16 h-16 bg-stone-100 rounded-2xl flex items-center justify-center mx-auto mb-4 text-stone-400">
+          <ShoppingBag className="w-8 h-8" />
+        </div>
+        <h2 className="text-2xl font-bold font-serif mb-2 text-stone-900">Product Not Found</h2>
+        <p className="text-stone-500 text-sm mb-6">The requested product could not be located in our catalog.</p>
+        <Link to="/shop" className="px-5 py-2.5 bg-teal-900 text-white rounded-xl text-xs font-bold shadow-xs hover:bg-teal-950 transition-colors">
+          Return to Artisanal Shop
         </Link>
       </div>
     );
@@ -49,30 +53,30 @@ export function ProductDetail() {
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
       {/* Breadcrumb Navigation */}
       <nav className="flex items-center gap-2 text-xs text-stone-500 mb-8 overflow-x-auto whitespace-nowrap">
-        <Link to="/" className="hover:text-stone-900">Home</Link>
-        <span>/</span>
-        <Link to="/shop" className="hover:text-stone-900">Shop</Link>
-        <span>/</span>
-        <Link to={`/category/${product.categorySlug}`} className="hover:text-stone-900">
+        <Link to="/" className="hover:text-stone-900 font-medium">Home</Link>
+        <span className="text-stone-300">/</span>
+        <Link to="/shop" className="hover:text-stone-900 font-medium">Artisanal Catalog</Link>
+        <span className="text-stone-300">/</span>
+        <Link to={`/category/${product.categorySlug}`} className="hover:text-stone-900 font-medium text-teal-900">
           {product.category}
         </Link>
-        <span>/</span>
-        <span className="text-stone-900 font-medium truncate max-w-xs">{title}</span>
+        <span className="text-stone-300">/</span>
+        <span className="text-stone-900 font-bold truncate max-w-xs">{title}</span>
       </nav>
 
-      {/* Main Product Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-14 mb-16">
+      {/* Main Product Layout Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 mb-16">
         
-        {/* Left Column: Image Gallery */}
-        <div className="space-y-4">
-          <div className="aspect-square w-full rounded-2xl overflow-hidden bg-stone-100 border border-stone-200 shadow-xs relative">
+        {/* Left Column: Image Gallery (5 cols on large screens) */}
+        <div className="lg:col-span-6 space-y-4">
+          <div className="aspect-square w-full rounded-3xl overflow-hidden bg-stone-100 border border-stone-200/90 shadow-sm relative group">
             <img
               src={product.images[selectedImage] || product.images[0]}
               alt={title}
-              className="w-full h-full object-cover object-center"
+              className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500"
             />
             {product.badge && (
-              <span className="absolute top-4 left-4 px-3 py-1 bg-stone-900 text-white text-xs font-bold rounded-md shadow-xs">
+              <span className="absolute top-5 left-5 px-3.5 py-1 bg-stone-950/90 backdrop-blur-md text-amber-300 text-xs font-bold rounded-xl shadow-xs border border-stone-800">
                 {product.badge}
               </span>
             )}
@@ -85,8 +89,8 @@ export function ProductDetail() {
                 <button
                   key={idx}
                   onClick={() => setSelectedImage(idx)}
-                  className={`w-20 h-20 rounded-lg overflow-hidden border-2 flex-shrink-0 transition-all ${
-                    selectedImage === idx ? 'border-teal-900 shadow-xs' : 'border-stone-200 opacity-70 hover:opacity-100'
+                  className={`w-20 h-20 rounded-2xl overflow-hidden border-2 flex-shrink-0 transition-all ${
+                    selectedImage === idx ? 'border-teal-900 shadow-xs scale-102' : 'border-stone-200 opacity-70 hover:opacity-100'
                   }`}
                 >
                   <img src={img} alt={`Thumb ${idx}`} className="w-full h-full object-cover" />
@@ -96,65 +100,72 @@ export function ProductDetail() {
           )}
         </div>
 
-        {/* Right Column: Details & Actions */}
-        <div className="flex flex-col justify-between space-y-6">
-          <div>
-            <div className="flex items-center justify-between gap-4 mb-2">
-              <span className="text-xs font-bold text-teal-900 uppercase tracking-widest bg-teal-50 px-2.5 py-1 rounded border border-teal-200">
+        {/* Right Column: Details & Actions (6 cols on large screens) */}
+        <div className="lg:col-span-6 flex flex-col justify-between space-y-6 bg-white p-6 sm:p-8 rounded-3xl border border-stone-200/90 shadow-sm">
+          <div className="space-y-4">
+            <div className="flex items-center justify-between gap-4">
+              <span className="text-xs font-bold text-teal-950 uppercase tracking-widest bg-teal-50 px-3 py-1 rounded-full border border-teal-200">
                 {product.category}
               </span>
               <span className="text-xs text-stone-400 font-mono">SKU: {selectedVariant?.sku || product.sku}</span>
             </div>
 
-            <h1 className="text-2xl sm:text-3xl font-serif font-bold text-stone-900 leading-snug mb-3">
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-serif font-black text-stone-900 leading-snug tracking-tight">
               {title}
             </h1>
 
-            {/* Rating */}
-            <div className="flex items-center gap-3 mb-4">
-              <div className="flex items-center text-amber-500">
+            {/* Rating and Origin Badge */}
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="flex items-center text-amber-500 bg-amber-50/80 px-2.5 py-1 rounded-lg border border-amber-200">
                 {[...Array(5)].map((_, i) => (
-                  <Star key={i} className="w-4 h-4 fill-amber-400 stroke-amber-400" />
+                  <Star key={i} className="w-3.5 h-3.5 fill-amber-400 stroke-amber-400" />
                 ))}
+                <span className="text-xs font-bold text-amber-950 ml-1.5">{product.rating}</span>
               </div>
-              <span className="text-xs font-bold text-stone-800">{product.rating}</span>
               <span className="text-xs text-stone-400">({product.reviewsCount} verified reviews)</span>
+              
+              {product.attributes?.origin && (
+                <span className="inline-flex items-center gap-1 text-xs font-semibold text-stone-700 bg-stone-100 px-2.5 py-1 rounded-lg border border-stone-200">
+                  <MapPin className="w-3 h-3 text-teal-800" />
+                  <span>{product.attributes.origin}</span>
+                </span>
+              )}
             </div>
 
-            {/* Price */}
-            <div className="flex items-baseline gap-3 py-3 border-y border-stone-200">
-              <span className="text-3xl font-bold text-stone-900">
+            {/* Price Box */}
+            <div className="flex items-baseline gap-4 py-4 border-y border-stone-100">
+              <span className="text-3xl sm:text-4xl font-black text-stone-900 font-mono tracking-tight">
                 ৳ {currentPrice.toLocaleString()}
               </span>
               {product.originalPrice && (
-                <span className="text-base text-stone-400 line-through">
+                <span className="text-base text-stone-400 line-through font-mono">
                   ৳ {product.originalPrice.toLocaleString()}
                 </span>
               )}
-              <span className="text-xs text-emerald-800 font-semibold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-                In Stock ({product.stock} units left)
+              <span className="text-xs text-emerald-800 font-bold bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200 ml-auto">
+                {product.stock > 0 ? `Ready Stock (${product.stock} units)` : 'Out of stock'}
               </span>
             </div>
 
-            <p className="text-stone-600 text-sm leading-relaxed mt-4">
+            <p className="text-stone-600 text-sm leading-relaxed">
               {description}
             </p>
 
             {/* Variant Picker */}
             {product.variants && product.variants.length > 0 && (
-              <div className="mt-6">
-                <label className="text-xs font-bold text-stone-900 uppercase tracking-wider block mb-2">
+              <div className="pt-2">
+                <label className="text-xs font-bold text-stone-800 uppercase tracking-wider block mb-2.5">
                   Select Variant / Color
                 </label>
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-2.5">
                   {product.variants.map((v) => (
                     <button
                       key={v.id}
                       onClick={() => setSelectedVariantId(v.id)}
-                      className={`px-3.5 py-2 rounded-lg text-xs font-semibold border transition-all ${
+                      className={`px-4 py-2 rounded-xl text-xs font-bold border transition-all ${
                         selectedVariantId === v.id
-                          ? 'border-teal-900 bg-teal-900 text-white shadow-xs'
-                          : 'border-stone-300 bg-white text-stone-700 hover:border-stone-400'
+                          ? 'border-teal-900 bg-teal-900 text-white shadow-xs scale-102'
+                          : 'border-stone-300 bg-stone-50 text-stone-700 hover:border-stone-400'
                       }`}
                     >
                       {language === 'BN' && v.nameBn ? v.nameBn : v.name}
@@ -165,21 +176,21 @@ export function ProductDetail() {
             )}
 
             {/* Quantity Stepper & Add to Cart */}
-            <div className="mt-6 pt-6 border-t border-stone-200 space-y-4">
-              <div className="flex items-center gap-4">
-                <div className="flex items-center border border-stone-300 rounded-lg bg-stone-50">
+            <div className="pt-4 space-y-4">
+              <div className="flex items-center gap-3">
+                <div className="flex items-center border border-stone-300 rounded-2xl bg-stone-50 p-1">
                   <button
                     onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                    className="px-3 py-2 text-stone-600 hover:text-stone-900 font-bold"
+                    className="w-8 h-8 flex items-center justify-center text-stone-600 hover:text-stone-900 hover:bg-stone-200/60 rounded-xl font-bold transition-colors"
                   >
                     -
                   </button>
-                  <span className="px-4 py-2 text-sm font-bold text-stone-900 min-w-10 text-center">
+                  <span className="px-3 text-sm font-bold text-stone-900 min-w-8 text-center">
                     {quantity}
                   </span>
                   <button
                     onClick={() => setQuantity(quantity + 1)}
-                    className="px-3 py-2 text-stone-600 hover:text-stone-900 font-bold"
+                    className="w-8 h-8 flex items-center justify-center text-stone-600 hover:text-stone-900 hover:bg-stone-200/60 rounded-xl font-bold transition-colors"
                   >
                     +
                   </button>
@@ -187,16 +198,16 @@ export function ProductDetail() {
 
                 <button
                   onClick={handleAddToCart}
-                  className="flex-1 flex items-center justify-center gap-2 py-3 px-6 bg-teal-900 text-white rounded-lg font-semibold text-sm hover:bg-teal-950 shadow-sm active:scale-98 transition-all"
+                  className="flex-1 flex items-center justify-center gap-2 py-3.5 px-6 bg-teal-900 text-white rounded-2xl font-bold text-xs sm:text-sm hover:bg-teal-950 shadow-xs hover:shadow-sm active:scale-98 transition-all"
                 >
-                  <ShoppingBag className="w-4 h-4" />
+                  <ShoppingBag className="w-4 h-4 text-teal-300" />
                   <span>{language === 'BN' ? 'কার্টে যোগ করুন' : 'Add to Cart'}</span>
                 </button>
 
                 <button
                   onClick={() => toggleWishlist(product.id)}
                   aria-label={isWishlisted(product.id) ? 'Remove from Wishlist' : 'Add to Wishlist'}
-                  className={`p-3 rounded-lg border transition-all ${
+                  className={`p-3.5 rounded-2xl border transition-all shadow-2xs ${
                     isWishlisted(product.id)
                       ? 'border-rose-200 bg-rose-50 text-rose-600 hover:bg-rose-100'
                       : 'border-stone-300 bg-white text-stone-600 hover:text-rose-600 hover:border-rose-300'
@@ -209,27 +220,28 @@ export function ProductDetail() {
 
               <button
                 onClick={handleBuyNow}
-                className="w-full py-3 px-6 bg-stone-900 text-white rounded-lg font-semibold text-sm hover:bg-black shadow-sm active:scale-98 transition-all"
+                className="w-full py-3.5 px-6 bg-stone-950 text-white rounded-2xl font-bold text-xs sm:text-sm hover:bg-stone-900 shadow-sm active:scale-98 transition-all flex items-center justify-center gap-2"
               >
-                {language === 'BN' ? 'সরাসরি অর্ডার করুন (Buy Now)' : 'Proceed to Instant Checkout'}
+                <span>{language === 'BN' ? 'সরাসরি অর্ডার করুন (Buy Now)' : 'Proceed to Instant Checkout'}</span>
+                <span>&rarr;</span>
               </button>
             </div>
 
             {/* Value Guarantees */}
-            <div className="grid grid-cols-3 gap-3 pt-6 border-t border-stone-200 text-center">
-              <div className="p-3 bg-stone-50 rounded-lg border border-stone-200/60">
-                <Truck className="w-4 h-4 mx-auto text-teal-800 mb-1" />
-                <span className="text-[11px] font-bold text-stone-800 block">Dhaka 24-48h</span>
+            <div className="grid grid-cols-3 gap-3 pt-6 border-t border-stone-100 text-center">
+              <div className="p-3 bg-stone-50 rounded-2xl border border-stone-200/70 shadow-2xs">
+                <Truck className="w-4 h-4 mx-auto text-teal-900 mb-1" />
+                <span className="text-[11px] font-bold text-stone-900 block">Dhaka 24-48h</span>
                 <span className="text-[10px] text-stone-500">Nationwide 3-4 days</span>
               </div>
-              <div className="p-3 bg-stone-50 rounded-lg border border-stone-200/60">
-                <RotateCcw className="w-4 h-4 mx-auto text-teal-800 mb-1" />
-                <span className="text-[11px] font-bold text-stone-800 block">7 Days Return</span>
+              <div className="p-3 bg-stone-50 rounded-2xl border border-stone-200/70 shadow-2xs">
+                <RotateCcw className="w-4 h-4 mx-auto text-teal-900 mb-1" />
+                <span className="text-[11px] font-bold text-stone-900 block">7 Days Return</span>
                 <span className="text-[10px] text-stone-500">Hassle-free exchange</span>
               </div>
-              <div className="p-3 bg-stone-50 rounded-lg border border-stone-200/60">
-                <ShieldCheck className="w-4 h-4 mx-auto text-teal-800 mb-1" />
-                <span className="text-[11px] font-bold text-stone-800 block">Cash on Delivery</span>
+              <div className="p-3 bg-stone-50 rounded-2xl border border-stone-200/70 shadow-2xs">
+                <ShieldCheck className="w-4 h-4 mx-auto text-teal-900 mb-1" />
+                <span className="text-[11px] font-bold text-stone-900 block">Cash on Delivery</span>
                 <span className="text-[10px] text-stone-500">Pay on doorstep</span>
               </div>
             </div>
@@ -237,29 +249,32 @@ export function ProductDetail() {
         </div>
       </div>
 
-      {/* Specifications & Artisanal Origin */}
+      {/* Specifications & Artisanal Provenance */}
       {product.attributes && (
-        <div className="bg-stone-50 rounded-2xl p-6 sm:p-8 border border-stone-200 mb-16">
-          <h3 className="text-lg font-serif font-bold text-stone-900 mb-4">
-            Product Specifications & Provenance
-          </h3>
+        <div className="bg-white rounded-3xl p-6 sm:p-8 border border-stone-200/90 shadow-sm mb-16">
+          <div className="flex items-center gap-2 mb-4">
+            <Award className="w-4 h-4 text-amber-500" />
+            <h3 className="text-lg font-serif font-bold text-stone-900">
+              Product Specifications & Heritage Provenance
+            </h3>
+          </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs sm:text-sm">
             {product.attributes.material && (
-              <div className="p-4 bg-white rounded-xl border border-stone-200">
-                <span className="text-stone-400 block text-xs mb-1">Primary Material</span>
-                <span className="font-semibold text-stone-900">{product.attributes.material}</span>
+              <div className="p-4 bg-stone-50 rounded-2xl border border-stone-200/80">
+                <span className="text-stone-400 block text-xs mb-1 font-semibold uppercase tracking-wider">Primary Material</span>
+                <span className="font-bold text-stone-900">{product.attributes.material}</span>
               </div>
             )}
             {product.attributes.origin && (
-              <div className="p-4 bg-white rounded-xl border border-stone-200">
-                <span className="text-stone-400 block text-xs mb-1">Artisan Origin</span>
-                <span className="font-semibold text-stone-900">{product.attributes.origin}</span>
+              <div className="p-4 bg-stone-50 rounded-2xl border border-stone-200/80">
+                <span className="text-stone-400 block text-xs mb-1 font-semibold uppercase tracking-wider">Artisan Origin</span>
+                <span className="font-bold text-stone-900">{product.attributes.origin}</span>
               </div>
             )}
             {product.attributes.weight && (
-              <div className="p-4 bg-white rounded-xl border border-stone-200">
-                <span className="text-stone-400 block text-xs mb-1">Net Weight / Dimension</span>
-                <span className="font-semibold text-stone-900">{product.attributes.weight}</span>
+              <div className="p-4 bg-stone-50 rounded-2xl border border-stone-200/80">
+                <span className="text-stone-400 block text-xs mb-1 font-semibold uppercase tracking-wider">Net Weight / Dimension</span>
+                <span className="font-bold text-stone-900">{product.attributes.weight}</span>
               </div>
             )}
           </div>
@@ -269,9 +284,14 @@ export function ProductDetail() {
       {/* Related Products */}
       {relatedProducts.length > 0 && (
         <div>
-          <h3 className="text-xl font-serif font-bold text-stone-900 mb-6">
-            You May Also Like
-          </h3>
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-xl sm:text-2xl font-serif font-bold text-stone-900">
+              {language === 'BN' ? 'আরও খাঁটি হস্তশিল্প পণ্য' : 'Authentic Handcrafted Pairings'}
+            </h3>
+            <Link to="/shop" className="text-xs font-bold text-teal-900 hover:underline">
+              {language === 'BN' ? 'সকল পণ্য দেখুন' : 'Explore All'} &rarr;
+            </Link>
+          </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {relatedProducts.map((p) => (
               <ProductCard key={p.id} product={p} />

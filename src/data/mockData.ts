@@ -596,6 +596,159 @@ export const INITIAL_ORDERS: Order[] = [
     timeline: [
       { status: 'CANCELLED', timestamp: '2026-09-02T01:10:00+06:00', note: 'Auto-cancelled by Fraud Engine: Blacklisted phone number matched.', updatedBy: 'SECURITY_AUTOMATION' }
     ]
+  },
+  {
+    id: 'ord-106',
+    orderNumber: 'KSH-2026-0886',
+    createdAt: '2026-09-02T16:20:00+06:00',
+    orderSource: 'WHATSAPP',
+    channelDetails: {
+      channel: 'WHATSAPP',
+      channelName: 'WhatsApp Business Chat',
+      socialHandleOrChatId: '+8801718899001',
+      whatsappNumber: '+8801718899001',
+      operatorName: 'Sultana Razia (Sales Executive)',
+      operatorRole: 'ORDER_MANAGER',
+      chatNotes: 'Customer sent product screenshot on WhatsApp. Verified color and size. Paid ৳200 delivery fee advance via bKash Personal.',
+      confirmedViaChat: true
+    },
+    advancePayment: {
+      isPaid: true,
+      amount: 200,
+      method: 'BKASH',
+      trxId: 'BKP98271034',
+      receivedAt: '2026-09-02T16:15:00+06:00',
+      receivedBy: 'Sultana Razia',
+      verified: true,
+      notes: 'bKash Transaction verified via SMS receipt.'
+    },
+    customer: {
+      id: 'cust-7',
+      name: 'Farhana Chowdhury',
+      phone: '+8801718899001',
+      email: 'farhana.chowdhury@gmail.com',
+      whatsappNumber: '+8801718899001'
+    },
+    shippingAddress: {
+      firstName: 'Farhana',
+      lastName: 'Chowdhury',
+      phone: '+8801718899001',
+      address: 'House 24, Road 7, Block C, Uttara Sector 4',
+      division: 'Dhaka',
+      district: 'Dhaka',
+      thana: 'Uttara',
+      postalCode: '1230'
+    },
+    items: [
+      {
+        productId: 'prod-1',
+        title: 'Heritage Dhakai Jamdani Saree (84 Count)',
+        titleBn: 'ঐতিহ্যবাহী ঢাকাই জামদানি শাড়ি',
+        price: 4850,
+        quantity: 1,
+        image: 'https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&q=80&w=200',
+        sku: 'KSH-JAM-001',
+        variantName: 'Ruby Red & Gold'
+      }
+    ],
+    subtotal: 4850,
+    shippingFee: 80,
+    discount: 150,
+    total: 4780,
+    balanceDueCod: 4580,
+    paymentMethod: 'COD',
+    paymentStatus: 'UNPAID',
+    settlementStatus: 'PENDING',
+    orderStatus: 'CONFIRMED',
+    verificationStatus: 'ADVANCE_PAID',
+    verificationNotes: 'WhatsApp Order: ৳200 delivery fee advance paid via bKash TrxID: BKP98271034. Balance COD ৳4,580.',
+    fraudRisk: {
+      riskScore: 8,
+      riskRating: 'LOW',
+      flags: ['WHATSAPP_ADVANCE_PAID'],
+      reasons: ['Advance delivery payment received and verified via bKash.'],
+      recommendation: 'AUTO_APPROVE',
+      breakdown: {
+        phoneScore: 0,
+        addressScore: 0,
+        valueScore: 5,
+        velocityScore: 0,
+        historyScore: 0,
+        emailScore: 0
+      },
+      evaluatedAt: '2026-09-02T16:20:00+06:00'
+    },
+    courier: {
+      provider: 'Steadfast',
+      status: 'CREATED'
+    },
+    whatsappConfirmationSent: true,
+    timeline: [
+      { status: 'PENDING', timestamp: '2026-09-02T16:20:00+06:00', note: 'Assisted order booked via WhatsApp Chat by Sultana Razia.', updatedBy: 'Sultana Razia' },
+      { status: 'CONFIRMED', timestamp: '2026-09-02T16:25:00+06:00', note: 'Advance ৳200 confirmed. WhatsApp confirmation invoice sent to customer.', updatedBy: 'Sultana Razia' }
+    ]
+  },
+  {
+    id: 'ord-107',
+    orderNumber: 'KSH-2026-0885',
+    createdAt: '2026-09-03T09:10:00+06:00',
+    orderSource: 'MESSENGER',
+    channelDetails: {
+      channel: 'MESSENGER',
+      channelName: 'Facebook Messenger Inbox',
+      socialHandleOrChatId: 'fb.me/anwar.hossain.bd',
+      operatorName: 'Muntasir Shihab',
+      operatorRole: 'SUPER_ADMIN',
+      chatNotes: 'Customer asked for discount on 2 leather wallets on Facebook page inbox.',
+      confirmedViaChat: true
+    },
+    customer: {
+      id: 'cust-8',
+      name: 'Anwar Hossain',
+      phone: '+8801612445566',
+      email: 'anwar.hossain@yahoo.com',
+      socialProfile: 'facebook.com/anwar.hossain.bd'
+    },
+    shippingAddress: {
+      firstName: 'Anwar',
+      lastName: 'Hossain',
+      phone: '+8801612445566',
+      address: 'Shahjalal Upashahar, Block B, Main Road',
+      division: 'Sylhet',
+      district: 'Sylhet',
+      thana: 'Sylhet Sadar',
+      postalCode: '3100'
+    },
+    items: [
+      {
+        productId: 'prod-4',
+        title: 'Hand-stitched Full Grain Leather Bi-Fold Wallet',
+        titleBn: 'খাঁটি চামড়ার মানিব্যাগ',
+        price: 1650,
+        quantity: 2,
+        image: 'https://images.unsplash.com/photo-1627123424574-724758594e93?auto=format&fit=crop&q=80&w=200',
+        sku: 'KSH-LEA-004',
+        variantName: 'Vintage Havana Brown'
+      }
+    ],
+    subtotal: 3300,
+    shippingFee: 130,
+    discount: 200,
+    total: 3230,
+    balanceDueCod: 3230,
+    paymentMethod: 'COD',
+    paymentStatus: 'UNPAID',
+    settlementStatus: 'PENDING',
+    orderStatus: 'PROCESSING',
+    verificationStatus: 'PHONE_VERIFIED',
+    courier: {
+      provider: 'Steadfast',
+      status: 'CREATED'
+    },
+    timeline: [
+      { status: 'PENDING', timestamp: '2026-09-03T09:10:00+06:00', note: 'Order created from Facebook Messenger conversation.', updatedBy: 'Muntasir Shihab' },
+      { status: 'PROCESSING', timestamp: '2026-09-03T09:20:00+06:00', note: 'Sent to packing desk with custom greeting card.', updatedBy: 'INVENTORY_MANAGER' }
+    ]
   }
 ];
 
@@ -643,6 +796,10 @@ export const INITIAL_CONTENT: SiteContent = {
   motto: 'Preserving Heritage, Empowering Artisans',
   mottoBn: 'বাংলার ঐতিহ্য সংরক্ষণ ও কারিগরদের ক্ষমতায়ন',
   logoUrl: 'https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&q=80&w=200',
+  logoDarkUrl: 'https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&q=80&w=200',
+  logoType: 'BOTH_IMAGE_AND_TEXT',
+  logoHeight: 44,
+  logoEmblemStyle: 'leaf_sprout',
   faviconUrl: 'https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&q=80&w=64',
   tradeLicense: 'TRAD/DNCC/094281/2026',
   announcementBar: {

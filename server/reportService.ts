@@ -70,7 +70,14 @@ export class ReportService {
 
     switch (dateRange) {
       case 'TODAY':
+      case '1D':
         startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        break;
+      case '2D':
+        startDate = new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000);
+        break;
+      case '5D':
+        startDate = new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000);
         break;
       case '7D':
         startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);

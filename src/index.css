@@ -1,6 +1,6 @@
 @import "tailwindcss";
 
-@import url('https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap');
+@custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
   --color-primary-50: #f0fdfa;
@@ -18,6 +18,214 @@
   --font-sans: "Plus Jakarta Sans", "Hind Siliguri", sans-serif;
   --font-serif: "Playfair Display", "Hind Siliguri", serif;
   --font-bangla: "Hind Siliguri", sans-serif;
+}
+
+/* Global Dark Mode Fallbacks & Styles */
+html.dark {
+  color-scheme: dark;
+  background-color: #0f172a;
+  color: #f8fafc;
+}
+
+html.dark body {
+  background-color: #0f172a;
+  color: #f8fafc;
+}
+
+/* Automatic Dark Mode Theme rules for containers, cards, inputs, tables & modals */
+html.dark .bg-white {
+  background-color: #1e293b !important;
+  color: #f8fafc !important;
+}
+
+html.dark header.bg-white\/95,
+html.dark header {
+  background-color: rgba(15, 23, 42, 0.95) !important;
+  border-color: #334155 !important;
+}
+
+html.dark .bg-gray-50,
+html.dark .bg-stone-50,
+html.dark .bg-slate-50,
+html.dark .bg-zinc-50 {
+  background-color: #0f172a !important;
+  color: #f8fafc !important;
+}
+
+html.dark .bg-gray-100,
+html.dark .bg-stone-100,
+html.dark .bg-slate-100,
+html.dark .bg-stone-100\/90 {
+  background-color: #1e293b !important;
+  color: #f8fafc !important;
+}
+
+html.dark .bg-gray-200,
+html.dark .bg-stone-200,
+html.dark .bg-slate-200 {
+  background-color: #334155 !important;
+  color: #f8fafc !important;
+}
+
+/* Tinted Status Badges & Alert Boxes in Dark Mode */
+html.dark .bg-teal-50,
+html.dark .bg-teal-50\/50,
+html.dark .bg-teal-100 {
+  background-color: rgba(20, 184, 166, 0.15) !important;
+  color: #5eead4 !important;
+}
+
+html.dark .bg-emerald-50,
+html.dark .bg-emerald-50\/50,
+html.dark .bg-emerald-100 {
+  background-color: rgba(16, 185, 129, 0.15) !important;
+  color: #6ee7b7 !important;
+}
+
+html.dark .bg-rose-50,
+html.dark .bg-rose-50\/50,
+html.dark .bg-rose-100 {
+  background-color: rgba(244, 63, 94, 0.15) !important;
+  color: #fda4af !important;
+}
+
+html.dark .bg-amber-50,
+html.dark .bg-amber-50\/50,
+html.dark .bg-amber-100 {
+  background-color: rgba(245, 158, 11, 0.15) !important;
+  color: #fde047 !important;
+}
+
+html.dark .bg-indigo-50,
+html.dark .bg-indigo-100,
+html.dark .bg-blue-50 {
+  background-color: rgba(99, 102, 241, 0.15) !important;
+  color: #a5b4fc !important;
+}
+
+html.dark .bg-purple-50,
+html.dark .bg-purple-100 {
+  background-color: rgba(168, 85, 247, 0.15) !important;
+  color: #e9d5ff !important;
+}
+
+/* Text Colors in Dark Mode */
+html.dark .text-gray-900,
+html.dark .text-stone-900,
+html.dark .text-slate-900,
+html.dark .text-teal-950,
+html.dark .text-teal-900,
+html.dark .text-black {
+  color: #f8fafc !important;
+}
+
+html.dark .text-gray-800,
+html.dark .text-stone-800,
+html.dark .text-slate-800 {
+  color: #f1f5f9 !important;
+}
+
+html.dark .text-gray-700,
+html.dark .text-stone-700,
+html.dark .text-slate-700 {
+  color: #cbd5e1 !important;
+}
+
+html.dark .text-gray-600,
+html.dark .text-stone-600,
+html.dark .text-slate-600,
+html.dark .text-gray-500,
+html.dark .text-stone-500,
+html.dark .text-slate-500 {
+  color: #94a3b8 !important;
+}
+
+/* Borders in Dark Mode */
+html.dark .border-gray-100,
+html.dark .border-gray-200,
+html.dark .border-gray-300,
+html.dark .border-stone-100,
+html.dark .border-stone-200,
+html.dark .border-stone-300,
+html.dark .border-stone-200\/80 {
+  border-color: #334155 !important;
+}
+
+/* Form Elements */
+html.dark input,
+html.dark select,
+html.dark textarea {
+  background-color: #0f172a !important;
+  color: #f8fafc !important;
+  border-color: #475569 !important;
+}
+
+html.dark input::placeholder,
+html.dark textarea::placeholder {
+  color: #64748b !important;
+}
+
+/* Tables in Dark Mode */
+html.dark table th {
+  background-color: #0f172a !important;
+  color: #cbd5e1 !important;
+  border-color: #334155 !important;
+}
+
+html.dark table td {
+  border-color: #1e293b !important;
+  color: #f8fafc !important;
+}
+
+html.dark tr.hover\:bg-gray-50:hover,
+html.dark tr.hover\:bg-stone-50:hover,
+html.dark tr.hover\:bg-slate-50:hover {
+  background-color: #334155 !important;
+}
+
+/* Modals and Shadows */
+html.dark .shadow-sm,
+html.dark .shadow-md,
+html.dark .shadow-lg,
+html.dark .shadow-xl,
+html.dark .shadow-2xl {
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.7), 0 8px 10px -6px rgba(0, 0, 0, 0.7) !important;
+}
+
+/* Custom Smooth Scrollbar for Tables and Containers */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 9999px;
+}
+
+html.dark ::-webkit-scrollbar-thumb {
+  background: #334155;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Ensure horizontal scroll containers in Admin tables work smoothly without layout breaks */
+.responsive-table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Ensure images maintain aspect ratio */
+img {
+  max-width: 100%;
+  height: auto;
 }
 
 @media print {
@@ -44,3 +252,4 @@
     margin: 12mm;
   }
 }
+
