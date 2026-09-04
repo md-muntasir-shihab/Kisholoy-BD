@@ -178,19 +178,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [theme, setThemeState] = useState<ThemePreference>(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('kisholoy-theme');
-arena/01a06c02-kisholoy-bd
       const valid: ThemePreference[] = ['light', 'dark', 'system'];
       if (saved && valid.includes(saved as ThemePreference)) return saved as ThemePreference;
       const legacy = localStorage.getItem('theme');
       if (legacy) return legacy === 'dark' ? 'dark' : 'light';
       return 'system';
-
-      if (saved === 'dark') return 'dark';
-      // Default is always Day (Light) theme for both Storefront and Admin
-      return 'light';
- main
     }
-    return 'light';
+    return 'system';
   });
   const [systemDark, setSystemDark] = useState<boolean>(false);
 

@@ -663,7 +663,6 @@ export function Dashboard() {
                 {isBn ? sec.titleBn : sec.title} ({sec.items.length})
               </button>
             ))}
-main
           </div>
         </div>
 

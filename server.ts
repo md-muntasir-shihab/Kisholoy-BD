@@ -233,6 +233,11 @@ async function startServer() {
   app.use('/api/customers', staffGuard(STAFF_CRM));
   app.use('/api/marketing/command', staffGuard(STAFF_ALL));
 
+  // Merged upstream (product-management feature): the WRITE endpoints are admin
+  // operations of the same class as C7 — guarded; GETs stay public storefront reads.
+  app.use('/api/products', (req, res, next) => (req.method === 'GET' ? next() : staffGuard(STAFF_ALL)(req, res, next)));
+  app.use('/api/categories', (req, res, next) => (req.method === 'GET' ? next() : staffGuard(STAFF_ALL)(req, res, next)));
+
   app.use('/api/orders', (req, res, next) => {
     const p = req.path;
     // public storefront paths

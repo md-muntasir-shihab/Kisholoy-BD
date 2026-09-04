@@ -278,11 +278,7 @@ export function AdminLayout() {
                   {currentRole.replace('_', ' ')}
                 </span>
                 <span className="text-[10px] text-teal-700 dark:text-teal-400 font-mono block truncate">
-arena/01a06c02-kisholoy-bd
                   {isBn ? 'আরবিএসি সক্রিয়' : 'RBAC Active'} • {isBn ? 'রুলস দেখুন' : 'Click to view rules'}
-
-                  {isBn ? 'আরবিএসি সক্রিয়' : 'RBAC Active'} • {isBn ? 'রুলস দেখুন' : 'View rules'}
- main
                 </span>
               </div>
               <KeyRound className="w-3.5 h-3.5 text-stone-400 dark:text-stone-500 group-hover:text-teal-600 dark:group-hover:text-teal-400 transition-colors" />
@@ -367,7 +363,6 @@ arena/01a06c02-kisholoy-bd
                                 {isBn ? badge.labelBn : badge.label}
                               </span>
                             )}
-main
                           </Link>
                         );
                       })}
