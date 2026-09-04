@@ -20,7 +20,8 @@ import { SupplierFinancialTrendChart } from './SupplierFinancialTrendChart';
 
 interface AdvancedSupplierLedgerModalProps {
   supplier: Supplier;
-  detail: SupplierDetailResponse;
+  detail: SupplierDetailResponse | null;
+  loading?: boolean;
   onClose: () => void;
   onMarkPoReceived: (supplierId: string, poId: string) => void;
   onDisbursePayment: (supplier: Supplier, suggestedAmount?: number) => void;
@@ -31,6 +32,7 @@ interface AdvancedSupplierLedgerModalProps {
 export const AdvancedSupplierLedgerModal: React.FC<AdvancedSupplierLedgerModalProps> = ({
   supplier,
   detail,
+  loading = false,
   onClose,
   onMarkPoReceived,
   onDisbursePayment,
@@ -43,7 +45,7 @@ export const AdvancedSupplierLedgerModal: React.FC<AdvancedSupplierLedgerModalPr
   const [statementFilter, setStatementFilter] = useState<'ALL' | 'PURCHASE_ORDER' | 'PAYMENT_VOUCHER'>('ALL');
   const [statementSearch, setStatementSearch] = useState('');
   const [copiedField, setCopiedField] = useState<string | null>(null);
-  const [expandedPoId, setExpandedPoId] = useState<string | null>(detail.purchaseOrders[0]?.id || null);
+  const [expandedPoId, setExpandedPoId] = useState<string | null>(detail?.purchaseOrders?.[0]?.id || null);
 
   const formatPrice = (amount: number) => {
     return new Intl.NumberFormat('en-BD', {
@@ -59,7 +61,20 @@ export const AdvancedSupplierLedgerModal: React.FC<AdvancedSupplierLedgerModalPr
     setTimeout(() => setCopiedField(null), 2000);
   };
 
-  const { financialSummary, sourcedProducts, ledgerStatement, purchaseOrders, payments, interactions } = detail;
+  const financialSummary = detail?.financialSummary || {
+    totalPurchased: supplier.totalPurchased || 0,
+    totalPaid: supplier.totalPaid || 0,
+    totalDue: supplier.totalDue || 0,
+    totalOrdersCount: 0,
+    paymentFulfillmentRatio: supplier.totalPurchased ? Math.round(((supplier.totalPaid || 0) / supplier.totalPurchased) * 100) : 100,
+    lastPaymentDate: undefined,
+    recentPurchasesTotal: 0
+  };
+  const sourcedProducts = detail?.sourcedProducts || [];
+  const ledgerStatement = detail?.ledgerStatement || [];
+  const purchaseOrders = detail?.purchaseOrders || [];
+  const payments = detail?.payments || [];
+  const interactions = detail?.interactions || [];
 
   // Filtered Products
   const filteredProducts = useMemo(() => {
@@ -117,205 +132,214 @@ export const AdvancedSupplierLedgerModal: React.FC<AdvancedSupplierLedgerModalPr
   };
 
   return (
-    <div id="advanced-supplier-ledger-modal" className="fixed inset-0 z-50 bg-stone-900/60 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4 overflow-y-auto animate-in fade-in duration-150">
-      <div className="bg-white rounded-2xl w-full max-w-6xl max-h-[94vh] shadow-2xl flex flex-col overflow-hidden border border-stone-200">
+    <div id="advanced-supplier-ledger-modal" className="fixed inset-0 z-50 bg-stone-900/70 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 overflow-y-auto animate-in fade-in duration-150">
+      <div className="bg-white rounded-t-2xl sm:rounded-2xl w-full max-w-6xl h-[92vh] sm:h-auto sm:max-h-[94vh] shadow-2xl flex flex-col overflow-hidden border border-stone-200">
         
         {/* ========================================================================= */}
         {/* Modal Top Header with Quick Actions */}
         {/* ========================================================================= */}
-        <div className="bg-stone-900 text-white p-5 sm:p-6 border-b border-stone-800 flex-shrink-0">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div className="space-y-1.5">
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="px-2.5 py-0.5 rounded text-[11px] font-mono font-bold bg-amber-400/20 text-amber-300 border border-amber-400/30">
+        <div className="bg-stone-900 text-white p-3.5 sm:p-6 border-b border-stone-800 flex-shrink-0">
+          <div className="flex flex-col gap-3">
+            {/* Top row: Badges and Close button */}
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="px-2 py-0.5 rounded text-[10px] sm:text-[11px] font-mono font-bold bg-amber-400/20 text-amber-300 border border-amber-400/30">
                   {supplier.code}
                 </span>
-                <span className={`px-2.5 py-0.5 rounded text-[10px] font-bold tracking-wider uppercase ${
+                <span className={`px-2 py-0.5 rounded text-[9px] sm:text-[10px] font-bold tracking-wider uppercase ${
                   supplier.status === 'ACTIVE'
                     ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
                     : 'bg-stone-700 text-stone-300 border border-stone-600'
                 }`}>
                   {supplier.status}
                 </span>
-                <span className="px-2.5 py-0.5 rounded text-[10px] font-bold bg-stone-800 text-stone-300 border border-stone-700">
+                <span className="px-2 py-0.5 rounded text-[9px] sm:text-[10px] font-bold bg-stone-800 text-stone-300 border border-stone-700">
                   {supplier.paymentTerms}
                 </span>
                 {supplier.district && (
-                  <span className="flex items-center gap-1 text-[11px] text-stone-400">
+                  <span className="flex items-center gap-1 text-[10px] sm:text-[11px] text-stone-400">
                     <MapPin className="w-3 h-3 text-stone-400" />
                     <span>{supplier.district}</span>
                   </span>
                 )}
               </div>
 
-              <div className="flex items-baseline gap-3 flex-wrap">
-                <h2 className="text-xl sm:text-2xl font-bold font-serif text-white tracking-tight">
-                  {supplier.companyName}
-                </h2>
-                <span className="text-sm text-stone-400 font-medium">
-                  {supplier.contactPerson}
-                </span>
-              </div>
-
-              <div className="flex items-center gap-4 text-xs text-stone-400 flex-wrap">
-                {supplier.phone && (
-                  <a href={`tel:${supplier.phone}`} className="flex items-center gap-1 hover:text-white transition-colors">
-                    <Phone className="w-3.5 h-3.5 text-emerald-400" />
-                    <span>{supplier.phone}</span>
-                  </a>
-                )}
-                {supplier.email && (
-                  <a href={`mailto:${supplier.email}`} className="flex items-center gap-1 hover:text-white transition-colors">
-                    <Mail className="w-3.5 h-3.5 text-sky-400" />
-                    <span>{supplier.email}</span>
-                  </a>
-                )}
-                {supplier.taxIdentificationNumber && (
-                  <span className="font-mono text-[11px] text-stone-400">
-                    TIN: {supplier.taxIdentificationNumber}
-                  </span>
-                )}
-              </div>
-            </div>
-
-            {/* Top Right Action Buttons */}
-            <div className="flex items-center gap-2 flex-wrap self-start md:self-center">
-              {onRefresh && (
-                <button
-                  onClick={onRefresh}
-                  title="রিফ্রেশ করুন"
-                  className="p-2 text-stone-300 hover:text-white bg-stone-800 hover:bg-stone-700 rounded-lg transition-colors"
-                >
-                  <RefreshCw className="w-4 h-4" />
-                </button>
-              )}
-              <button
-                onClick={handlePrint}
-                className="px-3 py-2 text-xs font-semibold bg-stone-800 hover:bg-stone-700 text-stone-200 rounded-lg transition-colors flex items-center gap-1.5 border border-stone-700"
-                title="প্রিন্ট ভাউচার / খতিয়ান"
-              >
-                <Printer className="w-3.5 h-3.5 text-stone-300" />
-                <span className="hidden sm:inline">প্রিন্ট খতিয়ান</span>
-              </button>
-              <button
-                onClick={handleExportCsv}
-                className="px-3 py-2 text-xs font-semibold bg-stone-800 hover:bg-stone-700 text-stone-200 rounded-lg transition-colors flex items-center gap-1.5 border border-stone-700"
-                title="ডাউনলোড CSV লেজার"
-              >
-                <Download className="w-3.5 h-3.5 text-stone-300" />
-                <span className="hidden sm:inline">CSV এক্সপোর্ট</span>
-              </button>
-              <button
-                onClick={() => onDisbursePayment(supplier, financialSummary.totalDue)}
-                className="px-3.5 py-2 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-colors shadow-xs flex items-center gap-1.5"
-              >
-                <CreditCard className="w-3.5 h-3.5" />
-                <span>পেমেন্ট পরিশোধ</span>
-              </button>
-              <button
-                onClick={() => onIssuePo(supplier)}
-                className="px-3.5 py-2 text-xs font-bold bg-amber-500 hover:bg-amber-600 text-stone-950 rounded-lg transition-colors shadow-xs flex items-center gap-1.5"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                <span>নতুন ক্রয়াদেশ</span>
-              </button>
               <button
                 onClick={onClose}
-                className="p-2 text-stone-400 hover:text-white hover:bg-stone-800 rounded-lg transition-colors ml-1"
+                className="p-1.5 text-stone-400 hover:text-white hover:bg-stone-800 rounded-lg transition-colors"
                 aria-label="Close modal"
               >
                 <X className="w-5 h-5" />
               </button>
+            </div>
+
+            {/* Middle row: Supplier Title & Contact Info */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+              <div className="space-y-1">
+                <div className="flex items-baseline gap-2 flex-wrap">
+                  <h2 className="text-lg sm:text-2xl font-bold font-serif text-white tracking-tight">
+                    {supplier.companyName}
+                  </h2>
+                  <span className="text-xs sm:text-sm text-stone-400 font-medium">
+                    {supplier.contactPerson}
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-3 text-xs text-stone-400 flex-wrap">
+                  {supplier.phone && (
+                    <a href={`tel:${supplier.phone}`} className="flex items-center gap-1 text-emerald-400 hover:underline">
+                      <Phone className="w-3 h-3" />
+                      <span>{supplier.phone}</span>
+                    </a>
+                  )}
+                  {supplier.email && (
+                    <a href={`mailto:${supplier.email}`} className="flex items-center gap-1 text-sky-400 hover:underline">
+                      <Mail className="w-3 h-3" />
+                      <span className="truncate max-w-[170px] sm:max-w-none">{supplier.email}</span>
+                    </a>
+                  )}
+                  {supplier.taxIdentificationNumber && (
+                    <span className="font-mono text-[10px] sm:text-[11px] text-stone-400">
+                      TIN: {supplier.taxIdentificationNumber}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+                {onRefresh && (
+                  <button
+                    onClick={onRefresh}
+                    title="রিফ্রেশ করুন"
+                    className="p-1.5 sm:p-2 text-stone-300 hover:text-white bg-stone-800 hover:bg-stone-700 rounded-lg transition-colors"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${loading ? 'animate-spin text-amber-400' : ''}`} />
+                  </button>
+                )}
+                <button
+                  onClick={handlePrint}
+                  className="px-2.5 sm:px-3 py-1.5 sm:py-2 text-[11px] sm:text-xs font-semibold bg-stone-800 hover:bg-stone-700 text-stone-200 rounded-lg transition-colors flex items-center gap-1 border border-stone-700"
+                  title="প্রিন্ট ভাউচার / খতিয়ান"
+                >
+                  <Printer className="w-3.5 h-3.5 text-stone-300" />
+                  <span className="hidden sm:inline">প্রিন্ট খতিয়ান</span>
+                </button>
+                <button
+                  onClick={handleExportCsv}
+                  className="px-2.5 sm:px-3 py-1.5 sm:py-2 text-[11px] sm:text-xs font-semibold bg-stone-800 hover:bg-stone-700 text-stone-200 rounded-lg transition-colors flex items-center gap-1 border border-stone-700"
+                  title="ডাউনলোড CSV লেজার"
+                >
+                  <Download className="w-3.5 h-3.5 text-stone-300" />
+                  <span className="hidden sm:inline">CSV</span>
+                </button>
+                <button
+                  onClick={() => onDisbursePayment(supplier, financialSummary.totalDue)}
+                  className="px-3 py-1.5 sm:py-2 text-[11px] sm:text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-colors shadow-xs flex items-center gap-1"
+                >
+                  <CreditCard className="w-3.5 h-3.5" />
+                  <span>পরিশোধ</span>
+                </button>
+                <button
+                  onClick={() => onIssuePo(supplier)}
+                  className="px-3 py-1.5 sm:py-2 text-[11px] sm:text-xs font-bold bg-amber-500 hover:bg-amber-600 text-stone-950 rounded-lg transition-colors shadow-xs flex items-center gap-1"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>নতুন PO</span>
+                </button>
+              </div>
             </div>
           </div>
 
           {/* ========================================================================= */}
           {/* Executive KPI Summary Ribbon */}
           {/* ========================================================================= */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mt-5 pt-4 border-t border-stone-800/80">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 mt-3 sm:mt-4 pt-3 sm:pt-4 border-t border-stone-800/80">
             {/* 1. Total Sourced */}
-            <div className="bg-stone-800/60 p-3.5 rounded-xl border border-stone-700/60">
-              <div className="flex items-center justify-between text-stone-400 text-xs">
+            <div className="bg-stone-800/60 p-2.5 sm:p-3.5 rounded-xl border border-stone-700/60">
+              <div className="flex items-center justify-between text-stone-400 text-[10px] sm:text-xs">
                 <span>মোট ক্রয় / বিল</span>
-                <TrendingUp className="w-3.5 h-3.5 text-stone-400" />
+                <TrendingUp className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-stone-400" />
               </div>
-              <div className="text-lg sm:text-xl font-bold font-mono text-white mt-1">
+              <div className="text-sm sm:text-xl font-bold font-mono text-white mt-0.5">
                 {formatPrice(financialSummary.totalPurchased)}
               </div>
-              <div className="text-[11px] text-stone-400 mt-1 flex items-center justify-between">
+              <div className="text-[10px] sm:text-[11px] text-stone-400 mt-0.5 flex items-center justify-between">
                 <span>{financialSummary.totalOrdersCount}টি ক্রয়াদেশ</span>
                 <button 
                   onClick={() => setActiveTab('trends')}
-                  className="text-[10px] text-amber-300 hover:text-white underline font-semibold flex items-center gap-1 transition-colors"
+                  className="text-[10px] text-amber-300 hover:text-white underline font-semibold flex items-center gap-0.5 transition-colors"
                 >
-                  ১২ মাসের ট্রেন্ড →
+                  <span>ট্রেন্ড</span>
+                  <ArrowUpRight className="w-2.5 h-2.5" />
                 </button>
               </div>
             </div>
 
             {/* 2. Total Paid */}
-            <div className="bg-stone-800/60 p-3.5 rounded-xl border border-stone-700/60">
-              <div className="flex items-center justify-between text-stone-400 text-xs">
+            <div className="bg-stone-800/60 p-2.5 sm:p-3.5 rounded-xl border border-stone-700/60">
+              <div className="flex items-center justify-between text-stone-400 text-[10px] sm:text-xs">
                 <span>পরিশোধিত অর্থ</span>
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                <CheckCircle2 className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-emerald-400" />
               </div>
-              <div className="text-lg sm:text-xl font-bold font-mono text-emerald-400 mt-1">
+              <div className="text-sm sm:text-xl font-bold font-mono text-emerald-400 mt-0.5">
                 {formatPrice(financialSummary.totalPaid)}
               </div>
-              <div className="text-[11px] text-stone-400 mt-1 flex items-center justify-between">
-                <span>পরিশোধের হার: <strong className="text-emerald-400">{financialSummary.paymentFulfillmentRatio}%</strong></span>
+              <div className="text-[10px] sm:text-[11px] text-stone-400 mt-0.5 flex items-center justify-between">
+                <span>{financialSummary.paymentFulfillmentRatio}% ক্লিয়ার</span>
                 <button 
-                  onClick={() => setActiveTab('trends')}
-                  className="text-[10px] text-emerald-300 hover:text-white underline font-semibold flex items-center gap-1 transition-colors"
+                  onClick={() => setActiveTab('payments')}
+                  className="text-[10px] text-emerald-400 hover:text-white underline font-semibold flex items-center gap-0.5 transition-colors"
                 >
-                  মাসিক চার্ট →
+                  <span>ভাউচার</span>
+                  <ArrowUpRight className="w-2.5 h-2.5" />
                 </button>
               </div>
             </div>
 
             {/* 3. Outstanding Due Balance */}
-            <div className={`p-3.5 rounded-xl border ${
+            <div className={`p-2.5 sm:p-3.5 rounded-xl border ${
               financialSummary.totalDue > 0 
                 ? 'bg-amber-950/40 border-amber-500/40' 
                 : 'bg-stone-800/60 border-stone-700/60'
             }`}>
-              <div className="flex items-center justify-between text-xs">
+              <div className="flex items-center justify-between text-[10px] sm:text-xs">
                 <span className={financialSummary.totalDue > 0 ? 'text-amber-300 font-medium' : 'text-stone-400'}>
-                  বর্তমান বকেয়া পাওনা
+                  বর্তমান বকেয়া
                 </span>
-                <AlertCircle className={`w-3.5 h-3.5 ${financialSummary.totalDue > 0 ? 'text-amber-400' : 'text-stone-500'}`} />
+                <AlertCircle className={`w-3 h-3 sm:w-3.5 sm:h-3.5 ${financialSummary.totalDue > 0 ? 'text-amber-400' : 'text-stone-500'}`} />
               </div>
-              <div className={`text-lg sm:text-xl font-bold font-mono mt-1 ${
+              <div className={`text-sm sm:text-xl font-bold font-mono mt-0.5 ${
                 financialSummary.totalDue > 0 ? 'text-amber-300' : 'text-emerald-400'
               }`}>
                 {formatPrice(financialSummary.totalDue)}
               </div>
-              <div className="text-[11px] mt-1 flex items-center justify-between">
+              <div className="text-[10px] sm:text-[11px] mt-0.5 flex items-center justify-between">
                 <span className={financialSummary.totalDue > 0 ? 'text-amber-400/80' : 'text-stone-400'}>
-                  {financialSummary.totalDue > 0 ? 'পরিশোধ বাকি আছে' : 'সকল বকেয়া পরিশোধিত'}
+                  {financialSummary.totalDue > 0 ? 'বকেয়া আছে' : 'ক্লিয়ার'}
                 </span>
                 {financialSummary.totalDue > 0 && (
                   <button 
                     onClick={() => onDisbursePayment(supplier, financialSummary.totalDue)}
                     className="text-[10px] text-amber-200 underline hover:text-white font-medium"
                   >
-                    এখনই পরিশোধ করুন
+                    পরিশোধ →
                   </button>
                 )}
               </div>
             </div>
 
             {/* 4. Procured SKUs & Live Stock */}
-            <div className="bg-stone-800/60 p-3.5 rounded-xl border border-stone-700/60">
-              <div className="flex items-center justify-between text-stone-400 text-xs">
-                <span>সরবরাহকৃত পণ্য ও স্টক</span>
-                <Boxes className="w-3.5 h-3.5 text-stone-400" />
+            <div className="bg-stone-800/60 p-2.5 sm:p-3.5 rounded-xl border border-stone-700/60">
+              <div className="flex items-center justify-between text-stone-400 text-[10px] sm:text-xs">
+                <span>পণ্য ও স্টক</span>
+                <Boxes className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-stone-400" />
               </div>
-              <div className="text-lg sm:text-xl font-bold font-mono text-white mt-1">
-                {sourcedProducts.length} <span className="text-xs font-normal text-stone-400">ধরণের পণ্য</span>
+              <div className="text-sm sm:text-xl font-bold font-mono text-white mt-0.5">
+                {sourcedProducts.length} <span className="text-xs font-normal text-stone-400">SKUs</span>
               </div>
-              <div className="text-[11px] text-stone-400 mt-1 flex items-center justify-between">
-                <span>বর্তমান লাইভ স্টক</span>
+              <div className="text-[10px] sm:text-[11px] text-stone-400 mt-0.5 flex items-center justify-between">
+                <span>লাইভ স্টক</span>
                 <span className="font-semibold text-sky-400">
                   {sourcedProducts.reduce((sum, p) => sum + p.currentStock, 0)} পিস
                 </span>
@@ -327,88 +351,96 @@ export const AdvancedSupplierLedgerModal: React.FC<AdvancedSupplierLedgerModalPr
         {/* ========================================================================= */}
         {/* Navigation Tabs */}
         {/* ========================================================================= */}
-        <div className="flex items-center border-b border-stone-200 bg-stone-50 px-6 gap-2 overflow-x-auto flex-shrink-0">
+        <div className="flex items-center border-b border-stone-200 bg-stone-50 px-2 sm:px-6 gap-1 sm:gap-2 overflow-x-auto flex-shrink-0 scrollbar-none py-1 sm:py-0">
           <button
             onClick={() => setActiveTab('products')}
-            className={`py-3 px-4 text-xs font-bold border-b-2 transition-colors flex items-center gap-2 whitespace-nowrap ${
+            className={`py-2 sm:py-3 px-2.5 sm:px-4 text-xs font-bold border-b-2 transition-colors flex items-center gap-1.5 whitespace-nowrap rounded-t-lg sm:rounded-none ${
               activeTab === 'products'
-                ? 'border-stone-900 text-stone-900 bg-white'
+                ? 'border-stone-900 text-stone-900 bg-white shadow-2xs sm:shadow-none'
                 : 'border-transparent text-stone-500 hover:text-stone-800 hover:border-stone-300'
             }`}
           >
-            <Package className="w-4 h-4 text-stone-600" />
-            <span>সরবরাহকৃত পণ্য ও বর্তমান স্টক ({sourcedProducts.length})</span>
+            <Package className="w-3.5 h-3.5 text-stone-600" />
+            <span>পণ্য ও স্টক ({sourcedProducts.length})</span>
           </button>
 
           <button
             onClick={() => setActiveTab('statement')}
-            className={`py-3 px-4 text-xs font-bold border-b-2 transition-colors flex items-center gap-2 whitespace-nowrap ${
+            className={`py-2 sm:py-3 px-2.5 sm:px-4 text-xs font-bold border-b-2 transition-colors flex items-center gap-1.5 whitespace-nowrap rounded-t-lg sm:rounded-none ${
               activeTab === 'statement'
-                ? 'border-stone-900 text-stone-900 bg-white'
+                ? 'border-stone-900 text-stone-900 bg-white shadow-2xs sm:shadow-none'
                 : 'border-transparent text-stone-500 hover:text-stone-800 hover:border-stone-300'
             }`}
           >
-            <Receipt className="w-4 h-4 text-stone-600" />
-            <span>সার্বিক খতিয়ান / লেজার স্টেটমেন্ট ({ledgerStatement.length})</span>
+            <Receipt className="w-3.5 h-3.5 text-stone-600" />
+            <span>খতিয়ান / স্টেটমেন্ট ({ledgerStatement.length})</span>
           </button>
 
           <button
             onClick={() => setActiveTab('trends')}
-            className={`py-3 px-4 text-xs font-bold border-b-2 transition-colors flex items-center gap-2 whitespace-nowrap ${
+            className={`py-2 sm:py-3 px-2.5 sm:px-4 text-xs font-bold border-b-2 transition-colors flex items-center gap-1.5 whitespace-nowrap rounded-t-lg sm:rounded-none ${
               activeTab === 'trends'
-                ? 'border-stone-900 text-stone-900 bg-white'
+                ? 'border-stone-900 text-stone-900 bg-white shadow-2xs sm:shadow-none'
                 : 'border-transparent text-stone-500 hover:text-stone-800 hover:border-stone-300'
             }`}
           >
-            <TrendingUp className="w-4 h-4 text-amber-600" />
-            <span>১২ মাসের আর্থিক ট্রেন্ড (12-Mo Financial Trends)</span>
+            <TrendingUp className="w-3.5 h-3.5 text-amber-600" />
+            <span>ট্রেন্ড গ্রাফ</span>
           </button>
 
           <button
             onClick={() => setActiveTab('pos')}
-            className={`py-3 px-4 text-xs font-bold border-b-2 transition-colors flex items-center gap-2 whitespace-nowrap ${
+            className={`py-2 sm:py-3 px-2.5 sm:px-4 text-xs font-bold border-b-2 transition-colors flex items-center gap-1.5 whitespace-nowrap rounded-t-lg sm:rounded-none ${
               activeTab === 'pos'
-                ? 'border-stone-900 text-stone-900 bg-white'
+                ? 'border-stone-900 text-stone-900 bg-white shadow-2xs sm:shadow-none'
                 : 'border-transparent text-stone-500 hover:text-stone-800 hover:border-stone-300'
             }`}
           >
-            <FileText className="w-4 h-4 text-stone-600" />
-            <span>সকল ক্রয়াদেশ ও চালান ({purchaseOrders.length})</span>
+            <FileText className="w-3.5 h-3.5 text-stone-600" />
+            <span>ক্রয়াদেশ ({purchaseOrders.length})</span>
           </button>
 
           <button
             onClick={() => setActiveTab('payments')}
-            className={`py-3 px-4 text-xs font-bold border-b-2 transition-colors flex items-center gap-2 whitespace-nowrap ${
+            className={`py-2 sm:py-3 px-2.5 sm:px-4 text-xs font-bold border-b-2 transition-colors flex items-center gap-1.5 whitespace-nowrap rounded-t-lg sm:rounded-none ${
               activeTab === 'payments'
-                ? 'border-stone-900 text-stone-900 bg-white'
+                ? 'border-stone-900 text-stone-900 bg-white shadow-2xs sm:shadow-none'
                 : 'border-transparent text-stone-500 hover:text-stone-800 hover:border-stone-300'
             }`}
           >
-            <CreditCard className="w-4 h-4 text-stone-600" />
-            <span>পেমেন্ট ভাউচার হিস্ট্রি ({payments.length})</span>
+            <CreditCard className="w-3.5 h-3.5 text-stone-600" />
+            <span>পেমেন্ট ({payments.length})</span>
           </button>
 
           <button
             onClick={() => setActiveTab('profile')}
-            className={`py-3 px-4 text-xs font-bold border-b-2 transition-colors flex items-center gap-2 whitespace-nowrap ${
+            className={`py-2 sm:py-3 px-2.5 sm:px-4 text-xs font-bold border-b-2 transition-colors flex items-center gap-1.5 whitespace-nowrap rounded-t-lg sm:rounded-none ${
               activeTab === 'profile'
-                ? 'border-stone-900 text-stone-900 bg-white'
+                ? 'border-stone-900 text-stone-900 bg-white shadow-2xs sm:shadow-none'
                 : 'border-transparent text-stone-500 hover:text-stone-800 hover:border-stone-300'
             }`}
           >
-            <Building2 className="w-4 h-4 text-stone-600" />
-            <span>ভেন্ডর প্রোফাইল ও চুক্তি</span>
+            <Building2 className="w-3.5 h-3.5 text-stone-600" />
+            <span>প্রোফাইল ও ব্যাংক</span>
           </button>
         </div>
 
         {/* ========================================================================= */}
         {/* Modal Scrollable Body */}
         {/* ========================================================================= */}
-        <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6">
-          
-          {/* --------------------------------------------------------------------- */}
-          {/* TAB 1: SOURCED PRODUCTS & LIVE STOCK LEVEL */}
-          {/* --------------------------------------------------------------------- */}
+        <div className="flex-1 overflow-y-auto p-3.5 sm:p-6 space-y-4 sm:space-y-6">
+          {loading && !detail ? (
+            <div className="py-16 text-center space-y-3 bg-stone-50/50 rounded-xl border border-dashed border-stone-200 m-2">
+              <RefreshCw className="w-8 h-8 text-amber-500 animate-spin mx-auto" />
+              <div className="text-sm font-bold text-stone-800">
+                সাপ্লায়ারের বিস্তারিত খতিয়ান ও লেনদেন লোড হচ্ছে...
+              </div>
+              <div className="text-xs text-stone-500">
+                Loading live balance ledger, purchase orders, and sourced products...
+              </div>
+            </div>
+          ) : (
+            <>
           {activeTab === 'products' && (
             <div className="space-y-4">
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-stone-50 p-4 rounded-xl border border-stone-200">
@@ -611,7 +643,7 @@ export const AdvancedSupplierLedgerModal: React.FC<AdvancedSupplierLedgerModalPr
                 {showStatementTrendChart && (
                   <div className="mt-4">
                     <SupplierFinancialTrendChart
-                      trends={detail.monthlyTrends || detail.financialSummary?.monthlyTrends}
+                      trends={detail?.monthlyTrends || detail?.financialSummary?.monthlyTrends}
                       purchaseOrders={purchaseOrders}
                       payments={payments}
                       supplierName={supplier.companyName}
@@ -621,12 +653,12 @@ export const AdvancedSupplierLedgerModal: React.FC<AdvancedSupplierLedgerModalPr
                 )}
               </div>
 
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-stone-50 p-4 rounded-xl border border-stone-200">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-stone-50 p-3 sm:p-4 rounded-xl border border-stone-200">
                 <div>
-                  <h3 className="text-sm font-bold text-stone-900">
+                  <h3 className="text-xs sm:text-sm font-bold text-stone-900">
                     সার্বিক হিসাব খতিয়ান ও রানিং ব্যালেন্স হিস্ট্রি (Statement of Account)
                   </h3>
-                  <p className="text-xs text-stone-500 mt-0.5">
+                  <p className="text-[11px] sm:text-xs text-stone-500 mt-0.5">
                     প্রতিটি ক্রয়াদেশের চালান (ক্রেডিট) এবং ব্যাংকিং/ক্যাশ পেমেন্ট (ডেবিট) সহ হিসাব জের।
                   </p>
                 </div>
@@ -635,11 +667,11 @@ export const AdvancedSupplierLedgerModal: React.FC<AdvancedSupplierLedgerModalPr
                   <select
                     value={statementFilter}
                     onChange={(e: any) => setStatementFilter(e.target.value)}
-                    className="text-xs border border-stone-200 rounded-lg px-2.5 py-1.5 bg-white focus:outline-none"
+                    className="text-xs border border-stone-200 rounded-lg px-2.5 py-1.5 bg-white focus:outline-none flex-shrink-0"
                   >
                     <option value="ALL">সকল লেনদেন</option>
-                    <option value="PURCHASE_ORDER">শুধুমাত্র ক্রয় চালান (বিল)</option>
-                    <option value="PAYMENT_VOUCHER">শুধুমাত্র পরিশোধিত ভাউচার</option>
+                    <option value="PURCHASE_ORDER">চালান (বিল)</option>
+                    <option value="PAYMENT_VOUCHER">পেমেন্ট ভাউচার</option>
                   </select>
 
                   <div className="relative flex-1 sm:w-48">
@@ -655,8 +687,66 @@ export const AdvancedSupplierLedgerModal: React.FC<AdvancedSupplierLedgerModalPr
                 </div>
               </div>
 
-              {/* Statement Table */}
-              <div className="overflow-x-auto rounded-xl border border-stone-200">
+              {/* Mobile Card List for Statement (visible on sm/xs screens) */}
+              <div className="block md:hidden space-y-2.5">
+                {filteredStatement.length === 0 ? (
+                  <div className="py-8 text-center text-stone-400 bg-stone-50 border border-dashed border-stone-200 rounded-xl text-xs">
+                    কোন লেনদেন পাওয়া যায়নি।
+                  </div>
+                ) : (
+                  filteredStatement.map((entry, idx) => {
+                    const isPo = entry.type === 'PURCHASE_ORDER';
+                    return (
+                      <div key={idx} className="bg-white rounded-xl border border-stone-200 p-3 shadow-2xs space-y-2">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className={`inline-flex items-center gap-1 font-mono font-bold text-xs ${
+                            isPo ? 'text-amber-800' : 'text-emerald-800'
+                          }`}>
+                            {isPo ? <ArrowUpRight className="w-3.5 h-3.5 text-amber-600" /> : <ArrowDownLeft className="w-3.5 h-3.5 text-emerald-600" />}
+                            <span>{entry.referenceNumber}</span>
+                          </span>
+                          <span className="text-[10px] text-stone-400 font-mono">
+                            {new Date(entry.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+                          </span>
+                        </div>
+
+                        <div className="text-xs font-semibold text-stone-800">
+                          {entry.descriptionBn || entry.description}
+                        </div>
+                        {entry.itemsSummary && (
+                          <div className="text-[11px] text-stone-500 line-clamp-2">
+                            {entry.itemsSummary}
+                          </div>
+                        )}
+
+                        <div className="grid grid-cols-3 gap-2 pt-2 border-t border-stone-100 text-center font-mono">
+                          <div className="bg-stone-50 p-1.5 rounded">
+                            <div className="text-[9px] text-stone-500 font-sans">বিল (Cr)</div>
+                            <div className="text-xs font-bold text-amber-800">
+                              {entry.credit > 0 ? formatPrice(entry.credit) : '—'}
+                            </div>
+                          </div>
+                          <div className="bg-stone-50 p-1.5 rounded">
+                            <div className="text-[9px] text-stone-500 font-sans">পরিশোধ (Dr)</div>
+                            <div className="text-xs font-bold text-emerald-700">
+                              {entry.debit > 0 ? formatPrice(entry.debit) : '—'}
+                            </div>
+                          </div>
+                          <div className="bg-amber-50/60 p-1.5 rounded border border-amber-200/50">
+                            <div className="text-[9px] text-amber-900 font-sans font-bold">ব্যালেন্স</div>
+                            <div className="text-xs font-black text-amber-900">
+                              {formatPrice(entry.runningBalance)}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+
+              {/* Statement Table (visible on md screens and larger) */}
+              <div className="hidden md:block overflow-x-auto rounded-xl border border-stone-200">
                 <table className="w-full text-left text-xs">
                   <thead className="bg-stone-100/80 border-b border-stone-200 text-stone-700 font-bold uppercase tracking-wider text-[10px]">
                     <tr>
@@ -731,8 +821,8 @@ export const AdvancedSupplierLedgerModal: React.FC<AdvancedSupplierLedgerModalPr
                             <td className="py-3.5 px-3.5 text-center">
                               <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold ${
                                 entry.status === 'RECEIVED' || entry.status === 'SETTLED' || entry.status === 'CLEARED'
-                                  ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                                  : 'bg-stone-100 text-stone-600 border border-stone-200'
+                                   ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                   : 'bg-stone-100 text-stone-600 border border-stone-200'
                               }`}>
                                 {entry.status}
                               </span>
@@ -775,7 +865,7 @@ export const AdvancedSupplierLedgerModal: React.FC<AdvancedSupplierLedgerModalPr
                     গত ১২ মাসের আর্থিক লেনদেন ও গতিপ্রকৃতি বিশ্লেষণ (12-Month Financial Performance Trends)
                   </h3>
                   <p className="text-xs text-stone-500 mt-0.5">
-                    মোট ক্রয়াদেশ বিল বনাম ব্যাংকিং পরিশোধের মাসিক ওঠানামা, কিউমুলেটিভ বকেয়া ও ক্যাশফ্লো চার্ট।
+                    মোট ক্রয়াদেশ বিল বনাম ব্যাংকিং পরিশোধের মাসিক ওঠানামা, কিউমুলেティブ বকেয়া ও ক্যাশফ্লো চার্ট।
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
@@ -797,7 +887,7 @@ export const AdvancedSupplierLedgerModal: React.FC<AdvancedSupplierLedgerModalPr
               </div>
 
               <SupplierFinancialTrendChart
-                trends={detail.monthlyTrends || detail.financialSummary?.monthlyTrends}
+                trends={detail?.monthlyTrends || detail?.financialSummary?.monthlyTrends}
                 purchaseOrders={purchaseOrders}
                 payments={payments}
                 supplierName={supplier.companyName}
@@ -1190,6 +1280,8 @@ export const AdvancedSupplierLedgerModal: React.FC<AdvancedSupplierLedgerModalPr
                 )}
               </div>
             </div>
+          )}
+            </>
           )}
         </div>
 

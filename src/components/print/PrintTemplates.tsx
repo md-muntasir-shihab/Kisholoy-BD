@@ -63,6 +63,7 @@ interface DocVisual {
   address: string;
   phone: string;
   email: string;
+  logoUrl?: string;
 }
 
 function useVisual(siteContent: SiteContent, settings: PrintSettings): DocVisual {
@@ -72,6 +73,7 @@ function useVisual(siteContent: SiteContent, settings: PrintSettings): DocVisual
     address: settings.businessAddress || siteContent.contact?.address || '',
     phone: settings.businessPhone || siteContent.contact?.phone || '',
     email: settings.businessEmail || siteContent.contact?.email || '',
+    logoUrl: siteContent.logoUrl || '/brand/kisholoy-logo.svg',
   };
 }
 
@@ -113,24 +115,38 @@ function PageFrame({ children, type, title, titleBn, visual, codeLine }: PageFra
           marginBottom: isLabel ? '6px' : '10px',
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <div
-            style={{
-              width: isLabel ? '26px' : '30px',
-              height: isLabel ? '26px' : '30px',
-              borderRadius: '5px',
-              background: '#115e59',
-              color: '#fff',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontWeight: 800,
-              fontSize: '13px',
-              flexShrink: 0,
-            }}
-          >
-            ক
-          </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          {visual.logoUrl ? (
+            <img
+              src={visual.logoUrl}
+              alt={visual.brandName}
+              style={{
+                height: isLabel ? '24px' : '32px',
+                width: 'auto',
+                maxWidth: '120px',
+                objectFit: 'contain',
+                flexShrink: 0
+              }}
+            />
+          ) : (
+            <div
+              style={{
+                width: isLabel ? '26px' : '30px',
+                height: isLabel ? '26px' : '30px',
+                borderRadius: '5px',
+                background: '#115e59',
+                color: '#fff',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontWeight: 800,
+                fontSize: '13px',
+                flexShrink: 0,
+              }}
+            >
+              ক
+            </div>
+          )}
           <div>
             <div style={{ fontWeight: 800, fontSize: isLabel ? '14px' : '16px', letterSpacing: '0.5px' }}>
               {visual.brandName}

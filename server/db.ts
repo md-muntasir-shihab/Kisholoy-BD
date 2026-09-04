@@ -81,6 +81,63 @@ class ServerDatabase {
     return this.products.find(p => p.sku === sku);
   }
 
+  addProduct(newProdData: Omit<Product, 'id'>, operator = 'ADMIN'): Product {
+    const newProd: Product = {
+      ...newProdData,
+      id: `prod-${Date.now()}`
+    };
+    this.products.unshift(newProd);
+    this.addAuditLog('CREATE_PRODUCT', 'Product', newProd.sku, `Created product "${newProd.title}"`, operator);
+    return newProd;
+  }
+
+  updateProduct(id: string, updates: Partial<Product>, operator = 'ADMIN'): Product | null {
+    const prod = this.getProductById(id);
+    if (!prod) return null;
+    Object.assign(prod, updates);
+    this.addAuditLog('UPDATE_PRODUCT', 'Product', prod.sku || id, `Updated product "${prod.title}" details`, operator);
+    return prod;
+  }
+
+  deleteProduct(id: string, operator = 'ADMIN'): boolean {
+    const idx = this.products.findIndex(p => p.id === id);
+    if (idx === -1) return false;
+    const removed = this.products.splice(idx, 1)[0];
+    this.addAuditLog('DELETE_PRODUCT', 'Product', removed.sku || id, `Deleted product "${removed.title}" from catalog`, operator);
+    return true;
+  }
+
+  // Category methods
+  getCategoryById(id: string): Category | undefined {
+    return this.categories.find(c => c.id === id);
+  }
+
+  addCategory(catData: Omit<Category, 'id'>, operator = 'ADMIN'): Category {
+    const newCat: Category = {
+      ...catData,
+      id: `cat-${Date.now()}`
+    };
+    this.categories.push(newCat);
+    this.addAuditLog('CREATE_CATEGORY', 'Category', newCat.slug, `Added category "${newCat.name}"`, operator);
+    return newCat;
+  }
+
+  updateCategory(id: string, updates: Partial<Category>, operator = 'ADMIN'): Category | null {
+    const cat = this.getCategoryById(id);
+    if (!cat) return null;
+    Object.assign(cat, updates);
+    this.addAuditLog('UPDATE_CATEGORY', 'Category', cat.slug || id, `Updated category "${cat.name}"`, operator);
+    return cat;
+  }
+
+  deleteCategory(id: string, operator = 'ADMIN'): boolean {
+    const idx = this.categories.findIndex(c => c.id === id);
+    if (idx === -1) return false;
+    const removed = this.categories.splice(idx, 1)[0];
+    this.addAuditLog('DELETE_CATEGORY', 'Category', removed.slug || id, `Deleted category "${removed.name}"`, operator);
+    return true;
+  }
+
   updateProductStock(productId: string, quantityToDeduct: number): boolean {
     const product = this.getProductById(productId);
     if (!product) return false;
@@ -914,6 +971,16 @@ class ServerDatabase {
       createdAt: new Date().toISOString()
     };
     this.customerAddresses.push(newAddress);
+
+    // Sync default address to customer profile view in admin
+    if (newAddress.isDefault) {
+      const cust = this.customers.find(c => c.id === address.customerId);
+      if (cust) {
+        cust.defaultAddress = `${newAddress.addressLine}, ${newAddress.district}`;
+        cust.district = newAddress.district;
+        cust.thana = newAddress.upazilaOrArea;
+      }
+    }
     return newAddress;
   }
 
@@ -927,6 +994,16 @@ class ServerDatabase {
         .forEach(a => { a.isDefault = false; });
     }
     Object.assign(address, updates);
+
+    // Sync default address to customer profile view in admin
+    if (address.isDefault) {
+      const cust = this.customers.find(c => c.id === address.customerId);
+      if (cust) {
+        cust.defaultAddress = `${address.addressLine}, ${address.district}`;
+        cust.district = address.district;
+        cust.thana = address.upazilaOrArea;
+      }
+    }
     return address;
   }
 

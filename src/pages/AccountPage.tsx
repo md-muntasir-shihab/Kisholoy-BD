@@ -5,7 +5,7 @@ import {
   Heart, RotateCcw, Plus, Trash2, Edit3, Check, Star, 
   ShieldCheck, AlertCircle, ShoppingBag, ArrowRight, CheckCircle2,
   Calendar, Building, Home, HelpCircle, Truck,
-  Bell, MessageCircle, Smartphone, CheckCheck, LogOut, Lock, Eye, EyeOff, Link2
+  Bell, MessageCircle, Smartphone, CheckCheck, LogOut, Lock, Eye, EyeOff, Link2, Languages
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { CustomerAddress, WishlistItem, CustomerReturnRequest } from '../types';
@@ -17,6 +17,7 @@ export function AccountPage() {
   const { 
     orders, 
     language, 
+    setLanguage,
     currentCustomerId, 
     setCurrentCustomerId,
     loginCustomer,
@@ -400,6 +401,25 @@ export function AccountPage() {
                 ? 'আপনার অর্ডার ট্র্যাকিং, ডেলিভারি ঠিকানা এবং রিটার্ন অনুরোধ পরিচালনা করতে সাইন ইন করুন।'
                 : 'Sign in to access your order tracking, delivery addresses, wishlist, and service requests.'}
             </p>
+
+            {/* Quick Actions for Visitors */}
+            <div className="pt-2 flex flex-wrap items-center justify-center gap-2">
+              <Link
+                to="/track-order"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-stone-800 hover:bg-stone-700 text-stone-200 text-xs font-semibold border border-stone-700 transition-colors"
+              >
+                <Truck className="w-3.5 h-3.5 text-teal-400" />
+                <span>{language === 'BN' ? 'অর্ডার ট্র্যাক করুন' : 'Track Order'}</span>
+              </Link>
+              <button
+                type="button"
+                onClick={() => setLanguage(language === 'BN' ? 'EN' : 'BN')}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-stone-800 hover:bg-stone-700 text-stone-200 text-xs font-semibold border border-stone-700 transition-colors"
+              >
+                <Languages className="w-3.5 h-3.5 text-teal-400" />
+                <span>{language === 'BN' ? 'Switch to English' : 'বাংলায় দেখুন'}</span>
+              </button>
+            </div>
           </div>
 
           {/* Mode Switcher */}
@@ -757,6 +777,18 @@ export function AccountPage() {
 
             {/* Navigation Tabs */}
             <nav className="space-y-1.5">
+              {/* 1. Track Order Direct Access */}
+              <Link
+                to="/track-order"
+                className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold text-stone-700 hover:bg-teal-50/70 hover:text-teal-950 dark:text-slate-300 dark:hover:bg-slate-800 transition-all group"
+              >
+                <span className="flex items-center gap-2.5">
+                  <Truck className="w-4 h-4 text-teal-800 dark:text-teal-400" />
+                  <span>{language === 'BN' ? 'অর্ডার ট্র্যাক' : 'Track Order'}</span>
+                </span>
+                <ChevronRight className="w-3.5 h-3.5 text-stone-400 group-hover:translate-x-0.5 transition-transform" />
+              </Link>
+
               <button
                 onClick={() => handleTabChange('orders')}
                 className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all ${
@@ -786,7 +818,7 @@ export function AccountPage() {
               >
                 <span className="flex items-center gap-2.5">
                   <Heart className="w-4 h-4" />
-                  {language === 'BN' ? 'সংরক্ষিত উইশলিস্ট' : 'My Wishlist'}
+                  {language === 'BN' ? 'ফেভারিট আইটেম' : 'Favorite Items'}
                 </span>
                 <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
                   activeTab === 'wishlist' ? 'bg-teal-800 text-white' : 'bg-rose-100 text-rose-800'
@@ -872,6 +904,43 @@ export function AccountPage() {
                 </span>
               </button>
             </nav>
+
+            {/* Language Settings inside User Account */}
+            <div className="p-3 rounded-xl bg-stone-50 border border-stone-200/80 space-y-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-xs font-bold text-stone-800">
+                  <Languages className="w-3.5 h-3.5 text-teal-800" />
+                  <span>{language === 'BN' ? 'ল্যাঙ্গুয়েজ সেটিংস' : 'Language Settings'}</span>
+                </div>
+                <span className="text-[10px] font-bold text-teal-800">
+                  {language === 'BN' ? 'বাংলা' : 'EN'}
+                </span>
+              </div>
+              <div className="grid grid-cols-2 gap-1.5 p-1 bg-stone-200/60 rounded-lg">
+                <button
+                  type="button"
+                  onClick={() => setLanguage('BN')}
+                  className={`py-1 rounded-md text-xs font-bold transition-all ${
+                    language === 'BN'
+                      ? 'bg-white text-teal-950 shadow-2xs'
+                      : 'text-stone-600 hover:text-stone-900'
+                  }`}
+                >
+                  বাংলা
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setLanguage('EN')}
+                  className={`py-1 rounded-md text-xs font-bold transition-all ${
+                    language === 'EN'
+                      ? 'bg-white text-teal-950 shadow-2xs'
+                      : 'text-stone-600 hover:text-stone-900'
+                  }`}
+                >
+                  English
+                </button>
+              </div>
+            </div>
 
             {/* Logout Sidebar Action */}
             <div className="pt-2 border-t border-stone-200">
@@ -1605,6 +1674,45 @@ export function AccountPage() {
                         </span>
                       </div>
                     </label>
+                  </div>
+                </div>
+
+                {/* Language Preference Settings */}
+                <div className="pt-4 border-t border-stone-200 space-y-3">
+                  <div className="flex items-center gap-2">
+                    <Languages className="w-4 h-4 text-teal-800" />
+                    <h3 className="font-bold text-sm text-stone-900">
+                      {language === 'BN' ? 'ল্যাঙ্গুয়েজ সেটিংস (Language Preferences)' : 'Language Preferences'}
+                    </h3>
+                  </div>
+                  <p className="text-[11px] text-stone-500">
+                    {language === 'BN' 
+                      ? 'ওয়েবসাইট ব্যবহারের জন্য আপনার পছন্দের ভাষা নির্বাচন করুন।' 
+                      : 'Choose your default language for browsing, orders, and receipts.'}
+                  </p>
+                  <div className="flex items-center gap-3 max-w-sm">
+                    <button
+                      type="button"
+                      onClick={() => setLanguage('BN')}
+                      className={`flex-1 py-2.5 px-4 rounded-xl text-xs font-bold border transition-all ${
+                        language === 'BN'
+                          ? 'bg-teal-900 text-white border-teal-900 shadow-xs'
+                          : 'bg-stone-50 text-stone-700 border-stone-200 hover:bg-stone-100'
+                      }`}
+                    >
+                      বাংলা (Bangla)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setLanguage('EN')}
+                      className={`flex-1 py-2.5 px-4 rounded-xl text-xs font-bold border transition-all ${
+                        language === 'EN'
+                          ? 'bg-teal-900 text-white border-teal-900 shadow-xs'
+                          : 'bg-stone-50 text-stone-700 border-stone-200 hover:bg-stone-100'
+                      }`}
+                    >
+                      English
+                    </button>
                   </div>
                 </div>
 

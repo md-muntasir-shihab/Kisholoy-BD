@@ -375,6 +375,105 @@ async function startServer() {
   });
 
   // -------------------------------------------------------------
+  // Catalog & Category Management Endpoints (Admin & Storefront)
+  // -------------------------------------------------------------
+  app.get('/api/products', (req, res) => {
+    try {
+      res.json({ success: true, products: serverDb.products });
+    } catch (e: any) {
+      res.status(500).json({ success: false, error: e.message });
+    }
+  });
+
+  app.post('/api/products', (req, res) => {
+    try {
+      const { title, price, category, sku } = req.body;
+      if (!title || price === undefined || !category) {
+        return res.status(400).json({ error: 'Title, price, and category are required' });
+      }
+      const operator = req.body.operator || 'ADMIN';
+      const newProd = serverDb.addProduct(req.body, operator);
+      res.status(201).json({ success: true, product: newProd });
+    } catch (e: any) {
+      res.status(500).json({ success: false, error: e.message });
+    }
+  });
+
+  app.put('/api/products/:id', (req, res) => {
+    try {
+      const operator = req.body.operator || 'ADMIN';
+      const updated = serverDb.updateProduct(req.params.id, req.body, operator);
+      if (!updated) {
+        return res.status(404).json({ error: 'Product not found' });
+      }
+      res.json({ success: true, product: updated });
+    } catch (e: any) {
+      res.status(500).json({ success: false, error: e.message });
+    }
+  });
+
+  app.delete('/api/products/:id', (req, res) => {
+    try {
+      const operator = req.query.operator ? String(req.query.operator) : 'ADMIN';
+      const success = serverDb.deleteProduct(req.params.id, operator);
+      if (!success) {
+        return res.status(404).json({ error: 'Product not found' });
+      }
+      res.json({ success: true, message: 'Product removed from catalog' });
+    } catch (e: any) {
+      res.status(500).json({ success: false, error: e.message });
+    }
+  });
+
+  app.get('/api/categories', (req, res) => {
+    try {
+      res.json({ success: true, categories: serverDb.categories });
+    } catch (e: any) {
+      res.status(500).json({ success: false, error: e.message });
+    }
+  });
+
+  app.post('/api/categories', (req, res) => {
+    try {
+      const { name, slug } = req.body;
+      if (!name || !slug) {
+        return res.status(400).json({ error: 'Category name and slug are required' });
+      }
+      const operator = req.body.operator || 'ADMIN';
+      const newCat = serverDb.addCategory(req.body, operator);
+      res.status(201).json({ success: true, category: newCat });
+    } catch (e: any) {
+      res.status(500).json({ success: false, error: e.message });
+    }
+  });
+
+  app.put('/api/categories/:id', (req, res) => {
+    try {
+      const operator = req.body.operator || 'ADMIN';
+      const updated = serverDb.updateCategory(req.params.id, req.body, operator);
+      if (!updated) {
+        return res.status(404).json({ error: 'Category not found' });
+      }
+      res.json({ success: true, category: updated });
+    } catch (e: any) {
+      res.status(500).json({ success: false, error: e.message });
+    }
+  });
+
+  app.delete('/api/categories/:id', (req, res) => {
+    try {
+      const operator = req.query.operator ? String(req.query.operator) : 'ADMIN';
+      const success = serverDb.deleteCategory(req.params.id, operator);
+      if (!success) {
+        return res.status(404).json({ error: 'Category not found' });
+      }
+      res.json({ success: true, message: 'Category removed' });
+    } catch (e: any) {
+      res.status(500).json({ success: false, error: e.message });
+    }
+  });
+
+  // -------------------------------------------------------------
   // Admin & System Order Fetching Endpoint
   // -------------------------------------------------------------
   app.get('/api/orders', (req, res) => {
@@ -453,6 +552,21 @@ async function startServer() {
           });
         }
         (updatedOrder as any).stockRestoredOnCancel = true;
+      }
+
+      // Supplier settlement eligibility & return adjustment triggers
+      if (status === 'DELIVERED') {
+        try {
+          supplierEngine.processDeliveredOrder(updatedOrder, operator || 'ADMIN');
+        } catch (supErr) {
+          console.warn('Supplier delivered sale capture warning:', supErr);
+        }
+      } else if (status === 'RETURNED') {
+        try {
+          supplierEngine.adjustReturnedOrder(updatedOrder.id, { reason: note || 'Order marked RETURNED' }, operator || 'ADMIN');
+        } catch (supErr) {
+          console.warn('Supplier return adjustment warning:', supErr);
+        }
       }
 
       // Automatically dispatch confirmation notification via configured gateways
