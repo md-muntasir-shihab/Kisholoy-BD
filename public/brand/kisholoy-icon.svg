@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="100%" height="100%">
+  <rect width="120" height="120" rx="28" fill="#083732" />
+  <!-- 'কি' Stylized Monogram Glyph with Botanical Arc & Terracotta Accents -->
+  <g transform="translate(18, 14) scale(0.38)">
+    <!-- Botanical Arc -->
+    <path d="M 40 100 A 70 70 0 0 1 180 84" fill="none" stroke="#34d399" stroke-width="24" stroke-linecap="round" />
+    <circle cx="30" cy="106" r="16" fill="#f43f5e" />
+    <!-- Stem -->
+    <path d="M 74 90 L 74 210 Q 74 240 104 240 L 124 240" fill="none" stroke="#f8fafc" stroke-width="24" stroke-linecap="round" />
+    <!-- Bar -->
+    <line x1="74" y1="96" x2="204" y2="96" stroke="#f8fafc" stroke-width="24" stroke-linecap="round" />
+    <!-- Loop -->
+    <path d="M 140 96 C 104 116 102 170 134 186 C 168 200 188 158 166 128" fill="none" stroke="#f8fafc" stroke-width="24" stroke-linecap="round" />
+    <path d="M 166 150 Q 180 190 196 240" fill="none" stroke="#f8fafc" stroke-width="24" stroke-linecap="round" />
+    <circle cx="204" cy="174" r="22" fill="#fb923c" />
+  </g>
+</svg>

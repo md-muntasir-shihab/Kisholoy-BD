@@ -6,6 +6,7 @@ import {
 import { useApp } from '../../context/AppContext';
 import { logAuthEvent } from '../../utils/telemetryLogger';
 import { signInWithGoogle } from '../../lib/firebase';
+import { BrandLogo } from '../brand/BrandLogo';
 
 interface CustomerAuthModalProps {
   isOpen: boolean;
@@ -189,21 +190,19 @@ export const CustomerAuthModal: React.FC<CustomerAuthModalProps> = ({
         
         {/* Header */}
         <div className="px-6 py-4 border-b border-stone-200 flex items-center justify-between bg-stone-50/70">
-          <div className="flex items-center gap-2.5">
-            <div className="p-2 rounded-xl bg-teal-900 text-white shadow-xs">
-              <User className="w-5 h-5" />
-            </div>
-            <div>
-              <h3 className="font-serif font-bold text-base text-stone-900">
+          <div className="flex items-center gap-3">
+            <BrandLogo variant="light" size="sm" linkToHome={false} showTagline={false} />
+            <div className="border-l border-stone-300 pl-3">
+              <h3 className="font-serif font-bold text-sm text-stone-900 leading-tight">
                 {mode === 'login' && (language === 'BN' ? 'লগইন করুন' : 'Customer Sign In')}
                 {mode === 'register' && (language === 'BN' ? 'নতুন অ্যাকাউন্ট খুলুন' : 'Create Account')}
                 {mode === 'guest' && (language === 'BN' ? 'গেস্ট কাস্টমার মোড' : 'Guest Shopper Mode')}
                 {mode === 'link_order' && (language === 'BN' ? 'গেস্ট অর্ডার লিঙ্ক করুন' : 'Link Guest Order')}
               </h3>
-              <p className="text-xs text-stone-500">
+              <p className="text-[11px] text-stone-500">
                 {mode === 'guest' 
                   ? 'Shop freely without an account'
-                  : 'Kisholoy customer account & order services'}
+                  : 'Kisholoy customer account'}
               </p>
             </div>
           </div>

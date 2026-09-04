@@ -358,18 +358,35 @@ export function ContentAdmin() {
 
                 {/* Comprehensive Visual Logo Configuration */}
                 <div className="p-5 rounded-xl border border-stone-200 bg-stone-50/70 space-y-4">
-                  <div className="flex items-center justify-between border-b border-stone-200 pb-3">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-stone-200 pb-3 gap-2">
                     <div>
                       <h4 className="text-sm font-bold text-stone-900 flex items-center gap-2">
                         <ImageIcon className="w-4 h-4 text-teal-800" />
                         Storefront Brand Logo & Emblem Studio
                       </h4>
-                      <p className="text-[11px] text-stone-500">Upload your brand logo image, select vector emblem motifs, or choose elegant artisan typography.</p>
+                      <p className="text-[11px] text-stone-500">Official vector brand logo is set by default. Upload new images, adjust height, or restore the default logo anytime.</p>
                     </div>
 
-                    <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded bg-teal-100 text-teal-900">
-                      Live Storefront Identity
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setDraft({
+                            ...draft,
+                            logoUrl: '/brand/kisholoy-logo.svg',
+                            logoDarkUrl: '/brand/kisholoy-logo-dark.svg',
+                            logoType: 'IMAGE',
+                            logoHeight: 46,
+                            faviconUrl: '/brand/kisholoy-icon.svg'
+                          });
+                          showToast('অফিসিয়াল কিশলয় লোগো সক্রিয় করা হয়েছে! (Official logo restored)');
+                        }}
+                        className="px-3 py-1.5 rounded-lg bg-teal-900 text-white hover:bg-teal-800 text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-2xs"
+                      >
+                        <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+                        <span>ডিফল্ট অফিসিয়াল লোগো (Reset to Official)</span>
+                      </button>
+                    </div>
                   </div>
 
                   {/* Logo Display Mode Selector */}
@@ -527,27 +544,47 @@ export function ContentAdmin() {
                     <label className="font-bold text-stone-700 block mb-2 text-xs">
                       Instant Artisan Logo Presets (Click to apply):
                     </label>
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
                       {[
+                        {
+                          name: 'কিশলয় অফিসিয়াল (Official)',
+                          url: '/brand/kisholoy-logo.svg',
+                          darkUrl: '/brand/kisholoy-logo-dark.svg',
+                          emblem: 'leaf_sprout',
+                          type: 'IMAGE',
+                          height: 46
+                        },
                         {
                           name: 'Heritage Jamdani Icon',
                           url: 'https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&q=80&w=200',
-                          emblem: 'jamdani_flower'
+                          darkUrl: '',
+                          emblem: 'jamdani_flower',
+                          type: 'BOTH_IMAGE_AND_TEXT',
+                          height: 44
                         },
                         {
                           name: 'Terracotta Pottery Mark',
                           url: 'https://images.unsplash.com/photo-1615529182904-14819c35db37?auto=format&fit=crop&q=80&w=200',
-                          emblem: 'terracotta_seal'
+                          darkUrl: '',
+                          emblem: 'terracotta_seal',
+                          type: 'BOTH_IMAGE_AND_TEXT',
+                          height: 44
                         },
                         {
                           name: 'Artisan Workshop Emblem',
                           url: 'https://images.unsplash.com/photo-1583391733956-3750e0ff4e8b?auto=format&fit=crop&q=80&w=200',
-                          emblem: 'heritage_loom'
+                          darkUrl: '',
+                          emblem: 'heritage_loom',
+                          type: 'BOTH_IMAGE_AND_TEXT',
+                          height: 44
                         },
                         {
                           name: 'Organic Green Leaf',
                           url: 'https://images.unsplash.com/photo-1576092768241-dec231879fc3?auto=format&fit=crop&q=80&w=200',
-                          emblem: 'leaf_sprout'
+                          darkUrl: '',
+                          emblem: 'leaf_sprout',
+                          type: 'BOTH_IMAGE_AND_TEXT',
+                          height: 44
                         }
                       ].map((preset, idx) => (
                         <button
@@ -557,14 +594,16 @@ export function ContentAdmin() {
                             setDraft({
                               ...draft,
                               logoUrl: preset.url,
+                              logoDarkUrl: preset.darkUrl !== undefined ? preset.darkUrl : draft.logoDarkUrl,
                               logoEmblemStyle: preset.emblem as any,
-                              logoType: 'BOTH_IMAGE_AND_TEXT'
+                              logoType: (preset.type as any) || 'BOTH_IMAGE_AND_TEXT',
+                              logoHeight: preset.height || draft.logoHeight
                             });
                             showToast(`Applied ${preset.name} preset!`);
                           }}
                           className="flex items-center gap-2 p-2 border border-stone-200 rounded-lg hover:border-teal-800 hover:bg-teal-50/50 text-left transition-colors bg-white text-xs"
                         >
-                          <img src={preset.url} alt="" className="w-7 h-7 rounded object-cover flex-shrink-0" />
+                          <img src={preset.url} alt="" className="w-7 h-7 rounded object-contain flex-shrink-0" />
                           <span className="text-[11px] font-medium text-stone-800 leading-tight">{preset.name}</span>
                         </button>
                       ))}

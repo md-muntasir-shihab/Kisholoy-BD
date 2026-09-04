@@ -247,7 +247,16 @@ export function AdminLayout() {
       {/* Real-time Urgent Operational Marquee/Banner (High Fraud Risk / Pending Settlements) */}
       <AdminUrgentAlertBanner />
 
-      <div className="flex-1 flex min-h-0 overflow-hidden">
+      <div className="flex-1 flex min-h-0 overflow-hidden relative">
+        {/* Mobile / Tablet Backdrop Overlay */}
+        {sidebarOpen && (
+          <div
+            className="fixed inset-0 z-15 bg-black/50 backdrop-blur-xs lg:hidden transition-opacity"
+            onClick={() => setSidebarOpen(false)}
+            aria-hidden="true"
+          />
+        )}
+
         {/* Sidebar Navigation */}
         <aside
           id="admin-sidebar"
@@ -269,7 +278,11 @@ export function AdminLayout() {
                   {currentRole.replace('_', ' ')}
                 </span>
                 <span className="text-[10px] text-teal-700 dark:text-teal-400 font-mono block truncate">
+arena/01a06c02-kisholoy-bd
                   {isBn ? 'আরবিএসি সক্রিয়' : 'RBAC Active'} • {isBn ? 'রুলস দেখুন' : 'Click to view rules'}
+
+                  {isBn ? 'আরবিএসি সক্রিয়' : 'RBAC Active'} • {isBn ? 'রুলস দেখুন' : 'View rules'}
+ main
                 </span>
               </div>
               <KeyRound className="w-3.5 h-3.5 text-stone-400 dark:text-stone-500 group-hover:text-teal-600 dark:group-hover:text-teal-400 transition-colors" />
@@ -292,14 +305,14 @@ export function AdminLayout() {
                     onClick={() => toggleSection(section.id)}
                     className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl transition-all text-left ${
                       isOpen
-                        ? 'bg-stone-100 text-stone-900'
-                        : 'text-stone-500 hover:bg-stone-100 hover:text-stone-800'
+                        ? 'bg-stone-100 dark:bg-stone-900 text-stone-900 dark:text-white'
+                        : 'text-stone-500 hover:bg-stone-100 dark:hover:bg-stone-900 hover:text-stone-800 dark:hover:text-stone-200'
                     }`}
                   >
                     <div className={`p-1.5 rounded-lg shrink-0 border ${
                       isOpen
-                        ? 'bg-teal-50 text-teal-800 dark:text-teal-300 border-teal-200'
-                        : 'bg-stone-100 text-stone-500 dark:text-stone-400 border-stone-200'
+                        ? 'bg-teal-50 text-teal-800 dark:text-teal-300 border-teal-200 dark:border-teal-800'
+                        : 'bg-stone-100 text-stone-500 dark:text-stone-400 border-stone-200 dark:border-stone-700'
                     }`}>
                       <SectionIcon className="w-4 h-4" />
                     </div>
@@ -328,8 +341,8 @@ export function AdminLayout() {
                             onClick={() => setSidebarOpen(false)}
                             className={`relative flex items-center justify-between pl-4 pr-3 py-2 rounded-xl text-xs font-medium transition-all group ${
                               isActive
-                                ? 'bg-teal-50 text-teal-900 font-semibold shadow-sm'
-                                : 'text-stone-500 hover:bg-stone-100 hover:text-stone-800'
+                                ? 'bg-teal-50 dark:bg-teal-900/40 text-teal-900 dark:text-teal-200 font-semibold shadow-xs border border-teal-200/60 dark:border-teal-800/60'
+                                : 'text-stone-600 dark:text-stone-400 hover:bg-stone-100 dark:hover:bg-stone-900 hover:text-stone-900 dark:hover:text-stone-100'
                             }`}
                           >
                             {isActive && (
@@ -337,9 +350,10 @@ export function AdminLayout() {
                             )}
                             <div className="flex items-center gap-2.5 truncate">
                               <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-teal-700 dark:text-teal-300' : 'text-stone-400 dark:text-stone-500 group-hover:text-stone-600 dark:group-hover:text-stone-300'}`} />
-                              <span className="truncate">{isBn ? item.labelBn : item.label}</span>
+                              <span className="truncate font-medium">{isBn ? item.labelBn : item.label}</span>
                             </div>
 
+ arena/01a06c02-kisholoy-bd
                             <div className="flex items-center gap-1.5 shrink-0">
                               {badge && (
                                 <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${badge.color}`}>
@@ -347,6 +361,13 @@ export function AdminLayout() {
                                 </span>
                               )}
                             </div>
+
+                            {badge && (
+                              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ml-2 ${badge.color}`}>
+                                {isBn ? badge.labelBn : badge.label}
+                              </span>
+                            )}
+main
                           </Link>
                         );
                       })}

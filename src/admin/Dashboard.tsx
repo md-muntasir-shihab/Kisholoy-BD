@@ -609,6 +609,7 @@ export function Dashboard() {
           <div className="grid grid-cols-2 gap-3 text-xs mt-2">
             <Metric label={isBn ? 'নিজস্ব বিক্রয়' : 'In-house'} value={fmtMoney(inHouseVsPartner.inHouse)} />
             <Metric label={isBn ? 'পার্টনার বিক্রয়' : 'Partner'} value={fmtMoney(inHouseVsPartner.partner)} />
+ arena/01a06c02-kisholoy-bd
           </div>
         </section>
       </div>
@@ -662,6 +663,7 @@ export function Dashboard() {
                 {isBn ? sec.titleBn : sec.title} ({sec.items.length})
               </button>
             ))}
+main
           </div>
         </div>
 
