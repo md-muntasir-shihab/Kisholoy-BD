@@ -22,7 +22,9 @@ import {
   Languages,
   LogOut,
   Settings,
-  Check
+  Check,
+  Sun,
+  Moon
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { CustomerAuthModal } from '../auth/CustomerAuthModal';
@@ -38,9 +40,12 @@ export function Header() {
     wishlist, 
     currentCustomerId, 
     customerProfile, 
-    logoutCustomer 
+    logoutCustomer,
+    theme,
+    setTheme
   } = useApp();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isCategoriesAccordionOpen, setIsCategoriesAccordionOpen] = useState(true);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -174,20 +179,29 @@ export function Header() {
         )}
 
         {/* Main Header Grid Container */}
-        <div className="max-w-7xl 2xl:max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-[auto_1fr_auto] items-center h-16 sm:h-18 lg:h-20 gap-2 sm:gap-4 lg:gap-6 w-full">
+        <div className="max-w-7xl 2xl:max-w-[1440px] mx-auto px-3 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16 sm:h-18 lg:h-20 gap-2 sm:gap-4 lg:gap-6 w-full">
             
             {/* Left Column (Logo & Mobile Menu) */}
-            <div className="col-start-1 justify-self-start flex items-center gap-2 sm:gap-3 shrink-0">
+            <div className="flex items-center gap-2 sm:gap-3 shrink-0 min-w-0">
               <button
-                onClick={() => setIsMobileMenuOpen(true)}
-                className="xl:hidden inline-flex h-9 w-9 items-center justify-center rounded-full border border-stone-200/80 dark:border-slate-800/80 bg-white/70 dark:bg-slate-900/70 backdrop-blur-md text-stone-700 dark:text-slate-200 hover:text-teal-900 dark:hover:text-teal-300 active:scale-95 transition-all shadow-2xs"
-                aria-label="Open mobile menu"
+                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                className={`xl:hidden inline-flex h-9 w-9 items-center justify-center rounded-full border backdrop-blur-md active:scale-95 transition-all shadow-2xs shrink-0 ${
+                  isMobileMenuOpen
+                    ? 'border-teal-700 bg-teal-50 dark:bg-teal-950/60 text-teal-900 dark:text-teal-300 ring-2 ring-teal-700/20'
+                    : 'border-stone-200/80 dark:border-slate-800/80 bg-white/70 dark:bg-slate-900/70 text-stone-700 dark:text-slate-200 hover:text-teal-900 dark:hover:text-teal-300'
+                }`}
+                aria-label={isMobileMenuOpen ? "মেনু বন্ধ করুন" : "মেনু খুলুন"}
+                aria-expanded={isMobileMenuOpen}
               >
-                <Menu className="h-5 w-5" />
+                {isMobileMenuOpen ? (
+                  <X className="h-5 w-5" />
+                ) : (
+                  <Menu className="h-5 w-5" />
+                )}
               </button>
 
-              <div className="flex items-center shrink-0">
+              <div className="flex items-center shrink-0 min-w-0">
                 <BrandLogo
                   variant="light"
                   size="md"
@@ -197,8 +211,8 @@ export function Header() {
             </div>
 
             {/* Center Column (Navigation Menu) */}
-            <div className="col-start-2 justify-self-center flex items-center justify-center min-w-0 w-full px-1 sm:px-2 lg:px-4">
-              <nav className="hidden xl:flex items-center gap-1 min-w-0">
+            <div className="hidden xl:flex items-center justify-center min-w-0 flex-1 px-1 sm:px-2 lg:px-4">
+              <nav className="flex items-center gap-1 min-w-0">
                 <div className="flex items-center gap-0.5 2xl:gap-1 p-1 rounded-full bg-stone-100/70 dark:bg-slate-900/70 border border-stone-200/70 dark:border-slate-800/70 backdrop-blur-md shadow-2xs">
                   {navLinks.map((link) => {
                     const isActive = location.pathname === link.path;
@@ -221,7 +235,7 @@ export function Header() {
             </div>
 
             {/* Right Column (Actions, Utilities: Search, Theme, Account, Cart) */}
-            <div className="col-start-3 justify-self-end flex items-center justify-end gap-1.5 sm:gap-2.5 shrink-0">
+            <div className="flex items-center justify-end gap-1.5 sm:gap-2.5 shrink-0">
               {/* Search Trigger Button */}
               <button
                 onClick={() => setIsSearchOpen(true)}
@@ -232,11 +246,13 @@ export function Header() {
                 <Search className="w-4 h-4 text-teal-700 dark:text-teal-400" />
               </button>
 
-              {/* Display Mode Switcher */}
-              <ThemeButton />
+              {/* Display Mode Switcher (Desktop/Tablet) */}
+              <div className="hidden sm:inline-flex">
+                <ThemeButton />
+              </div>
 
-              {/* User Account with Interactive Dropdown (Houses Track Order, Wishlist / Favorite Items, Language Settings) */}
-              <div className="relative" ref={accountMenuRef}>
+              {/* User Account with Interactive Dropdown (Desktop/Tablet) */}
+              <div className="hidden sm:inline-flex relative" ref={accountMenuRef}>
                 <button
                   onClick={() => setIsAccountMenuOpen(!isAccountMenuOpen)}
                   className={`inline-flex h-9 px-2 sm:px-3 items-center justify-center gap-1.5 rounded-full border backdrop-blur-md text-xs font-semibold shadow-2xs active:scale-95 transition-all ${
@@ -612,147 +628,256 @@ export function Header() {
         )}
       </AnimatePresence>
 
-      {/* Slide-out Mobile Navigation Drawer with Smooth Slide-in Motion Animations */}
+      {/* Mobile Top-Down Dropdown Menu (মোবাইলের ড্রপ ডাউন মেনু) */}
       <AnimatePresence>
         {isMobileMenuOpen && (
-          <div className="fixed inset-0 z-50 xl:hidden">
-            {/* Backdrop overlay with smooth fade transition */}
+          <div className="fixed inset-x-0 top-16 sm:top-18 lg:top-20 bottom-0 z-40 xl:hidden flex flex-col">
+            {/* Backdrop overlay */}
             <motion.div
-              key="mobile-menu-backdrop"
+              key="mobile-dropdown-backdrop"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              transition={{ duration: 0.25, ease: 'easeInOut' }}
-              className="fixed inset-0 bg-stone-950/60 backdrop-blur-sm"
+              transition={{ duration: 0.2 }}
+              className="absolute inset-0 bg-stone-950/60 backdrop-blur-xs"
               onClick={() => setIsMobileMenuOpen(false)}
               aria-hidden="true"
             />
 
-            {/* Drawer Panel with spring physics slide-in */}
+            {/* Dropdown Card unfolding downwards from the header */}
             <motion.div
-              key="mobile-menu-drawer-panel"
-              initial={{ x: '-100%' }}
-              animate={{ x: 0 }}
-              exit={{ x: '-100%' }}
-              transition={{ type: 'spring', damping: 28, stiffness: 280, mass: 0.8 }}
-              className="fixed inset-y-0 left-0 w-full max-w-xs sm:max-w-sm bg-white dark:bg-slate-950 shadow-2xl flex flex-col z-10 border-r border-stone-200 dark:border-slate-800"
+              key="mobile-dropdown-panel"
+              initial={{ opacity: 0, y: -16 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -16 }}
+              transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+              className="relative z-10 w-full max-h-[calc(100vh-4.5rem)] overflow-y-auto bg-white/98 dark:bg-slate-950/98 backdrop-blur-2xl border-b border-stone-200 dark:border-slate-800 shadow-2xl flex flex-col divide-y divide-stone-100 dark:divide-slate-800"
             >
-              {/* Drawer Header */}
-              <div className="p-4 sm:p-5 border-b border-stone-200 dark:border-slate-800 flex items-center justify-between">
-                <BrandLogo variant="light" size="sm" showTagline={false} />
-                <button
-                  onClick={() => setIsMobileMenuOpen(false)}
-                  className="p-2 rounded-full text-stone-400 hover:text-stone-700 dark:hover:text-white transition-colors active:scale-95"
-                  aria-label="Close menu"
+              {/* 1. Mobile Quick Search */}
+              <div className="p-3.5 sm:p-4 bg-stone-50/70 dark:bg-slate-900/60">
+                <form
+                  onSubmit={(e) => {
+                    handleSearch(e);
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className="flex gap-2"
                 >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-
-              {/* Mobile Search Bar */}
-              <div className="p-4 border-b border-stone-100 dark:border-slate-800">
-                <form onSubmit={(e) => { handleSearch(e); setIsMobileMenuOpen(false); }} className="flex gap-2">
                   <div className="relative flex-1">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-400" />
+                    <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-teal-700 dark:text-teal-400" />
                     <input
                       type="text"
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
-                      placeholder={isBn ? 'পণ্য খুঁজুন...' : 'Search products...'}
-                      className="w-full text-xs pl-9 pr-3 py-2.5 rounded-xl border border-stone-200 dark:border-slate-700 bg-stone-50 dark:bg-slate-900 text-stone-900 dark:text-stone-100 placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-teal-700/30"
+                      placeholder={isBn ? 'পণ্য, ক্যাটাগরি বা উপকরণ খুঁজুন...' : 'Search products, categories...'}
+                      className="w-full text-xs pl-10 pr-3 py-2.5 rounded-xl border border-stone-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-stone-900 dark:text-stone-100 placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-teal-700/30"
                     />
                   </div>
                   <button
                     type="submit"
-                    className="px-3.5 py-2.5 bg-teal-900 dark:bg-teal-600 hover:bg-teal-950 dark:hover:bg-teal-500 text-white rounded-xl text-xs font-semibold active:scale-95 transition-all shadow-2xs"
+                    className="px-4 py-2.5 bg-teal-900 dark:bg-teal-600 hover:bg-teal-950 dark:hover:bg-teal-500 text-white rounded-xl text-xs font-bold active:scale-95 transition-all shadow-xs shrink-0"
                   >
-                    {isBn ? 'খুঁজুন' : 'Go'}
+                    {isBn ? 'খুঁজুন' : 'Search'}
                   </button>
                 </form>
+
+                {/* Popular Searches */}
+                <div className="flex flex-wrap items-center gap-1.5 mt-2.5">
+                  <span className="text-[10px] font-bold text-stone-400 dark:text-slate-500 uppercase tracking-wider mr-1">
+                    {isBn ? 'জনপ্রিয়:' : 'Popular:'}
+                  </span>
+                  {popularSearches.slice(0, 4).map((term) => (
+                    <button
+                      key={term}
+                      type="button"
+                      onClick={() => {
+                        handleQuickSearch(term);
+                        setIsMobileMenuOpen(false);
+                      }}
+                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium bg-white dark:bg-slate-800 border border-stone-200 dark:border-slate-700 text-stone-700 dark:text-slate-300 hover:text-teal-900 hover:border-teal-700 transition-colors shadow-2xs"
+                    >
+                      <Sparkle className="w-2.5 h-2.5 text-amber-500" />
+                      <span>{term}</span>
+                    </button>
+                  ))}
+                </div>
               </div>
 
-              {/* Navigation Links & Categories */}
-              <div className="flex-1 overflow-y-auto p-4 space-y-1">
-                <div className="text-[10px] font-bold text-stone-400 dark:text-slate-500 uppercase tracking-wider px-3.5 block mb-1">
-                  {isBn ? 'ক্যাটাগরি ও ব্রাউজ' : 'Categories & Navigation'}
+              {/* 2. Main Navigation & Categories Accordion Dropdown */}
+              <div className="p-3.5 sm:p-4 space-y-1">
+                <div className="text-[10px] font-bold text-stone-400 dark:text-slate-500 uppercase tracking-wider px-3 block mb-1">
+                  {isBn ? 'নেভিগেশন ও ক্যাটাগরি' : 'Navigation & Categories'}
                 </div>
-                {navLinks.map((link, idx) => {
-                  const isActive = location.pathname === link.path;
-                  return (
-                    <motion.div
-                      key={link.path}
-                      initial={{ opacity: 0, x: -12 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: 0.04 * (idx + 1), duration: 0.2 }}
-                    >
-                      <Link
-                        to={link.path}
-                        onClick={() => setIsMobileMenuOpen(false)}
-                        className={`flex items-center justify-between px-3.5 py-3 rounded-xl text-sm font-semibold transition-all ${
-                          isActive
-                            ? 'bg-teal-50 dark:bg-teal-950/40 text-teal-900 dark:text-teal-300'
-                            : 'text-stone-700 dark:text-slate-300 hover:bg-stone-50 dark:hover:bg-slate-900'
-                        }`}
-                      >
-                        <span>{link.name}</span>
-                        <ChevronRight className="w-4 h-4 text-stone-400" />
-                      </Link>
-                    </motion.div>
-                  );
-                })}
 
-                {/* User Account & Services Section in Drawer */}
-                <motion.div
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.25, duration: 0.2 }}
-                  className="pt-3 border-t border-stone-200/80 dark:border-slate-800 space-y-1"
+                <Link
+                  to="/"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className={`flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all ${
+                    location.pathname === '/'
+                      ? 'bg-teal-50 dark:bg-teal-950/40 text-teal-900 dark:text-teal-300'
+                      : 'text-stone-800 dark:text-slate-200 hover:bg-stone-50 dark:hover:bg-slate-900'
+                  }`}
                 >
-                  <span className="text-[10px] font-bold text-stone-400 dark:text-slate-500 uppercase tracking-wider px-3.5 block mb-1">
-                    {isBn ? 'ইউজার অ্যাকাউন্ট ও সেবা' : 'Account & Services'}
-                  </span>
+                  <span>{isBn ? 'হোম' : 'Home'}</span>
+                  <ChevronRight className="w-4 h-4 text-stone-400" />
+                </Link>
 
-                  {/* 1. Track Order */}
+                <Link
+                  to="/shop"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className={`flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all ${
+                    location.pathname === '/shop'
+                      ? 'bg-teal-50 dark:bg-teal-950/40 text-teal-900 dark:text-teal-300'
+                      : 'text-stone-800 dark:text-slate-200 hover:bg-stone-50 dark:hover:bg-slate-900'
+                  }`}
+                >
+                  <span>{isBn ? 'সকল পণ্য' : 'All Products'}</span>
+                  <ChevronRight className="w-4 h-4 text-stone-400" />
+                </Link>
+
+                {/* Categories Dropdown Accordion */}
+                <div className="rounded-xl border border-stone-200/70 dark:border-slate-800 overflow-hidden bg-stone-50/50 dark:bg-slate-900/40">
+                  <button
+                    type="button"
+                    onClick={() => setIsCategoriesAccordionOpen(!isCategoriesAccordionOpen)}
+                    className="w-full flex items-center justify-between px-3.5 py-2.5 text-xs font-bold text-stone-800 dark:text-slate-200 hover:bg-stone-100/70 dark:hover:bg-slate-800/70 transition-colors"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Layers className="w-4 h-4 text-teal-700 dark:text-teal-400" />
+                      <span>{isBn ? 'ক্যাটাগরি সমূহ (ড্রপ ডাউন)' : 'Product Categories (Dropdown)'}</span>
+                    </div>
+                    <ChevronDown className={`w-4 h-4 text-stone-400 transition-transform duration-200 ${isCategoriesAccordionOpen ? 'rotate-180 text-teal-700 dark:text-teal-400' : ''}`} />
+                  </button>
+
+                  {isCategoriesAccordionOpen && (
+                    <div className="p-2 pt-0 space-y-1 border-t border-stone-200/50 dark:border-slate-800/50 bg-white dark:bg-slate-950">
+                      <Link
+                        to="/category/traditional-clothing"
+                        onClick={() => setIsMobileMenuOpen(false)}
+                        className="flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium text-stone-700 dark:text-slate-300 hover:bg-teal-50 dark:hover:bg-teal-950/30 hover:text-teal-950 dark:hover:text-teal-300 transition-colors"
+                      >
+                        <span>{isBn ? 'ঐতিহ্যবাহী পোশাক ও শাড়ি' : 'Traditional Clothing & Sarees'}</span>
+                        <ChevronRight className="w-3.5 h-3.5 text-stone-400" />
+                      </Link>
+                      <Link
+                        to="/category/handicrafts-decor"
+                        onClick={() => setIsMobileMenuOpen(false)}
+                        className="flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium text-stone-700 dark:text-slate-300 hover:bg-teal-50 dark:hover:bg-teal-950/30 hover:text-teal-950 dark:hover:text-teal-300 transition-colors"
+                      >
+                        <span>{isBn ? 'হস্তশিল্প ও গৃহসজ্জা' : 'Handicrafts & Home Decor'}</span>
+                        <ChevronRight className="w-3.5 h-3.5 text-stone-400" />
+                      </Link>
+                      <Link
+                        to="/category/organic-pantry"
+                        onClick={() => setIsMobileMenuOpen(false)}
+                        className="flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium text-stone-700 dark:text-slate-300 hover:bg-teal-50 dark:hover:bg-teal-950/30 hover:text-teal-950 dark:hover:text-teal-300 transition-colors"
+                      >
+                        <span>{isBn ? 'খাঁটি অর্গানিক খাদ্য' : 'Pure Organic Pantry'}</span>
+                        <ChevronRight className="w-3.5 h-3.5 text-stone-400" />
+                      </Link>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* 3. Account & Orders Section */}
+              <div className="p-3.5 sm:p-4 space-y-2.5 bg-stone-50/40 dark:bg-slate-900/30">
+                <div className="text-[10px] font-bold text-stone-400 dark:text-slate-500 uppercase tracking-wider px-3 block mb-1">
+                  {isBn ? 'ইউজার অ্যাকাউন্ট ও সেবা' : 'Account & Services'}
+                </div>
+
+                {currentCustomerId ? (
+                  <div className="p-3 rounded-xl bg-white dark:bg-slate-900 border border-stone-200/80 dark:border-slate-700 space-y-2.5">
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-full bg-teal-900 text-white flex items-center justify-center font-bold text-xs shadow-xs shrink-0">
+                        {customerProfile?.name ? customerProfile.name.slice(0, 2).toUpperCase() : 'KH'}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="text-xs font-bold text-stone-900 dark:text-white truncate">
+                          {customerProfile?.name || 'Customer Account'}
+                        </div>
+                        <div className="text-[11px] text-stone-500 dark:text-slate-400 truncate">
+                          {customerProfile?.phone || customerProfile?.email || 'Active Member'}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 pt-1 border-t border-stone-100 dark:border-slate-800">
+                      <Link
+                        to="/account?tab=orders"
+                        onClick={() => setIsMobileMenuOpen(false)}
+                        className="flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg bg-stone-100 dark:bg-slate-800 text-stone-700 dark:text-slate-200 text-xs font-semibold hover:bg-teal-50 hover:text-teal-900 transition-colors"
+                      >
+                        <Package className="w-3.5 h-3.5 text-teal-700 dark:text-teal-400" />
+                        <span>{isBn ? 'অর্ডারসমূহ' : 'My Orders'}</span>
+                      </Link>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsMobileMenuOpen(false);
+                          logoutCustomer();
+                        }}
+                        className="flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 text-xs font-semibold hover:bg-rose-100 transition-colors"
+                      >
+                        <LogOut className="w-3.5 h-3.5" />
+                        <span>{isBn ? 'সাইন আউট' : 'Sign Out'}</span>
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsMobileMenuOpen(false);
+                      setAuthModalMode('login');
+                      setAuthModalOpen(true);
+                    }}
+                    className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-teal-900 hover:bg-teal-950 dark:bg-teal-600 dark:hover:bg-teal-500 text-white text-xs font-bold shadow-xs active:scale-95 transition-all"
+                  >
+                    <LogIn className="w-4 h-4" />
+                    <span>{isBn ? 'কাস্টমার লগইন / সাইন আপ' : 'Sign In / Register'}</span>
+                  </button>
+                )}
+
+                {/* Track Order & Wishlist Quick Buttons */}
+                <div className="grid grid-cols-2 gap-2">
                   <Link
                     to="/track-order"
                     onClick={() => setIsMobileMenuOpen(false)}
-                    className="flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-semibold text-stone-700 dark:text-slate-300 hover:bg-stone-50 dark:hover:bg-slate-900"
+                    className="flex items-center gap-2 p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-stone-200/80 dark:border-slate-700/80 text-xs font-semibold text-stone-700 dark:text-slate-200 hover:border-teal-700 transition-colors"
                   >
-                    <div className="flex items-center gap-2.5">
-                      <Truck className="w-4 h-4 text-teal-700 dark:text-teal-400" />
-                      <span>{isBn ? 'অর্ডার ট্র্যাক' : 'Track Order'}</span>
-                    </div>
-                    <ChevronRight className="w-4 h-4 text-stone-400" />
+                    <Truck className="w-4 h-4 text-teal-700 dark:text-teal-400" />
+                    <span>{isBn ? 'অর্ডার ট্র্যাক' : 'Track Order'}</span>
                   </Link>
-
-                  {/* 2. Favorite Items / Wishlist */}
                   <Link
                     to="/account?tab=wishlist"
                     onClick={() => setIsMobileMenuOpen(false)}
-                    className="flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-semibold text-stone-700 dark:text-slate-300 hover:bg-stone-50 dark:hover:bg-slate-900"
+                    className="flex items-center justify-between p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-stone-200/80 dark:border-slate-700/80 text-xs font-semibold text-stone-700 dark:text-slate-200 hover:border-rose-500 transition-colors"
                   >
-                    <div className="flex items-center gap-2.5">
+                    <div className="flex items-center gap-2">
                       <Heart className="w-4 h-4 text-rose-500" />
-                      <span>{isBn ? 'ফেভারিট আইটেম' : 'Favorite Items'}</span>
+                      <span>{isBn ? 'উইশলিস্ট' : 'Wishlist'}</span>
                     </div>
                     {wishlist.length > 0 && (
-                      <span className="px-2 py-0.5 rounded-full bg-rose-600 text-white text-xs font-bold">
+                      <span className="px-1.5 py-0.5 rounded-full bg-rose-600 text-white text-[10px] font-bold">
                         {wishlist.length}
                       </span>
                     )}
                   </Link>
+                </div>
+              </div>
 
-                  {/* 3. Language Settings Switcher */}
-                  <div className="flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-semibold text-stone-700 dark:text-slate-300">
-                    <div className="flex items-center gap-2.5">
-                      <Languages className="w-4 h-4 text-teal-700 dark:text-teal-400" />
-                      <span>{isBn ? 'ল্যাঙ্গুয়েজ সেটিংস' : 'Language Settings'}</span>
-                    </div>
-                    <div className="inline-flex p-0.5 rounded-lg bg-stone-100 dark:bg-slate-800 border border-stone-200 dark:border-slate-700">
+              {/* 4. Language & Display Theme Selector */}
+              <div className="p-3.5 sm:p-4 space-y-3 bg-white dark:bg-slate-950">
+                <div className="grid grid-cols-2 gap-3">
+                  {/* Language Selector */}
+                  <div>
+                    <span className="text-[10px] font-bold text-stone-400 dark:text-slate-500 uppercase tracking-wider block mb-1.5">
+                      {isBn ? 'ভাষা (Language)' : 'Language'}
+                    </span>
+                    <div className="grid grid-cols-2 p-1 bg-stone-100 dark:bg-slate-900 rounded-xl border border-stone-200/70 dark:border-slate-800">
                       <button
                         type="button"
                         onClick={() => setLanguage('BN')}
-                        className={`px-2 py-1 rounded-md text-xs font-bold transition-all ${
+                        className={`py-1.5 px-2 rounded-lg text-xs font-bold text-center transition-all ${
                           language === 'BN'
                             ? 'bg-teal-900 text-white shadow-2xs'
                             : 'text-stone-600 dark:text-slate-400'
@@ -763,7 +888,7 @@ export function Header() {
                       <button
                         type="button"
                         onClick={() => setLanguage('EN')}
-                        className={`px-2 py-1 rounded-md text-xs font-bold transition-all ${
+                        className={`py-1.5 px-2 rounded-lg text-xs font-bold text-center transition-all ${
                           language === 'EN'
                             ? 'bg-teal-900 text-white shadow-2xs'
                             : 'text-stone-600 dark:text-slate-400'
@@ -773,52 +898,62 @@ export function Header() {
                       </button>
                     </div>
                   </div>
-                </motion.div>
-              </div>
 
-              {/* Drawer Footer Actions */}
-              <div className="p-4 border-t border-stone-200 dark:border-slate-800 space-y-3 bg-stone-50/50 dark:bg-slate-900/50">
-                {/* Customer Account Button */}
-                {currentCustomerId ? (
-                  <Link
-                    to="/account"
-                    onClick={() => setIsMobileMenuOpen(false)}
-                    className="flex items-center justify-center gap-2 w-full py-2.5 px-4 rounded-xl bg-teal-900 hover:bg-teal-950 dark:bg-teal-600 dark:hover:bg-teal-500 text-white text-xs font-bold shadow-xs active:scale-95 transition-all"
-                  >
-                    <User className="w-4 h-4" />
-                    <span>{isBn ? 'আমার অ্যাকাউন্ট' : 'My Account'}</span>
-                  </Link>
-                ) : (
-                  <button
-                    onClick={() => {
-                      setIsMobileMenuOpen(false);
-                      setAuthModalMode('login');
-                      setAuthModalOpen(true);
-                    }}
-                    className="flex items-center justify-center gap-2 w-full py-2.5 px-4 rounded-xl bg-teal-900 hover:bg-teal-950 dark:bg-teal-600 dark:hover:bg-teal-500 text-white text-xs font-bold shadow-xs active:scale-95 transition-all"
-                  >
-                    <LogIn className="w-4 h-4" />
-                    <span>{isBn ? 'লগইন / রেজিস্টার' : 'Sign In / Register'}</span>
-                  </button>
-                )}
-
-                {/* Quick Admin Shortcut */}
-                <Link
-                  to="/admin"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                  className="flex items-center justify-center gap-2 w-full py-2 px-3 rounded-xl border border-stone-200 dark:border-slate-700 text-stone-600 dark:text-slate-400 text-xs font-semibold hover:text-teal-900 dark:hover:text-white transition-colors"
-                >
-                  <ShieldCheck className="w-3.5 h-3.5 text-teal-700 dark:text-teal-400" />
-                  <span>{isBn ? 'অ্যাডমিন অপারেশনস' : 'Admin Operations'}</span>
-                </Link>
-
-                {/* Phone Helpline */}
-                {siteContent.contact?.phone && (
-                  <div className="pt-2 text-center text-xs text-stone-500 dark:text-slate-400 flex items-center justify-center gap-1.5">
-                    <PhoneCall className="w-3.5 h-3.5 text-teal-600" />
-                    <span>{siteContent.contact.phone}</span>
+                  {/* Theme Mode Selector */}
+                  <div>
+                    <span className="text-[10px] font-bold text-stone-400 dark:text-slate-500 uppercase tracking-wider block mb-1.5">
+                      {isBn ? 'ডিসপ্লে থিম' : 'Display Mode'}
+                    </span>
+                    <div className="grid grid-cols-2 p-1 bg-stone-100 dark:bg-slate-900 rounded-xl border border-stone-200/70 dark:border-slate-800">
+                      <button
+                        type="button"
+                        onClick={() => setTheme('light')}
+                        className={`py-1.5 px-2 rounded-lg text-xs font-bold flex items-center justify-center gap-1 transition-all ${
+                          theme === 'light'
+                            ? 'bg-white text-stone-900 shadow-2xs'
+                            : 'text-stone-600 dark:text-slate-400'
+                        }`}
+                      >
+                        <Sun className="w-3.5 h-3.5 text-amber-500" />
+                        <span>{isBn ? 'লাইট' : 'Light'}</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setTheme('dark')}
+                        className={`py-1.5 px-2 rounded-lg text-xs font-bold flex items-center justify-center gap-1 transition-all ${
+                          theme === 'dark'
+                            ? 'bg-slate-800 text-white shadow-2xs'
+                            : 'text-stone-600 dark:text-slate-400'
+                        }`}
+                      >
+                        <Moon className="w-3.5 h-3.5 text-teal-400" />
+                        <span>{isBn ? 'ডার্ক' : 'Dark'}</span>
+                      </button>
+                    </div>
                   </div>
-                )}
+                </div>
+
+                {/* Footer Links: Admin / Portal & Hotline */}
+                <div className="pt-2 border-t border-stone-100 dark:border-slate-800 flex items-center justify-between text-xs text-stone-500 dark:text-slate-400">
+                  <Link
+                    to="/admin"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className="inline-flex items-center gap-1.5 text-teal-800 dark:text-teal-400 font-semibold hover:underline"
+                  >
+                    <ShieldCheck className="w-3.5 h-3.5" />
+                    <span>{isBn ? 'অ্যাডমিন ও পোর্টাল' : 'Admin & Portal'}</span>
+                  </Link>
+
+                  {siteContent.contact?.phone && (
+                    <a
+                      href={`tel:${siteContent.contact.phone}`}
+                      className="inline-flex items-center gap-1 text-stone-600 dark:text-slate-300 font-medium hover:text-teal-700"
+                    >
+                      <PhoneCall className="w-3.5 h-3.5 text-teal-600" />
+                      <span>{siteContent.contact.phone}</span>
+                    </a>
+                  )}
+                </div>
               </div>
             </motion.div>
           </div>

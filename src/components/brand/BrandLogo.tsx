@@ -28,8 +28,8 @@ export const OfficialKisholoyVector: React.FC<{
     <svg
       xmlns="http://www.w3.org/2000/svg"
       viewBox="0 0 920 370"
-      style={{ height: `${height}px`, width: 'auto' }}
-      className={`object-contain flex-shrink-0 transition-transform duration-300 group-hover:scale-105 ${className}`}
+      style={{ maxHeight: `${height}px`, width: 'auto' }}
+      className={`h-7 sm:h-9 lg:h-10 w-auto max-w-[130px] object-contain flex-shrink-0 transition-transform duration-300 group-hover:scale-105 ${className}`}
       aria-label="কিশলয় লোগো (Kisholoy Official Logo)"
     >
       <g id="kisholoy-wordmark">
@@ -237,7 +237,7 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({
             alt={brandName}
             style={{ maxHeight: `${sizeConfig.imgHeight}px` }}
             onError={() => setImageError(true)}
-            className="w-auto object-contain transition-transform duration-300 group-hover:scale-105 rounded-md"
+            className="h-7 sm:h-9 lg:h-10 w-auto max-w-[130px] object-contain transition-transform duration-300 group-hover:scale-105 rounded-md"
             loading="eager"
           />
         </div>
