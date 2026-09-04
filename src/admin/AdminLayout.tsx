@@ -17,6 +17,8 @@ import { AdminNotificationAlerts } from '../components/admin/AdminNotificationAl
 import { AdminUrgentAlertBanner } from '../components/admin/AdminUrgentAlertBanner';
 import { ScannerModal } from '../components/scan/ScannerModal';
 import { LanguageButton } from '../components/layout/LanguageButton';
+import { StaffLoginGate } from '../components/auth/StaffLoginGate';
+import { staffLogout } from '../lib/apiAuth';
 import { ThemeButton } from '../components/layout/ThemeButton';
 
 // Route Access Control Matrix
@@ -125,6 +127,7 @@ export function AdminLayout() {
   };
 
   return (
+    <StaffLoginGate>
     <div id="admin-root-layout" className="h-screen overflow-hidden flex flex-col bg-stone-100/90 dark:bg-slate-950 text-stone-900 dark:text-slate-100 font-sans selection:bg-teal-900 selection:text-white transition-colors duration-200">
       {/* Top Operational Header */}
       <header id="admin-top-header" className="sticky top-0 z-30 bg-white/95 text-stone-900 border-b border-stone-200/90 dark:bg-stone-950/95 dark:text-white dark:border-stone-800/80 h-16 flex items-center justify-between px-4 sm:px-6 shadow-xs backdrop-blur-md transition-colors">
@@ -153,6 +156,15 @@ export function AdminLayout() {
 
         {/* Topbar Actions */}
         <div className="flex items-center gap-2 sm:gap-3">
+          {/* Server-session sign-out (audit C7: real sessions now exist) */}
+          <button
+            id="admin-session-logout-btn"
+            onClick={() => { void staffLogout(); }}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-stone-100 hover:bg-rose-50 dark:bg-stone-900 dark:hover:bg-rose-950/60 text-stone-600 hover:text-rose-700 dark:text-stone-300 dark:hover:text-rose-300 border border-stone-200 dark:border-stone-800 text-xs font-semibold transition-all"
+            title="Sign out — terminates the server-side session / সাইন আউট"
+          >
+            <LogOut className="w-3.5 h-3.5" />
+          </button>
           
           {/* Who Am I? Identity Inspector Trigger */}
           <button
@@ -462,6 +474,7 @@ export function AdminLayout() {
         onClose={() => setScannerOpen(false)}
       />
     </div>
+    </StaffLoginGate>
   );
 }
 

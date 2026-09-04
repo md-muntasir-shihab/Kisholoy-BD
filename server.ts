@@ -8,6 +8,14 @@ import express from 'express';
 import path from 'path';
 import { createServer as createViteServer } from 'vite';
 import { serverDb } from './server/db';
+import {
+  generateSalt,
+  hashPassword as hashCredential,
+  verifyPassword as verifyCredential,
+  validatePasswordStrength,
+  normalizeBdMobilePhone,
+  requireBdMobilePhone
+} from './server/passwordHash';
 import { calculateOrderFinance, calculateFinancialSummary, performReconciliationScan } from './server/financeEngine';
 import { paymentService } from './server/paymentService';
 import { courierService } from './server/courierService';
@@ -73,7 +81,7 @@ async function startServer() {
     let tier: RateLimitTier = 'STOREFRONT';
     if (req.path.startsWith('/api/checkout') || req.path === '/api/orders/create') {
       tier = 'CHECKOUT';
-    } else if (req.path.startsWith('/api/auth') || req.path.startsWith('/api/security/auth')) {
+    } else if (req.path.startsWith('/api/auth') || req.path.startsWith('/api/security/auth') || req.path.startsWith('/api/customer/auth/') || req.path.startsWith('/api/suppliers/portal/login')) {
       tier = 'AUTH';
     } else if (req.path.startsWith('/api/admin') || req.path.startsWith('/api/security') || req.path.startsWith('/api/marketing/command')) {
       tier = 'ADMIN';
@@ -101,6 +109,145 @@ async function startServer() {
   });
 
   app.use(express.json());
+
+  // -------------------------------------------------------------
+  // 3a. SECURITY AUDIT (Phases 2–4): session enforcement + RBAC
+  // Single chokepoint in front of every guarded route group. Staff tokens are
+  // validated against securityEngine sessions; customer & supplier tokens
+  // against server-issued portal sessions. Client bodies can no longer pick
+  // their own identity (audit C1/C5/C7).
+  // -------------------------------------------------------------
+  const bearerOf = (req: express.Request): string => {
+    const h = req.headers['authorization'];
+    if (typeof h === 'string' && h.startsWith('Bearer ')) return h.slice(7).trim();
+    const alt = req.headers['x-ksh-token'];
+    return typeof alt === 'string' ? alt.trim() : '';
+  };
+  const reqIp = (req: express.Request) =>
+    ((req.headers['x-forwarded-for'] as string)?.split(',')[0].trim() || req.socket.remoteAddress || '127.0.0.1');
+
+  const STAFF_ALL: Role[] = ['SUPER_ADMIN', 'ADMIN', 'ORDER_MANAGER', 'INVENTORY_MANAGER', 'FINANCE', 'SUPPORT'];
+  const STAFF_ORDERS = ['SUPER_ADMIN', 'ADMIN', 'ORDER_MANAGER', 'SUPPORT', 'FINANCE'] as Role[];
+  const STAFF_FINANCE = ['SUPER_ADMIN', 'ADMIN', 'FINANCE'] as Role[];
+  const STAFF_SUPPLIERS = ['SUPER_ADMIN', 'ADMIN', 'FINANCE', 'INVENTORY_MANAGER'] as Role[];
+  const STAFF_CRM = ['SUPER_ADMIN', 'ADMIN', 'ORDER_MANAGER', 'SUPPORT', 'FINANCE'] as Role[];
+
+  const staffGuard = (allowed: Role[]) => (req: express.Request, res: express.Response, next: express.NextFunction) => {
+    const check = securityEngine.verifySession(bearerOf(req), reqIp(req));
+    if (!check.valid || !check.session) {
+      return res.status(401).json({ error: 'Staff sign-in required for this operation.', code: 'AUTH_REQUIRED' });
+    }
+    if (!allowed.includes(check.session.role)) {
+      return res.status(403).json({ error: 'RBAC: your role is not permitted for this operation.', code: 'FORBIDDEN', role: check.session.role });
+    }
+    (req as any).staffSession = check.session;
+    next();
+  };
+
+  // Customers: every /api/customer/* call except login/register must carry a
+  // valid server-issued session token, and may only touch its OWN ids (IDOR).
+  const customerGuard = (req: express.Request, res: express.Response, next: express.NextFunction) => {
+    const rel = req.path; // relative to the /api/customer mount
+    if (rel === '/auth/login' || rel === '/auth/register') return next();
+    const check = securityEngine.verifyPortalSession(bearerOf(req), 'CUSTOMER');
+    if (!check.valid || !check.session) {
+      return res.status(401).json({ error: 'Customer sign-in required.', code: 'AUTH_REQUIRED' });
+    }
+    const sid = check.session.principalId;
+    (req as any).customerSession = check.session;
+
+    const denied = () => res.status(403).json({ error: 'This resource belongs to another customer account.', code: 'FORBIDDEN' });
+    // /:customerId paths where the id must equal the session principal
+    const idMatch = rel.match(/^\/(profile|wishlist|returns|notifications|addresses)\/([\w-]+)$/);
+    // literal action segments (not customer ids) fall through to the body check
+    if (idMatch && (idMatch[2] === 'toggle' || idMatch[2] === 'read-all')) {
+      const bodyCidLit = (req.body && typeof req.body.customerId === 'string') ? req.body.customerId : undefined;
+      if (bodyCidLit && bodyCidLit !== sid) return res.status(403).json({ error: 'This resource belongs to another customer account.', code: 'FORBIDDEN' });
+      return next();
+    }
+    if (idMatch) {
+      const [, seg, segId] = idMatch;
+      if (segId === sid) return next();
+      // addresses PUT/DELETE carry an ADDRESS id — resolve ownership through the DB
+      if (seg === 'addresses' && req.method !== 'GET') {
+        const addr = serverDb.customerAddresses.find(a => a.id === segId);
+        if (!addr) return next(); // route will 404 appropriately
+        if (addr.customerId === sid) return next();
+        return denied();
+      }
+      if (seg === 'notifications' && req.method === 'POST') {
+        const notif = serverDb.customerNotifications.find(nn => nn.id === segId);
+        if (!notif) return next();
+        if (notif.customerId === sid) return next();
+        return denied();
+      }
+      return denied();
+    }
+    // body-supplied customerId must match the session
+    const bodyCid = (req.body && typeof req.body.customerId === 'string') ? req.body.customerId : undefined;
+    if (bodyCid && bodyCid !== sid) return denied();
+    return next();
+  };
+
+  // Suppliers portal: dashboard/update/change-password derive supplier ONLY
+  // from the portal session token (audit C5). Query/body ids may not point elsewhere.
+  const supplierPortalGuard = (req: express.Request, res: express.Response, next: express.NextFunction) => {
+    if (req.path === '/login') return next();
+    const check = securityEngine.verifyPortalSession(bearerOf(req), 'SUPPLIER');
+    if (!check.valid || !check.session) {
+      return res.status(401).json({ error: 'Supplier portal sign-in required.', code: 'AUTH_REQUIRED' });
+    }
+    const claimed = (req.query.supplierId as string) || (req.body && typeof req.body.supplierId === 'string' ? req.body.supplierId : undefined) || (req.headers['x-supplier-id'] as string);
+    if (claimed && claimed !== check.session.principalId) {
+      return res.status(403).json({ error: 'This portal session belongs to a different supplier account.', code: 'FORBIDDEN' });
+    }
+    (req as any).supplierSession = check.session;
+    (req as any).supplierId = check.session.principalId;
+    next();
+  };
+
+  app.use('/api/customer', customerGuard);
+  app.use('/api/suppliers/portal', supplierPortalGuard);
+
+  app.use('/api/suppliers', (req, res, next) => {
+    if (req.path.startsWith('/portal/')) return next(); // handled by supplierPortalGuard
+    return staffGuard(STAFF_SUPPLIERS)(req, res, next);
+  });
+
+  app.use('/api/security/auth', (req, res, next) => {
+    const publicAuth = ['/login', '/logout', '/verify', '/reset-password-request', '/reset-password-confirm', '/mfa-verify'];
+    if (publicAuth.includes(req.path)) return next();
+    // everything else under security/auth (e.g. change-password) requires a live staff session
+    return staffGuard(STAFF_ALL)(req, res, next);
+  });
+  app.use('/api/security', (req, res, next) => {
+    if (req.path.startsWith('/auth/')) return next();
+    return staffGuard(['SUPER_ADMIN', 'ADMIN'])(req, res, next);
+  });
+
+  app.use('/api/admin', (req, res, next) => {
+    if (/^\/(returns|refunds)(\/|$)/.test(req.path)) return staffGuard(STAFF_ORDERS)(req, res, next);
+    return staffGuard(['SUPER_ADMIN', 'ADMIN'])(req, res, next);
+  });
+  app.use('/api/finance', staffGuard(STAFF_FINANCE));
+  app.use('/api/customers', staffGuard(STAFF_CRM));
+  app.use('/api/marketing/command', staffGuard(STAFF_ALL));
+
+  app.use('/api/orders', (req, res, next) => {
+    const p = req.path;
+    // public storefront paths
+    if (p === '/create' || p === '/track' || p.startsWith('/track?') || (p.startsWith('/track') && req.method === 'GET')) return next();
+    // list hydration: staff see everything; a logged-in customer sees only their own orders
+    if ((p === '' || p === '/') && req.method === 'GET') {
+      const staff = securityEngine.verifySession(bearerOf(req), reqIp(req));
+      if (staff.valid && staff.session) { (req as any).staffSession = staff.session; return next(); }
+      const cust = securityEngine.verifyPortalSession(bearerOf(req), 'CUSTOMER');
+      if (cust.valid && cust.session) { (req as any).customerScopeId = cust.session.principalId; return next(); }
+      return res.status(401).json({ error: 'Sign in (staff or customer) to list orders.', code: 'AUTH_REQUIRED' });
+    }
+    // admin mutations + risk checks
+    return staffGuard(STAFF_ORDERS)(req, res, next);
+  });
 
   // -------------------------------------------------------------
   // 1. Health Check
@@ -157,6 +304,31 @@ async function startServer() {
 
       if (!items || !Array.isArray(items) || items.length === 0) {
         return res.status(400).json({ error: 'At least one item is required to place an order' });
+      }
+
+      // Security audit Ph.5 (C11/C12): Bangladesh phone normalization + recipient hygiene.
+      // Canonical form +8801XXXXXXXXX is STORED on the order so courier payloads,
+      // fraud blacklists and COD-duplicate detection all speak the same format.
+      const custName = String(customer.name).trim();
+      if (custName.length < 3) {
+        return res.status(400).json({ error: 'Customer name must be at least 3 characters.' });
+      }
+      const custPhoneRes = requireBdMobilePhone(customer.phone, 'Customer phone');
+      if (custPhoneRes.error) return res.status(400).json({ error: custPhoneRes.error });
+      const normCustomerPhone = custPhoneRes.phone!;
+      let normShipPhone = normCustomerPhone;
+      if (shippingAddress.phone) {
+        const shipPhoneRes = requireBdMobilePhone(shippingAddress.phone, 'Recipient phone');
+        if (shipPhoneRes.error) return res.status(400).json({ error: shipPhoneRes.error });
+        normShipPhone = shipPhoneRes.phone!;
+      }
+      if (shippingAddress.postalCode != null && String(shippingAddress.postalCode).trim() !== ''
+          && !/^\d{4}(\d{2})?$/.test(String(shippingAddress.postalCode).trim())) {
+        return res.status(400).json({ error: 'Postal code must be 4 digits (or 6-digit BD post code).' });
+      }
+      if (shippingAddress.thana != null && String(shippingAddress.thana).trim() !== ''
+          && String(shippingAddress.thana).trim().length < 2) {
+        return res.status(400).json({ error: 'Thana / area name is too short to route a delivery.' });
       }
 
       // Authoritative financial recalculation with customer context
@@ -236,14 +408,14 @@ async function startServer() {
         balanceDueCod,
         customer: {
           id: `cust-${Date.now()}`,
-          name: customer.name.trim(),
-          phone: customer.phone.trim(),
+          name: custName,
+          phone: normCustomerPhone,
           email: customer.email?.trim()
         },
         shippingAddress: {
           firstName: shippingAddress.firstName || customer.name,
           lastName: shippingAddress.lastName || '',
-          phone: shippingAddress.phone || customer.phone,
+          phone: normShipPhone,
           email: shippingAddress.email || customer.email,
           address: shippingAddress.address,
           division: shippingAddress.division || 'Dhaka',
@@ -380,7 +552,10 @@ async function startServer() {
   app.get('/api/orders', (req, res) => {
     try {
       // Ensure all orders have an authoritative fraud risk assessment
-      const orders = serverDb.orders.map(o => {
+      const scopeCustomerId: string | undefined = (req as any).customerScopeId;
+      const scopedCustomer = scopeCustomerId ? serverDb.customers.find(c => c.id === scopeCustomerId) : undefined;
+      const scopePhone = scopedCustomer ? normalizeBdMobilePhone(scopedCustomer.phone) : null;
+      let orders = serverDb.orders.map(o => {
         if (!o.fraudRisk) {
           o.fraudRisk = fraudEngine.evaluateOrderRisk({
             phone: o.customer.phone || '',
@@ -396,6 +571,13 @@ async function startServer() {
         }
         return o;
       });
+      if (scopeCustomerId) {
+        // logged-in customer: only their own orders (by linkage or verified phone)
+        orders = orders.filter(o =>
+          (o as any).customerId === scopeCustomerId ||
+          (scopePhone ? normalizeBdMobilePhone((o as any).customer?.phone || (o as any).customerPhone || '') === scopePhone : false)
+        );
+      }
       res.json({ success: true, orders });
     } catch (e: any) {
       res.status(500).json({ success: false, error: e.message });
@@ -734,11 +916,24 @@ async function startServer() {
             ? (order.balanceDueCod !== undefined ? order.balanceDueCod : Math.max(0, order.total - (order.advancePayment?.amount || order.advancePaymentAmount || 0)))
             : 0);
 
+      // Audit C10: recipient = the DELIVERY RECIPIENT on the shipping address
+      // (gifts/third-party deliveries), never silently the purchasing customer.
+      const ship = order.shippingAddress as any;
+      const derivedRecipientName =
+        recipientName ||
+        [ship?.firstName, ship?.lastName].filter(Boolean).join(' ').trim() ||
+        order.customer.name;
+      const phoneResolution = requireBdMobilePhone(
+        recipientPhone || ship?.phone || order.customer.phone,
+        'Recipient phone'
+      );
+      if (phoneResolution.error) return res.status(400).json({ error: phoneResolution.error });
+
       const booking = await courierService.bookConsignment({
         orderId: order.id,
         orderNumber: order.orderNumber,
-        recipientName: recipientName || order.customer.name,
-        recipientPhone: recipientPhone || order.customer.phone,
+        recipientName: derivedRecipientName,
+        recipientPhone: phoneResolution.phone!,
         recipientAddress: recipientAddress || `${order.shippingAddress.address}, ${order.shippingAddress.thana || ''}, ${order.shippingAddress.district || ''}`,
         recipientDistrict: order.shippingAddress.district,
         recipientThana: order.shippingAddress.thana,
@@ -754,6 +949,13 @@ async function startServer() {
       return res.json({ 
         success: true, 
         booking,
+        // audit C10: surface exactly which recipient identity was sent to the courier
+        recipient: {
+          name: derivedRecipientName,
+          phone: phoneResolution.phone,
+          address: recipientAddress || `${order.shippingAddress.address}, ${order.shippingAddress.thana || ''}, ${order.shippingAddress.district || ''}`,
+          source: (recipientName || ship?.firstName) ? 'SHIPPING_ADDRESS' : 'ORDER_CUSTOMER'
+        },
         order: serverDb.getOrderById(orderId)
       });
     } catch (err: any) {
@@ -3273,8 +3475,12 @@ async function startServer() {
       if (!name || !email || !phone || !role) {
         return res.status(400).json({ error: 'Name, email, phone and role are required' });
       }
-      const newUser = securityEngine.createStaffUser({ name, email, phone, role }, operator || 'SUPER_ADMIN');
-      res.json({ success: true, user: newUser });
+      const staffSession = (req as any).staffSession;
+      if (staffSession && staffSession.role !== 'SUPER_ADMIN') {
+        return res.status(403).json({ error: 'Only SUPER_ADMIN can provision staff accounts.' });
+      }
+      const { user: newUser, initialPassword } = securityEngine.createStaffUser({ name, email, phone, role }, operator || 'SUPER_ADMIN');
+      res.json({ success: true, user: newUser, initialPassword, note: 'Share the initial password over a secure channel; it is not recoverable afterwards.' });
     } catch (e: any) {
       res.status(500).json({ error: e.message });
     }
@@ -3381,17 +3587,25 @@ async function startServer() {
 
   app.post('/api/security/auth/change-password', (req, res) => {
     try {
-      const { userId, currentPassword, newPassword, operator, skipOldCheck } = req.body;
+      // Audit C6: `skipOldCheck` is NO LONGER a client-controlled switch. The
+      // guard guarantees a live staff session; the override only applies when an
+      // authenticated SUPER_ADMIN resets ANOTHER user's password.
+      const { userId, currentPassword, newPassword } = req.body;
       if (!userId || !newPassword) {
         return res.status(400).json({ error: 'User ID and new password are required' });
       }
+      const staffSession = (req as any).staffSession;
+      if (!staffSession) {
+        return res.status(401).json({ error: 'Staff session required.' });
+      }
+      const isSuperAdminOverride = staffSession.role === 'SUPER_ADMIN' && staffSession.userId !== userId;
 
       const result = securityEngine.changeStaffPassword(
         userId,
         currentPassword,
         newPassword,
-        operator || 'StaffSelf',
-        Boolean(skipOldCheck)
+        staffSession.userName,
+        isSuperAdminOverride
       );
 
       if (!result.success) {
@@ -3669,9 +3883,11 @@ async function startServer() {
 
   app.get('/api/suppliers/portal/dashboard', (req, res) => {
     try {
-      const supplierId = (req.query.supplierId as string) || (req.headers['x-supplier-id'] as string);
+      // Audit C5: supplier identity comes from the validated portal session (set by guard),
+      // never from query params / headers the client can forge.
+      const supplierId: string = (req as any).supplierId;
       if (!supplierId) {
-        return res.status(400).json({ error: 'Supplier ID is required' });
+        return res.status(401).json({ error: 'Supplier portal session is required' });
       }
 
       const dashboard = supplierEngine.getSupplierPortalDashboard(supplierId);
@@ -3687,10 +3903,12 @@ async function startServer() {
 
   app.post('/api/suppliers/portal/update-profile', (req, res) => {
     try {
-      const { supplierId, updates, operator } = req.body;
-      if (!supplierId) return res.status(400).json({ error: 'Supplier ID is required' });
+      const { updates } = req.body;
+      const session = (req as any).supplierSession;
+      const supplierId: string = (req as any).supplierId;
+      if (!supplierId) return res.status(401).json({ error: 'Supplier portal session is required' });
 
-      const result = supplierEngine.updateSupplierPortalProfile(supplierId, updates || {}, operator || 'Supplier Admin');
+      const result = supplierEngine.updateSupplierPortalProfile(supplierId, updates || {}, session?.displayName || 'Supplier Self-Service');
       if (!result.success) return res.status(400).json({ error: result.error });
 
       res.json({ success: true, supplier: result.supplier, message: 'Supplier profile updated successfully' });
@@ -3701,13 +3919,34 @@ async function startServer() {
 
   app.post('/api/suppliers/portal/change-password', (req, res) => {
     try {
-      const { supplierId, newPassword, operator } = req.body;
-      if (!supplierId || !newPassword) return res.status(400).json({ error: 'Supplier ID and new password required' });
+      // Self-service change additionally verifies the CURRENT portal password.
+      const { newPassword, currentPassword } = req.body;
+      const supplierId: string = (req as any).supplierId;
+      if (!supplierId || !newPassword) return res.status(400).json({ error: 'New password required' });
 
-      const result = supplierEngine.setSupplierPortalPassword(supplierId, newPassword, operator || 'Supplier Self-Service');
+      if (!supplierEngine.verifyPortalPassword(supplierId, String(currentPassword || ''))) {
+        return res.status(401).json({ error: 'Current password is incorrect.' });
+      }
+
+      const result = supplierEngine.setSupplierPortalPassword(supplierId, newPassword, (req as any).supplierSession?.displayName || 'Supplier Self-Service');
       if (!result.success) return res.status(400).json({ error: result.error });
 
-      res.json({ success: true, message: 'Password updated successfully' });
+      // the caller's own session is revoked too by setSupplierPortalPassword — force re-login
+      res.json({ success: true, message: 'Password updated successfully. Please sign in again.' });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.post('/api/suppliers/:id/portal-impersonate', (req, res) => {
+    try {
+      const staffSession = (req as any).staffSession;
+      if (!staffSession || !['SUPER_ADMIN', 'ADMIN'].includes(staffSession.role)) {
+        return res.status(403).json({ error: 'Only Super Admin / Admin may open an impersonated supplier portal view.' });
+      }
+      const result = supplierEngine.issueStaffImpersonationSession(req.params.id, `${staffSession.userName} (${staffSession.userEmail})`, reqIp(req));
+      if (!result.success) return res.status(404).json({ error: result.error });
+      res.json({ success: true, token: result.token, ttlMinutes: 12 * 60, note: 'Short-lived impersonation session; recorded in the security audit ledger.' });
     } catch (e: any) {
       res.status(500).json({ error: e.message });
     }
@@ -3999,21 +4238,58 @@ async function startServer() {
         return res.status(400).json({ error: 'Identifier (email or phone) and password are required' });
       }
 
-      const cleanIdentifier = identifier.trim().toLowerCase();
+      const cleanIdentifier = String(identifier).trim().toLowerCase();
       const customer = serverDb.customers.find(
-        c => c.email.toLowerCase() === cleanIdentifier || c.phone.trim() === cleanIdentifier
+        c => c.email.toLowerCase() === cleanIdentifier || c.phone.trim().toLowerCase() === cleanIdentifier ||
+               (normalizeBdMobilePhone(cleanIdentifier) !== null && normalizeBdMobilePhone(c.phone) === normalizeBdMobilePhone(cleanIdentifier))
       );
 
+      // Uniform error for both "no such account" and "wrong password" (no enumeration, audit C1)
+      const unauthorized = () => res.status(401).json({ error: 'Invalid credentials. Please verify your email/phone and password.' });
+
       if (!customer) {
-        // Uniform error to prevent account enumeration
-        return res.status(401).json({ error: 'Invalid credentials. Please verify your email/phone and password.' });
+        // burn comparable time to reduce timing-based enumeration
+        verifyCredential(password || 'x', generateSalt(), hashCredential('timing-pad', 'salt-pad') + '');
+        return unauthorized();
       }
 
-      // Customer session token
-      const token = `ksh-cust-sess-${customer.id}-${Date.now()}`;
+      if (!customer.passwordHash || !verifyCredential(password, (customer as any).passwordSalt, customer.passwordHash)) {
+        securityEngine.logAudit({
+          operator: customer.name,
+          role: 'CUSTOMER',
+          action: 'CUSTOMER_LOGIN_FAILED',
+          category: 'AUTH',
+          severity: 'WARNING',
+          resource: 'Customer',
+          resourceId: customer.id,
+          details: `Customer login rejected (missing or incorrect password) for ${cleanIdentifier}`
+        });
+        return unauthorized();
+      }
+
+      if (customer.status === 'BLOCKED') {
+        return res.status(403).json({ error: 'This customer account is blocked. Contact support.' });
+      }
+
+      // Server-side session store — subsequent /api/customer/* calls MUST present this token.
+      const clientIp = (req.headers['x-forwarded-for'] as string)?.split(',')[0].trim() || req.socket.remoteAddress || '127.0.0.1';
+      const portalSession = securityEngine.issuePortalSession('CUSTOMER', customer.id, customer.name, clientIp);
+
+      securityEngine.logAudit({
+        operator: customer.name,
+        role: 'CUSTOMER',
+        action: 'CUSTOMER_LOGIN_SUCCESS',
+        category: 'AUTH',
+        severity: 'INFO',
+        resource: 'Customer',
+        resourceId: customer.id,
+        details: `Customer password verified; portal session established from IP ${clientIp}.`
+      });
+
       res.json({
         success: true,
-        token,
+        token: portalSession.token,
+        expiresAt: portalSession.expiresAt,
         customer: {
           id: customer.id,
           name: customer.name,
@@ -4049,18 +4325,28 @@ async function startServer() {
         return res.status(400).json({ error: 'An account with this phone number or email already exists.' });
       }
 
+      // Security audit C2: a real credential is now mandatory and stored HASHED.
+      const phoneCheck = requireBdMobilePhone(cleanPhone, 'Phone number');
+      if (phoneCheck.error) return res.status(400).json({ error: phoneCheck.error });
+      const strengthError = validatePasswordStrength(password);
+      if (strengthError) return res.status(400).json({ error: strengthError });
+
       const id = `cust-${Date.now()}`;
+      const salt = generateSalt();
       const newCustomer: Customer = {
         id,
         name: name.trim(),
-        email: cleanEmail || `${cleanPhone}@customer.kisholoy.com`,
-        phone: cleanPhone,
+        email: cleanEmail || `${phoneCheck.phone}@customer.kisholoy.com`,
+        phone: phoneCheck.phone!,
         totalSpent: 0,
         totalOrders: 0,
         joinedDate: new Date().toISOString().split('T')[0],
         defaultAddress: address ? address.trim() : 'Dhaka, Bangladesh',
-        status: 'ACTIVE'
-      };
+        status: 'ACTIVE',
+        passwordHash: hashCredential(String(password), salt),
+        passwordSalt: salt,
+        passwordUpdatedAt: new Date().toISOString()
+      } as Customer & { passwordSalt: string };
 
       serverDb.customers.push(newCustomer);
 
@@ -4082,11 +4368,14 @@ async function startServer() {
         });
       }
 
-      const token = `ksh-cust-sess-${id}-${Date.now()}`;
+      const clientIpReg = (req.headers['x-forwarded-for'] as string)?.split(',')[0].trim() || req.socket.remoteAddress || '127.0.0.1';
+      const portalSession = securityEngine.issuePortalSession('CUSTOMER', id, newCustomer.name, clientIpReg);
+      const { passwordHash: _ph, passwordSalt: _ps, ...safeCustomer } = newCustomer as Customer & { passwordHash?: string; passwordSalt?: string };
       res.json({
         success: true,
-        token,
-        customer: newCustomer,
+        token: portalSession.token,
+        expiresAt: portalSession.expiresAt,
+        customer: safeCustomer,
         message: 'Account created successfully'
       });
     } catch (e: any) {
@@ -4095,6 +4384,23 @@ async function startServer() {
   });
 
   app.post('/api/customer/auth/logout', (req, res) => {
+    // Guard guarantees a live session here; revoke server-side so the token dies immediately.
+    const auth = req.headers['authorization'];
+    const token = typeof auth === 'string' && auth.startsWith('Bearer ') ? auth.slice(7).trim() : '';
+    const session = (req as any).customerSession;
+    if (token) securityEngine.revokePortalSession(token);
+    if (session) {
+      securityEngine.logAudit({
+        operator: session.displayName,
+        role: 'CUSTOMER',
+        action: 'CUSTOMER_LOGOUT',
+        category: 'AUTH',
+        severity: 'INFO',
+        resource: 'Customer',
+        resourceId: session.principalId,
+        details: 'Customer portal session terminated.'
+      });
+    }
     res.json({ success: true, message: 'Logged out successfully' });
   });
 
@@ -4154,18 +4460,50 @@ async function startServer() {
 
   app.post('/api/customer/auth/change-password', (req, res) => {
     try {
-      const { customerId, currentPassword, newPassword } = req.body;
+      // Audit C3: this route used to only write an audit line — nothing changed.
+      // It now verifies the CURRENT password and persists the new scrypt hash.
+      const session = (req as any).customerSession;
+      const { currentPassword, newPassword } = req.body;
+      const customerId = session?.principalId;
       if (!customerId || !newPassword) {
-        return res.status(400).json({ error: 'Customer ID and new password are required' });
-      }
-      if (newPassword.length < 6) {
-        return res.status(400).json({ error: 'New password must be at least 6 characters.' });
+        return res.status(400).json({ error: 'New password is required' });
       }
 
       const customer = serverDb.customers.find(c => c.id === customerId);
       if (!customer) {
         return res.status(404).json({ error: 'Customer not found.' });
       }
+
+      if (!customer.passwordHash || !verifyCredential(currentPassword, (customer as any).passwordSalt, customer.passwordHash)) {
+        securityEngine.logAudit({
+          operator: customer.name,
+          role: 'CUSTOMER',
+          action: 'CUSTOMER_PASSWORD_CHANGE_FAILED',
+          category: 'AUTH',
+          severity: 'WARNING',
+          resource: 'Customer',
+          resourceId: customerId,
+          details: 'Password change rejected: current password did not match.'
+        });
+        return res.status(401).json({ error: 'Current password is incorrect.' });
+      }
+
+      const strengthError = validatePasswordStrength(newPassword);
+      if (strengthError) return res.status(400).json({ error: strengthError });
+      if (String(newPassword) === String(currentPassword)) {
+        return res.status(400).json({ error: 'New password must be different from the current one.' });
+      }
+
+      const salt = generateSalt();
+      const updated = customer as Customer & { passwordSalt?: string; passwordUpdatedAt?: string };
+      updated.passwordHash = hashCredential(String(newPassword), salt);
+      updated.passwordSalt = salt;
+      updated.passwordUpdatedAt = new Date().toISOString();
+
+      // Zero-trust hygiene: every other session for this customer dies now.
+      const auth = req.headers['authorization'];
+      const currentToken = typeof auth === 'string' && auth.startsWith('Bearer ') ? auth.slice(7).trim() : '';
+      securityEngine.revokeAllPortalSessionsFor('CUSTOMER', customerId, currentToken || undefined);
 
       securityEngine.logAudit({
         operator: customer.name,
@@ -4175,10 +4513,10 @@ async function startServer() {
         severity: 'INFO',
         resource: 'Customer',
         resourceId: customerId,
-        details: `Customer ${customer.name} updated their security password.`
+        details: `Customer ${customer.name} verified the current password and updated their credential; other sessions revoked.`
       });
 
-      res.json({ success: true, message: 'Password updated successfully.' });
+      res.json({ success: true, message: 'Password updated successfully. Other devices were signed out.' });
     } catch (e: any) {
       res.status(500).json({ error: e.message });
     }

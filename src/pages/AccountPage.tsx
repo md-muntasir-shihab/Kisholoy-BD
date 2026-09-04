@@ -161,6 +161,7 @@ export function AccountPage() {
       });
       const data = await res.json();
       if (data.success && data.customer) {
+        if (data.token) localStorage.setItem('ksh_customer_token', data.token);
         loginCustomer(data.customer.id, data.customer);
         showToast(`Welcome back, ${data.customer.name}!`);
       } else {
@@ -196,6 +197,7 @@ export function AccountPage() {
       });
       const data = await res.json();
       if (data.success && data.customer) {
+        if (data.token) localStorage.setItem('ksh_customer_token', data.token);
         loginCustomer(data.customer.id, data.customer);
         showToast(`Account created! Welcome, ${data.customer.name}.`);
       } else {

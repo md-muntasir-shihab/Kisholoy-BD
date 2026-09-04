@@ -872,6 +872,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return newOrder;
   };
 
+  // Re-run order hydration once a staff session becomes available (AdminLayout gate fires this).
+  useEffect(() => {
+    const onAuthReady = () => { void refreshOrders(); };
+    window.addEventListener('kisholoy-auth-ready', onAuthReady);
+    return () => window.removeEventListener('kisholoy-auth-ready', onAuthReady);
+  }, []);
+
   const refreshOrders = async () => {
     try {
       const res = await fetch('/api/orders');
@@ -1621,6 +1628,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setCustomerLoyalty(null);
     try {
       localStorage.removeItem('kisholoy_customer_id');
+      // security audit: drop the server session too, so guarded calls stop 401-looping
+      localStorage.removeItem('ksh_customer_token');
     } catch {}
     showToast('Logged out of customer account.');
   };

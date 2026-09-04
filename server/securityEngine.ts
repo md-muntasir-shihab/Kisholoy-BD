@@ -19,8 +19,16 @@ import {
   BannedIpRecord, 
   SecurityDiagnosticsSummary, 
   SecurityAuditCheckResult,
-  AdminAccountStatus
+  AdminAccountStatus,
+  PortalSession
 } from '../src/types';
+import {
+  generateSalt,
+  hashPassword,
+  verifyPassword,
+  validatePasswordStrength,
+  MIN_PASSWORD_LENGTH
+} from './passwordHash';
 
 // Server-authoritative secret for HMAC signatures
 const SERVER_HMAC_SECRET = process.env.SECURITY_HMAC_SECRET || 'kisholoy-security-master-secret-key-2026-bangladesh';
@@ -30,6 +38,14 @@ class SecurityEngine {
   // In-Memory Storage for Admin Staff & RBAC
   private adminUsers: Map<string, AdminUser & { passwordHash: string; salt: string }> = new Map();
   private activeSessions: Map<string, AdminSession> = new Map();
+  /** One-time console-printed bootstrap password for demo staff (null when pinned via env). */
+  private bootstrapStaffPassword: string | null = null;
+  /** Server-validated sessions for customers & supplier portal users (audit C1/C5/C7). */
+  private portalSessions: Map<string, PortalSession> = new Map();
+  private readonly portalSessionTtlMs: Record<PortalSession['principalType'], number> = {
+    CUSTOMER: 7 * 24 * 60 * 60 * 1000, // 7 days storefront session
+    SUPPLIER: 12 * 60 * 60 * 1000      // 12 hours supplier portal session
+  };
   private rolePermissions: Map<Role, RolePermissionsConfig> = new Map();
 
   // Rate Limiting Storage
@@ -277,12 +293,28 @@ class SecurityEngine {
   // =============================================================
 
   private hashPassword(password: string, salt: string): string {
-    return crypto.pbkdf2Sync(password, salt, 10000, 64, 'sha512').toString('hex');
+    // Security audit (C9): upgraded from PBKDF2-SHA512/10k to memory-hard
+    // scrypt (OWASP params) with per-account salts. Centralized in
+    // server/passwordHash.ts so staff, customer and supplier principals share
+    // exactly one hardening pipeline.
+    return hashPassword(password, salt);
+  }
+
+  private verifyHashedPassword(password: string, salt: string | undefined, storedHash: string | undefined): boolean {
+    return verifyPassword(password, salt, storedHash);
   }
 
   private initializeAdminUsers() {
-    const defaultSalt = 'kisholoy_bd_salt_99812';
-    const defaultPasswordHash = this.hashPassword('Kisholoy@2026!', defaultSalt);
+    // Security audit (C8): no fixed shared salt and no publicly-known default
+    // password. Each account gets its own random salt; the demo/bootstrap
+    // password comes from KISHOLOY_ADMIN_INIT_PASSWORD when provided, otherwise
+    // a random one-time password is generated and printed to the server console.
+    const bootstrapPassword = process.env.KISHOLOY_ADMIN_INIT_PASSWORD || crypto.randomBytes(12).toString('base64url');
+    this.bootstrapStaffPassword = process.env.KISHOLOY_ADMIN_INIT_PASSWORD ? null : bootstrapPassword;
+    const seededPasswordHash = (seed?: { salt?: string }) => {
+      const salt = seed?.salt || generateSalt();
+      return { salt, passwordHash: this.hashPassword(bootstrapPassword, salt) };
+    };
 
     const initialStaff: (AdminUser & { passwordHash: string; salt: string })[] = [
       {
@@ -299,8 +331,8 @@ class SecurityEngine {
         lastLoginIp: '103.145.118.22',
         createdAt: '2026-01-01T00:00:00.000Z',
         updatedAt: '2026-01-01T00:00:00.000Z',
-        passwordHash: defaultPasswordHash,
-        salt: defaultSalt
+        passwordHash: '',
+        salt: ''
       },
       {
         id: 'adm-002',
@@ -315,8 +347,8 @@ class SecurityEngine {
         lastLoginIp: '103.145.118.56',
         createdAt: '2026-01-10T00:00:00.000Z',
         updatedAt: '2026-01-10T00:00:00.000Z',
-        passwordHash: defaultPasswordHash,
-        salt: defaultSalt
+        passwordHash: '',
+        salt: ''
       },
       {
         id: 'adm-003',
@@ -331,8 +363,8 @@ class SecurityEngine {
         lastLoginIp: '103.145.118.34',
         createdAt: '2026-01-15T00:00:00.000Z',
         updatedAt: '2026-01-15T00:00:00.000Z',
-        passwordHash: defaultPasswordHash,
-        salt: defaultSalt
+        passwordHash: '',
+        salt: ''
       },
       {
         id: 'adm-004',
@@ -348,8 +380,8 @@ class SecurityEngine {
         lastLoginIp: '103.145.118.45',
         createdAt: '2026-01-20T00:00:00.000Z',
         updatedAt: '2026-01-20T00:00:00.000Z',
-        passwordHash: defaultPasswordHash,
-        salt: defaultSalt
+        passwordHash: '',
+        salt: ''
       },
       {
         id: 'adm-005',
@@ -364,30 +396,29 @@ class SecurityEngine {
         lastLoginIp: '103.145.118.89',
         createdAt: '2026-02-01T00:00:00.000Z',
         updatedAt: '2026-02-01T00:00:00.000Z',
-        passwordHash: defaultPasswordHash,
-        salt: defaultSalt
+        passwordHash: '',
+        salt: ''
       }
     ];
 
     for (const u of initialStaff) {
+      // Independent salt per account (audit C8: one shared fixed salt weakened all users).
+      const { salt, passwordHash } = seededPasswordHash();
+      u.salt = salt;
+      u.passwordHash = passwordHash;
       this.adminUsers.set(u.id, u);
     }
 
-    // Create a pre-authenticated session for the Super Admin
-    const initialSessionToken = 'ksh-token-super-admin-root-session-2026';
-    this.activeSessions.set(initialSessionToken, {
-      sessionId: 'sess-000001',
-      token: initialSessionToken,
-      userId: 'adm-001',
-      userName: 'Arifur Rahman (Chief Admin)',
-      userEmail: 'admin@kisholoy.com',
-      role: 'SUPER_ADMIN',
-      ipAddress: '103.145.118.22',
-      userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) KisholoyControlPlane/2.0',
-      createdAt: new Date().toISOString(),
-      expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 4).toISOString(), // 4-hour max session TTL
-      lastActiveAt: new Date().toISOString()
-    });
+    // SECURITY AUDIT C8 FIX: the previous boot routine created a
+    // pre-authenticated SUPER_ADMIN session under a hard-coded token
+    // ('ksh-token-super-admin-root-session-2026') valid for 4 hours after every
+    // restart — a permanent backdoor. It is removed: every staff session must
+    // come from a successful /api/security/auth/login.
+
+    if (this.bootstrapStaffPassword) {
+      console.log('[security] Bootstrap staff password (one-time, this process only): ' + this.bootstrapStaffPassword);
+      console.log('[security] Any seeded staff email (e.g. admin@kisholoy.com) + this password will log in. Set KISHOLOY_ADMIN_INIT_PASSWORD to pin your own.');
+    }
   }
 
   public getAdminUsers(): AdminUser[] {
@@ -445,9 +476,8 @@ class SecurityEngine {
       }
     }
 
-    // Verify Password
-    const candidateHash = this.hashPassword(pass, userEntry.salt);
-    if (candidateHash !== userEntry.passwordHash) {
+    // Verify Password (timing-safe scrypt comparison)
+    if (!this.verifyHashedPassword(pass, userEntry.salt, userEntry.passwordHash)) {
       userEntry.failedLoginAttempts++;
       if (userEntry.failedLoginAttempts >= 5) {
         userEntry.status = 'LOCKED';
@@ -537,15 +567,9 @@ class SecurityEngine {
   public verifySession(token: string, clientIp: string): { valid: boolean; session?: AdminSession; role?: Role } {
     if (!token) return { valid: false };
 
-    // Support fallback for root test token
-    if (token === 'ksh-token-super-admin-root-session-2026') {
-      const rootSession = this.activeSessions.get(token);
-      if (rootSession) {
-        rootSession.lastActiveAt = new Date().toISOString();
-        return { valid: true, session: rootSession, role: rootSession.role };
-      }
-    }
-
+    // SECURITY AUDIT C8 FIX: the former 'root test token' fallback accepted a
+    // hard-coded token as an automatic SUPER_ADMIN grant. Sessions are now
+    // only valid if they were issued by a successful authenticate() call.
     const session = this.activeSessions.get(token);
     if (!session) return { valid: false };
 
@@ -612,6 +636,85 @@ class SecurityEngine {
     return count;
   }
 
+  // =============================================================
+  // 2b. Portal Sessions — customers & supplier portal (audit C1/C5)
+  // Tokens are random, server-stored, and the ONLY proof of identity for
+  // /api/customer/* and /api/suppliers/portal/* requests.
+  // =============================================================
+
+  public issuePortalSession(
+    principalType: PortalSession['principalType'],
+    principalId: string,
+    displayName: string,
+    clientIp: string,
+    impersonatedBy?: string
+  ): PortalSession {
+    const tokenPrefix = principalType === 'CUSTOMER' ? 'ksh-cust-sess' : 'ksh-sup-sess';
+    const token = `${tokenPrefix}-${crypto.randomBytes(24).toString('hex')}`;
+    const now = Date.now();
+    const session: PortalSession = {
+      token,
+      principalType,
+      principalId,
+      displayName,
+      ipAddress: clientIp || '',
+      createdAt: new Date(now).toISOString(),
+      expiresAt: new Date(now + this.portalSessionTtlMs[principalType]).toISOString(),
+      lastActiveAt: new Date(now).toISOString(),
+      impersonatedBy
+    };
+    this.portalSessions.set(token, session);
+    return session;
+  }
+
+  public verifyPortalSession(token: string | undefined, expectedType: PortalSession['principalType']): { valid: boolean; session?: PortalSession } {
+    if (!token) return { valid: false };
+    const session = this.portalSessions.get(token);
+    if (!session) return { valid: false };
+    if (session.principalType !== expectedType) return { valid: false };
+    if (new Date(session.expiresAt).getTime() < Date.now()) {
+      this.portalSessions.delete(token);
+      return { valid: false };
+    }
+    session.lastActiveAt = new Date().toISOString();
+    return { valid: true, session };
+  }
+
+  public revokePortalSession(token: string): boolean {
+    return this.portalSessions.delete(token);
+  }
+
+  /** Revoke all portal sessions of a principal (e.g. after a password change) — keeps history via audit. */
+  public revokeAllPortalSessionsFor(principalType: PortalSession['principalType'], principalId: string, exceptToken?: string): number {
+    let count = 0;
+    for (const [token, session] of this.portalSessions.entries()) {
+      if (session.principalType === principalType && session.principalId === principalId && token !== exceptToken) {
+        this.portalSessions.delete(token);
+        count++;
+      }
+    }
+    if (count > 0) {
+      this.logAudit({
+        operator: principalId,
+        role: principalType === 'CUSTOMER' ? 'CUSTOMER' : 'SUPPLIER',
+        action: 'PORTAL_SESSIONS_REVOKED',
+        category: 'AUTH',
+        severity: 'INFO',
+        resource: principalType === 'CUSTOMER' ? 'CustomerSession' : 'SupplierPortalSession',
+        resourceId: principalId,
+        details: `Revoked ${count} ${principalType.toLowerCase()} portal session(s) after credential change${exceptToken ? ' (current session kept)' : ''}.`
+      });
+    }
+    return count;
+  }
+
+  public pruneExpiredPortalSessions(): void {
+    const now = Date.now();
+    for (const [token, session] of this.portalSessions.entries()) {
+      if (new Date(session.expiresAt).getTime() < now) this.portalSessions.delete(token);
+    }
+  }
+
   public updateUserRole(userId: string, newRole: Role, operator: string): boolean {
     const user = this.adminUsers.get(userId);
     if (!user) return false;
@@ -670,9 +773,11 @@ class SecurityEngine {
     return true;
   }
 
-  public createStaffUser(data: { name: string; email: string; phone: string; role: Role }, operator: string): AdminUser {
-    const salt = crypto.randomBytes(16).toString('hex');
-    const defaultPassword = 'KisholoyStaff@2026';
+  public createStaffUser(data: { name: string; email: string; phone: string; role: Role }, operator: string): { user: AdminUser; initialPassword: string } {
+    const salt = generateSalt();
+    // Audit C8: no publicly-known default. A random one-time password is
+    // generated and shown to the creating Super Admin exactly once.
+    const defaultPassword = process.env.KISHOLOY_STAFF_INIT_PASSWORD || crypto.randomBytes(9).toString('base64url') + '#A1';
     const passwordHash = this.hashPassword(defaultPassword, salt);
     const id = `adm-${Date.now().toString().slice(-4)}`;
 
@@ -705,7 +810,7 @@ class SecurityEngine {
     });
 
     const { passwordHash: _, salt: __, ...safeUser } = newUser;
-    return safeUser;
+    return { user: safeUser, initialPassword: defaultPassword };
   }
 
   // =============================================================
@@ -952,14 +1057,10 @@ class SecurityEngine {
     const userEntry = this.adminUsers.get(userId);
     if (!userEntry) return { success: false, error: 'Staff account not found' };
 
-    // Validate new password complexity
-    if (!newPassword || newPassword.length < 8) {
-      return { success: false, error: 'Password must be at least 8 characters long.' };
-    }
-    const hasLetter = /[a-zA-Z]/.test(newPassword);
-    const hasDigit = /[0-9]/.test(newPassword);
-    if (!hasLetter || !hasDigit) {
-      return { success: false, error: 'Password must contain both letters and numbers.' };
+    // Validate new password complexity (shared policy in passwordHash.ts)
+    const strengthError = validatePasswordStrength(newPassword);
+    if (strengthError) {
+      return { success: false, error: strengthError };
     }
 
     // Verify current password if not overridden by Super Admin
@@ -967,8 +1068,7 @@ class SecurityEngine {
       if (!currentPassword) {
         return { success: false, error: 'Current password is required.' };
       }
-      const candidateHash = this.hashPassword(currentPassword, userEntry.salt);
-      if (candidateHash !== userEntry.passwordHash) {
+      if (!this.verifyHashedPassword(currentPassword, userEntry.salt, userEntry.passwordHash)) {
         return { success: false, error: 'Current password does not match records.' };
       }
     }
@@ -1068,8 +1168,10 @@ class SecurityEngine {
       return { success: false, error: 'Too many invalid attempts. Reset request revoked.' };
     }
 
-    // Accept either direct match or development master OTP '998877'
-    if (record.code !== otpOrToken.trim() && otpOrToken.trim() !== '998877') {
+    // SECURITY AUDIT FIX: the previous check accepted a hard-coded master OTP
+    // ('998877') for ANY reset token, turning the reset flow into a universal
+    // account-takeover path. Only the freshly generated single-use code works now.
+    if (record.code !== otpOrToken.trim()) {
       return { success: false, error: 'Incorrect verification code.' };
     }
 

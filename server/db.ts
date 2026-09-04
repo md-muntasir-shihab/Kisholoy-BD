@@ -32,12 +32,34 @@ import {
   INITIAL_CUSTOMER_ADDRESSES, INITIAL_WISHLISTS, INITIAL_CUSTOMER_RETURNS, INITIAL_CUSTOMER_PROFILES,
   INITIAL_CUSTOMER_NOTIFICATIONS
 } from '../src/data/mockData';
+import { hashSeedPassword } from './passwordHash';
+
+/**
+ * Security audit C2 seed migration: the mock customer directory previously had
+ * NO credential at all, which is exactly why login never checked one. Seeded
+ * demo profiles now get a real scrypt hash of this documented demo password
+ * (overridable via env for local runs). Real registrations always store the
+ * user's own hashed credential; this constant is seed DATA, never a backdoor.
+ */
+const DEMO_CUSTOMER_PASSWORD = process.env.KISHOLOY_DEMO_CUSTOMER_PASSWORD || 'Kisholoy@Demo2026';
+function seedCustomerCredentials(list: Customer[]): Customer[] {
+  for (const c of list) {
+    const rec = c as Customer & { passwordSalt?: string; passwordUpdatedAt?: string };
+    if (!rec.passwordHash) {
+      const { salt, passwordHash } = hashSeedPassword(DEMO_CUSTOMER_PASSWORD);
+      rec.passwordHash = passwordHash;
+      rec.passwordSalt = salt;
+      rec.passwordUpdatedAt = new Date().toISOString();
+    }
+  }
+  return list;
+}
 
 class ServerDatabase {
   products: Product[] = JSON.parse(JSON.stringify(INITIAL_PRODUCTS));
   categories: Category[] = JSON.parse(JSON.stringify(INITIAL_CATEGORIES));
   orders: Order[] = JSON.parse(JSON.stringify(INITIAL_ORDERS));
-  customers: Customer[] = JSON.parse(JSON.stringify(INITIAL_CUSTOMERS));
+  customers: Customer[] = seedCustomerCredentials(JSON.parse(JSON.stringify(INITIAL_CUSTOMERS)));
   siteContent: SiteContent = JSON.parse(JSON.stringify(INITIAL_CONTENT));
   contentRevisions: ContentRevision[] = JSON.parse(JSON.stringify(INITIAL_CONTENT_REVISIONS));
   auditLogs: AuditLog[] = JSON.parse(JSON.stringify(INITIAL_AUDIT_LOGS));

@@ -955,7 +955,7 @@ export function SuppliersAdmin() {
                       </span>
                     </div>
                     <div className="text-[11px] text-stone-500 font-mono mt-0.5">
-                      Login Email: <strong className="text-stone-800">{s.portalAccess?.loginEmail || s.email}</strong> • Default Password: <code className="text-stone-600 font-mono">kisholoy2026</code>
+                      Login Email: <strong className="text-stone-800">{s.portalAccess?.loginEmail || s.email}</strong> • Credential: <code className="text-stone-600 font-mono">{(s as any).portalAccess?.passwordHash ? 'set (hashed)' : 'hashed — provisioned by admin'}</code>
                     </div>
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
@@ -968,11 +968,26 @@ export function SuppliersAdmin() {
                     </span>
                     
                     <button
-                      onClick={() => {
-                        // Store session and open live portal directly
-                        localStorage.setItem('ksh_supplier_token', `ksh-sup-token-${s.id}-${Date.now()}`);
-                        localStorage.setItem('ksh_supplier_user', JSON.stringify(s));
-                        window.open('/supplier', '_blank');
+                      onClick={async () => {
+                        // Audit C5: fabricated tokens are dead — the server now issues a
+                        // REAL short-lived, AUDITED impersonation session for SUPER_ADMIN/ADMIN.
+                        try {
+                          const res = await fetch(`/api/suppliers/${s.id}/portal-impersonate`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({})
+                          });
+                          const data = await res.json();
+                          if (!res.ok || !data.success || !data.token) {
+                            notify(data?.error || 'Impersonation session refused (staff SUPER_ADMIN/ADMIN only).');
+                            return;
+                          }
+                          localStorage.setItem('ksh_supplier_token', data.token);
+                          localStorage.setItem('ksh_supplier_user', JSON.stringify(s));
+                          window.open('/supplier', '_blank');
+                        } catch (err: any) {
+                          notify(`Impersonation failed: ${err.message}`);
+                        }
                       }}
                       className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-stone-900 text-white hover:bg-stone-800 flex items-center gap-1 shadow-xs"
                     >

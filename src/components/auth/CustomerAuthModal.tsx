@@ -61,6 +61,7 @@ export const CustomerAuthModal: React.FC<CustomerAuthModalProps> = ({
       });
       const data = await res.json();
       if (data.success && data.customer) {
+        if (data.token) localStorage.setItem('ksh_customer_token', data.token);
         setCurrentCustomerId(data.customer.id);
         logAuthEvent({
           userId: data.customer.id,
@@ -136,6 +137,7 @@ export const CustomerAuthModal: React.FC<CustomerAuthModalProps> = ({
       });
       const data = await res.json();
       if (data.success && data.customer) {
+        if (data.token) localStorage.setItem('ksh_customer_token', data.token);
         setCustomers([...customers, data.customer]);
         setCurrentCustomerId(data.customer.id);
         showToast(`Account created! Welcome, ${data.customer.name}.`);

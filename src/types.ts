@@ -288,6 +288,12 @@ export interface Customer {
   source?: string;
   district?: string;
   thana?: string;
+  /** scrypt digest — never store plaintext (security audit C2). */
+  passwordHash?: string;
+  /** Per-customer random salt (hex). */
+  passwordSalt?: string;
+  /** ISO timestamp of last credential change; sessions issued before it are rejected. */
+  passwordUpdatedAt?: string;
 }
 
 export interface InventoryTransaction {
@@ -1577,6 +1583,25 @@ export interface AdminSession {
   lastActiveAt: string;
 }
 
+/**
+ * Server-side session for non-staff principals (storefront customers and
+ * supplier-portal users). Tokens are random, stored only server-side, and are
+ * the single source of truth for "who is this request from" — query/body IDs
+ * can never widen access (audit C1/C5).
+ */
+export interface PortalSession {
+  token: string;
+  principalType: 'CUSTOMER' | 'SUPPLIER';
+  principalId: string;
+  displayName: string;
+  ipAddress: string;
+  createdAt: string;
+  expiresAt: string;
+  lastActiveAt: string;
+  /** Set when a staff member opened the portal on a supplier's behalf. */
+  impersonatedBy?: string;
+}
+
 export interface PermissionDefinition {
   id: string;
   domain: string;
@@ -1953,7 +1978,10 @@ export interface Supplier {
     loginEmail?: string;
     lastLoginAt?: string;
     loginIsolated: boolean; // isolated from internal staff/customer DB
-    password?: string;
+    /** scrypt digest with per-supplier salt — plaintext passwords are never stored (audit C4). */
+    passwordHash?: string;
+    /** ISO timestamp of last portal password change; older portal sessions are revoked on change. */
+    passwordUpdatedAt?: string;
   };
 
   purchaseOrdersCount?: number;

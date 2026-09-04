@@ -112,7 +112,8 @@ export function UsersAdmin() {
       });
       const data = await res.json();
       if (data.success) {
-        showToast('success', `Staff member ${newStaffName} created successfully with role ${newStaffRole}.`);
+        const tmp = data.initialPassword ? ` Initial one-time password: ${data.initialPassword} (share over a secure channel — it is not recoverable later.)` : '';
+        showToast('success', `Staff member ${newStaffName} created successfully with role ${newStaffRole}.${tmp}`);
         setAddStaffOpen(false);
         setNewStaffName('');
         setNewStaffEmail('');
@@ -845,7 +846,7 @@ export function UsersAdmin() {
                   <option value="ADMIN">System Administrator</option>
                 </select>
                 <span className="text-[11px] text-stone-400 mt-1 block">
-                  A default secure initial password (<code className="bg-stone-100 px-1 py-0.5 rounded">KisholoyStaff@2026</code>) will be provisioned.
+                  A cryptographically random one-time password is generated at creation and shown once in the result toast — no shared default exists anymore.
                 </span>
               </div>
 

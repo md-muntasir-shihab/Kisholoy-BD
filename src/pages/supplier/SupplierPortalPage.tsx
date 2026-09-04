@@ -64,6 +64,7 @@ export function SupplierPortalPage() {
 
   // Password change state
   const [passwordModalOpen, setPasswordModalOpen] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [changingPassword, setChangingPassword] = useState(false);
@@ -82,6 +83,20 @@ export function SupplierPortalPage() {
       showToast(msg);
     }
   };
+
+  // Stale/expired portal session (server restart, password change, revocation) → back to login
+  useEffect(() => {
+    const onAuthExpired = (e: Event) => {
+      const path = ((e as CustomEvent).detail || {}).path || '';
+      if (typeof path === 'string' && path.startsWith('/api/suppliers/portal')) {
+        localStorage.removeItem('ksh_supplier_token');
+        localStorage.removeItem('ksh_supplier_user');
+        navigate('/supplier/login');
+      }
+    };
+    window.addEventListener('kisholoy-auth-expired', onAuthExpired);
+    return () => window.removeEventListener('kisholoy-auth-expired', onAuthExpired);
+  }, [navigate]);
 
   // Check auth and load dashboard
   useEffect(() => {
@@ -251,8 +266,10 @@ export function SupplierPortalPage() {
     e.preventDefault();
     if (!supplierUser?.id) return;
 
-    if (newPassword.length < 6) {
-      notify(language === 'BN' ? 'পাসওয়ার্ড কমপক্ষে ৬ অক্ষরের হতে হবে।' : 'Password must be at least 6 characters.');
+    if (newPassword.length < 8 || !/[a-zA-Z]/.test(newPassword) || !/[0-9]/.test(newPassword)) {
+      notify(language === 'BN'
+        ? 'পাসওয়ার্ড কমপক্ষে ৮ অক্ষরের এবং অক্ষর+সংখ্যা সম্বলিত হতে হবে।'
+        : 'Password must be at least 8 characters and contain letters and numbers.');
       return;
     }
 
@@ -267,9 +284,8 @@ export function SupplierPortalPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          supplierId: supplierUser.id,
-          newPassword,
-          operator: supplierUser.contactPerson
+          currentPassword,
+          newPassword
         })
       });
 
@@ -278,10 +294,17 @@ export function SupplierPortalPage() {
         throw new Error(data.error || 'Failed to update password');
       }
 
-      notify(language === 'BN' ? 'পাসওয়ার্ড সফলভাবে পরিবর্তন করা হয়েছে।' : 'Password changed successfully.');
+      notify(language === 'BN'
+        ? 'পাসওয়ার্ড পরিবর্তিত — নিরাপত্তার জন্য সব সেশন বন্ধ, আবার লগইন করুন।'
+        : 'Password changed. All sessions were terminated — please sign in again.');
       setPasswordModalOpen(false);
+      setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
+      // The server revoked every portal session (including this one) after the change.
+      localStorage.removeItem('ksh_supplier_token');
+      localStorage.removeItem('ksh_supplier_user');
+      setTimeout(() => navigate('/supplier/login'), 900);
     } catch (err: any) {
       notify(`Error: ${err.message}`);
     } finally {
@@ -1778,7 +1801,19 @@ export function SupplierPortalPage() {
 
             <form onSubmit={handleChangePassword} className="space-y-3.5 text-xs">
               <div>
-                <label className="block text-stone-400 mb-1 font-semibold">New Password (Min. 6 chars)</label>
+                <label className="block text-stone-400 mb-1 font-semibold">{language === 'BN' ? 'বর্তমান পাসওয়ার্ড' : 'Current Password'}</label>
+                <input
+                  type="password"
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                  placeholder="••••••••••••"
+                  required
+                  className="w-full px-3 py-2 bg-stone-950 border border-stone-800 rounded-xl text-white font-medium"
+                />
+              </div>
+
+              <div>
+                <label className="block text-stone-400 mb-1 font-semibold">{language === 'BN' ? 'নতুন পাসওয়ার্ড (কমপক্ষে ৮ অক্ষর, অক্ষর+সংখ্যা)' : 'New Password (Min. 8 chars, letters + numbers)'}</label>
                 <input
                   type="password"
                   value={newPassword}

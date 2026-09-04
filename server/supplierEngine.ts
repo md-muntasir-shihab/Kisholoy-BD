@@ -29,7 +29,16 @@ import {
   SupplierCalculationBasis
 } from '../src/types';
 import { securityEngine } from './securityEngine';
+import { sealPassword, verifySealedPassword, validatePasswordStrength } from './passwordHash';
 import { serverDb } from './db';
+
+/**
+ * Demo-only seed credential for the five pre-provisioned supplier portals
+ * (audit C4): it now exists purely as seed DATA, hashed per supplier — the
+ * engine no longer treats it as a universal password. Real suppliers get a
+ * password set by administration via setSupplierPortalPassword().
+ */
+export const SEED_PORTAL_PASSWORD = 'kisholoy2026';
 
 class SupplierEngine {
   private suppliers: Map<string, Supplier> = new Map();
@@ -83,7 +92,7 @@ class SupplierEngine {
         enabled: true, // Feature-flagged: enabled for registered suppliers
         loginEmail: 'supplier.jamdani@kisholoy.com',
         loginIsolated: true,
-        password: 'kisholoy2026'
+        passwordHash: sealPassword(SEED_PORTAL_PASSWORD)
       },
       notes: 'Premier Jamdani master weaver coop producing 84-count authentic Dhakai Jamdani sarees.',
       createdAt: '2026-01-05T08:00:00.000Z',
@@ -119,7 +128,7 @@ class SupplierEngine {
         enabled: true,
         loginEmail: 'supplier.claycraft@kisholoy.com',
         loginIsolated: true,
-        password: 'kisholoy2026'
+        passwordHash: sealPassword(SEED_PORTAL_PASSWORD)
       },
       notes: 'Hand-carved natural red terracotta vases and artisanal interior accents.',
       createdAt: '2026-01-12T10:00:00.000Z',
@@ -156,7 +165,7 @@ class SupplierEngine {
         enabled: true,
         loginEmail: 'supplier.tea@kisholoy.com',
         loginIsolated: true,
-        password: 'kisholoy2026'
+        passwordHash: sealPassword(SEED_PORTAL_PASSWORD)
       },
       notes: 'Single-estate hand-picked green tea and artisan Orthodox black tea.',
       createdAt: '2026-01-18T09:15:00.000Z',
@@ -192,7 +201,7 @@ class SupplierEngine {
         enabled: true,
         loginEmail: 'supplier.leather@kisholoy.com',
         loginIsolated: true,
-        password: 'kisholoy2026'
+        passwordHash: sealPassword(SEED_PORTAL_PASSWORD)
       },
       notes: 'Full-grain vegetable-tanned leather bi-fold wallets, laptop sleeves, and belts.',
       createdAt: '2026-01-22T11:45:00.000Z',
@@ -219,7 +228,7 @@ class SupplierEngine {
         enabled: true,
         loginEmail: 'supplier.khadi@kisholoy.com',
         loginIsolated: true,
-        password: 'kisholoy2026'
+        passwordHash: sealPassword(SEED_PORTAL_PASSWORD)
       },
       notes: 'Hand-spun and hand-woven Khadi cotton fabric for traditional panjabis and kurtas.',
       createdAt: '2026-02-01T14:00:00.000Z',
@@ -1087,6 +1096,19 @@ class SupplierEngine {
   // Supplier Queries & Financial Recalculation
   // =============================================================
 
+  /** Never let credential material (sealed hash / flags internals) leave the engine. */
+  private safePortal(s: Supplier): Supplier {
+    return {
+      ...s,
+      portalAccess: {
+        enabled: Boolean(s.portalAccess?.enabled),
+        loginIsolated: true,
+        loginEmail: s.portalAccess?.loginEmail,
+        lastLoginAt: s.portalAccess?.lastLoginAt
+      }
+    };
+  }
+
   public getAllSuppliers(): Supplier[] {
     return Array.from(this.suppliers.values()).map(s => {
       const pos = Array.from(this.purchaseOrders.values()).filter(p => p.supplierId === s.id);
@@ -1095,7 +1117,7 @@ class SupplierEngine {
       const totalPurchased = pos.reduce((sum, p) => sum + p.totalAmount, 0);
       const totalPaid = payments.reduce((sum, p) => sum + p.amount, 0);
       const totalDue = Math.max(0, totalPurchased - totalPaid);
-      return {
+      return this.safePortal({
         ...s,
         totalPurchased: pos.length > 0 ? totalPurchased : s.totalPurchased,
         totalPaid: pos.length > 0 ? totalPaid : s.totalPaid,
@@ -1103,7 +1125,7 @@ class SupplierEngine {
         purchaseOrdersCount: pos.length,
         paymentsCount: payments.length,
         interactionsCount: interactions.length
-      };
+      });
     });
   }
 
@@ -1300,7 +1322,7 @@ class SupplierEngine {
     };
 
     return {
-      supplier: {
+      supplier: this.safePortal({
         ...supplier,
         totalPurchased,
         totalPaid,
@@ -1308,7 +1330,7 @@ class SupplierEngine {
         purchaseOrdersCount: purchaseOrders.length,
         paymentsCount: payments.length,
         interactionsCount: interactions.length
-      },
+      }),
       purchaseOrders,
       payments,
       interactions,
@@ -1615,6 +1637,9 @@ class SupplierEngine {
       ...data,
       id: existing.id,
       code: existing.code,
+      // Security audit: portal credentials/flags are never writable through the
+      // generic supplier update — use toggle-portal / set-portal-password routes.
+      portalAccess: existing.portalAccess,
       // Protect financial balances from manual overriding:
       totalPurchased: existing.totalPurchased,
       totalPaid: existing.totalPaid,
@@ -1635,7 +1660,7 @@ class SupplierEngine {
       details: `Updated supplier profile: ${updated.companyName} (${updated.code}). Status: ${updated.status}.`
     });
 
-    return updated;
+    return this.safePortal(updated);
   }
 
   public createPurchaseOrder(poData: {
@@ -1853,7 +1878,7 @@ class SupplierEngine {
       details: `Toggled isolated supplier portal access for ${supplier.companyName}: ${enabled ? 'ENABLED' : 'DISABLED'}.`
     });
 
-    return { success: true, supplier };
+    return { success: true, supplier: this.safePortal(supplier) };
   }
 
   // Feature-flagged Isolated Supplier Portal Auth
@@ -1884,14 +1909,32 @@ class SupplierEngine {
       return { success: false, error: 'Supplier account is inactive or suspended.' };
     }
 
-    // Verify password if provided
-    const configuredPassword = (supplier.portalAccess as any)?.password || 'kisholoy2026';
-    if (pass && pass.trim() !== configuredPassword && pass.trim() !== 'kisholoy2026') {
-      return { success: false, error: 'Incorrect password. Please verify your credentials.' };
+    // Security audit C4/C5 fixes:
+    //  - password is ALWAYS required (previously an empty password skipped the check),
+    //  - stored credential is a sealed scrypt hash with per-supplier salt (no plaintext),
+    //  - the universal 'kisholoy2026' fallback is gone — it only exists as seed data
+    //    for demo accounts and stops working the moment a supplier changes it.
+    const sealed = (supplier.portalAccess as any)?.passwordHash as string | undefined;
+    if (!sealed) {
+      return { success: false, error: 'No portal password is set for this supplier. Ask Kisholoy administration to provision one.' };
+    }
+    if (!pass || !pass.trim() || !verifySealedPassword(pass.trim(), sealed)) {
+      securityEngine.logAudit({
+        operator: supplier.companyName,
+        role: 'MERCHANT',
+        action: 'SUPPLIER_PORTAL_LOGIN_FAILED',
+        resource: 'SupplierPortal',
+        resourceId: supplier.id,
+        severity: 'WARNING',
+        category: 'AUTH',
+        details: `Failed supplier portal login (wrong or missing password) from IP ${clientIp}.`
+      });
+      return { success: false, error: 'Invalid supplier login email or password.' };
     }
 
-    // Isolated token generated for supplier self-service only
-    const token = `ksh-sup-token-${supplier.id}-${Date.now()}`;
+    // Isolated server-side session; the token is mapped to THIS supplier id only.
+    const portalSession = securityEngine.issuePortalSession('SUPPLIER', supplier.id, supplier.companyName, clientIp);
+    const token = portalSession.token;
     supplier.portalAccess.lastLoginAt = new Date().toISOString();
     this.suppliers.set(supplier.id, supplier);
 
@@ -1930,11 +1973,41 @@ class SupplierEngine {
         totalPurchased: supplier.totalPurchased,
         totalPaid: supplier.totalPaid,
         totalDue: supplier.totalDue,
-        portalAccess: supplier.portalAccess,
+        // Audit fix: only the non-sensitive flags reach the client
+        portalAccess: {
+          enabled: supplier.portalAccess?.enabled,
+          loginIsolated: true,
+          loginEmail: supplier.portalAccess?.loginEmail,
+          lastLoginAt: supplier.portalAccess?.lastLoginAt
+        },
         createdAt: supplier.createdAt,
         updatedAt: supplier.updatedAt
       }
     };
+  }
+
+  /** Resolve the supplier bound to a portal session token (audit C5: IDs come from the token, never the client). */
+  public resolvePortalSupplierId(token: string | undefined): string | null {
+    const check = securityEngine.verifyPortalSession(token, 'SUPPLIER');
+    return check.valid && check.session ? check.session.principalId : null;
+  }
+
+  /** Staff-authorized short-lived portal view (replaces the fabricated-token admin shortcut). */
+  public issueStaffImpersonationSession(supplierId: string, staffName: string, clientIp: string): { success: boolean; token?: string; error?: string } {
+    const supplier = this.suppliers.get(supplierId);
+    if (!supplier) return { success: false, error: 'Supplier not found' };
+    const session = securityEngine.issuePortalSession('SUPPLIER', supplierId, supplier.companyName, clientIp, staffName);
+    securityEngine.logAudit({
+      operator: staffName,
+      role: 'SUPER_ADMIN',
+      action: 'SUPPLIER_PORTAL_IMPERSONATION',
+      resource: 'SupplierPortal',
+      resourceId: supplierId,
+      severity: 'SECURITY_ALERT',
+      category: 'AUTH',
+      details: `Staff ${staffName} opened an impersonated supplier portal session for ${supplier.companyName}.`
+    });
+    return { success: true, token: session.token };
   }
 
   // Get complete isolated dashboard data for authenticated supplier
@@ -2002,7 +2075,13 @@ class SupplierEngine {
         totalPurchased: supplier.totalPurchased,
         totalPaid: supplier.totalPaid,
         totalDue: supplier.totalDue,
-        portalAccess: supplier.portalAccess
+        // audit: flags only — credential material never leaves the engine
+        portalAccess: {
+          enabled: supplier.portalAccess?.enabled,
+          loginIsolated: true,
+          loginEmail: supplier.portalAccess?.loginEmail,
+          lastLoginAt: supplier.portalAccess?.lastLoginAt
+        }
       },
       metrics: {
         totalSuppliedBdt: totalSupplied,
@@ -2063,23 +2142,35 @@ class SupplierEngine {
       details: `Supplier ${supplier.companyName} updated contact and financial profile details.`
     });
 
-    return { success: true, supplier };
+    return { success: true, supplier: this.safePortal(supplier) };
+  }
+
+  /** Internal check used by the self-service change flow — sealed hash never leaves the engine. */
+  public verifyPortalPassword(supplierId: string, plaintext: string): boolean {
+    const supplier = this.suppliers.get(supplierId);
+    const sealed = (supplier as any)?.portalAccess?.passwordHash as string | undefined;
+    return !!sealed && verifySealedPassword(plaintext || '', sealed);
   }
 
   public setSupplierPortalPassword(supplierId: string, newPassword: string, operator: string): { success: boolean; error?: string } {
     const supplier = this.suppliers.get(supplierId);
     if (!supplier) return { success: false, error: 'Supplier not found' };
 
-    if (!newPassword || newPassword.length < 6) {
-      return { success: false, error: 'Password must be at least 6 characters.' };
+    const strengthError = validatePasswordStrength(newPassword);
+    if (strengthError) {
+      return { success: false, error: strengthError };
     }
 
     supplier.portalAccess = {
       ...supplier.portalAccess,
-      password: newPassword
+      passwordHash: sealPassword(newPassword),
+      passwordUpdatedAt: new Date().toISOString()
     } as any;
     supplier.updatedAt = new Date().toISOString();
     this.suppliers.set(supplierId, supplier);
+
+    // Credential change invalidates every existing portal session (zero-trust hygiene)
+    securityEngine.revokeAllPortalSessionsFor('SUPPLIER', supplierId);
 
     securityEngine.logAudit({
       operator,
