@@ -15,7 +15,7 @@ export const ThemeButton: React.FC = () => {
   const ref = useRef<HTMLDivElement>(null);
   const isBn = language === 'BN';
 
-  const active = OPTIONS.find((o) => o.key === theme) || OPTIONS[2];
+  const active = OPTIONS.find((o) => o.key === theme) || OPTIONS[0];
   const ActiveIcon = active.icon;
 
   useEffect(() => {
@@ -40,10 +40,10 @@ export const ThemeButton: React.FC = () => {
         aria-expanded={open}
         aria-haspopup="menu"
         title={isBn ? 'ডিসপ্লে মোড' : 'Display mode'}
-        className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-stone-200 dark:border-slate-700 bg-white/95 dark:bg-slate-800/90 text-stone-700 dark:text-slate-200 hover:border-teal-700 dark:hover:border-teal-500 hover:text-teal-900 dark:hover:text-teal-300 hover:bg-stone-100 dark:hover:bg-slate-800 active:scale-[0.95] transition-all shadow-xs"
+        className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-stone-200/90 dark:border-stone-800 bg-stone-50/90 dark:bg-stone-900 text-stone-700 dark:text-stone-200 hover:border-teal-700/60 dark:hover:border-teal-500 hover:text-teal-900 dark:hover:text-teal-300 active:scale-95 transition-all shadow-2xs relative"
       >
         <ActiveIcon className="h-4 w-4 text-teal-700 dark:text-teal-400" />
-        <ChevronDown className={`absolute -bottom-0.5 -right-0.5 h-3 w-3 text-stone-400 dark:text-slate-500 transition-transform ${open ? 'rotate-180' : ''}`} />
+        <ChevronDown className={`absolute -bottom-0.5 -right-0.5 h-3 w-3 text-stone-400 dark:text-stone-500 transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
 
       {open && (

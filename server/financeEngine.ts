@@ -233,9 +233,10 @@ export function calculateFinancialSummary() {
     .filter(t => t.status === 'VALID')
     .reduce((sum, t) => sum + (t.feeDeducted || 0), 0);
 
+  const discountsTotal = nonCancelledOrders.reduce((sum, o) => sum + (o.discount || 0), 0);
   const totalOperatingExpenses = packagingTotal + courierFeesTotal + marketingTotal + otherExpensesTotal + gatewayFeesTotal;
-  const netOperatingProfit = grossProfit - totalOperatingExpenses;
-  const netProfitMarginPct = grossRevenue > 0 ? (netOperatingProfit / grossRevenue) * 100 : 0;
+  const estimatedOperatingProfit = grossProfit - totalOperatingExpenses;
+  const estimatedOperatingMarginPct = grossRevenue > 0 ? (estimatedOperatingProfit / grossRevenue) * 100 : 0;
 
   // Bank Settlements
   const settledFundsInBank = settlements
@@ -246,8 +247,23 @@ export function calculateFinancialSummary() {
     .filter(s => s.status !== 'SETTLED')
     .reduce((sum, s) => sum + s.netPayout, 0);
 
+  // Cash flow metrics
+  const cashReceivedFromGateways = transactions
+    .filter(t => t.status === 'VALID')
+    .reduce((sum, t) => sum + (t.amount - (t.feeDeducted || 0)), 0);
+
+  const cashPaidForExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
+
+  // Unremitted COD receivables for delivered or dispatched COD orders
+  const unremittedCodReceivable = orders
+    .filter(o => o.paymentMethod === 'COD' && o.orderStatus !== 'CANCELLED' && o.paymentStatus !== 'PAID')
+    .reduce((sum, o) => sum + (o.balanceDueCod !== undefined ? o.balanceDueCod : o.total), 0);
+
+  const accountsReceivable = pendingSettlements + unremittedCodReceivable;
+
   return {
     grossRevenue,
+    discountsTotal,
     netSales,
     totalCogs,
     grossProfit,
@@ -258,10 +274,17 @@ export function calculateFinancialSummary() {
     marketingTotal,
     packagingTotal,
     otherExpensesTotal,
-    netOperatingProfit: Number(netOperatingProfit.toFixed(2)),
-    netProfitMarginPct: Number(netProfitMarginPct.toFixed(2)),
+    netOperatingProfit: Number(estimatedOperatingProfit.toFixed(2)),
+    netProfitMarginPct: Number(estimatedOperatingMarginPct.toFixed(2)),
+    estimatedOperatingProfit: Number(estimatedOperatingProfit.toFixed(2)),
+    estimatedOperatingMarginPct: Number(estimatedOperatingMarginPct.toFixed(2)),
     settledFundsInBank: Number(settledFundsInBank.toFixed(2)),
-    pendingSettlements: Number(pendingSettlements.toFixed(2))
+    pendingSettlements: Number(pendingSettlements.toFixed(2)),
+    cashReceived: Number(cashReceivedFromGateways.toFixed(2)),
+    cashPaid: Number(cashPaidForExpenses.toFixed(2)),
+    accountsReceivable: Number(accountsReceivable.toFixed(2)),
+    unremittedCodReceivable: Number(unremittedCodReceivable.toFixed(2)),
+    accountingDisclaimer: 'Operational management metrics for internal decision support; not certified statutory financial accounts.'
   };
 }
 

@@ -496,30 +496,30 @@ ${advancePaid > 0 ? `✅ *অগ্রিম পরিশোধ:* ৳${advancePa
       {/* Order Detail Modal */}
       {selectedOrder && (
         <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6 space-y-6 shadow-2xl">
-            <div className="flex justify-between items-center pb-4 border-b border-stone-200">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-4 sm:p-6 space-y-6 shadow-2xl border border-stone-200 dark:border-slate-800 text-stone-900 dark:text-slate-100">
+            <div className="flex justify-between items-center pb-4 border-b border-stone-200 dark:border-slate-800">
               <div>
-                <h3 className="text-lg font-bold font-serif text-stone-900">{selectedOrder.orderNumber}</h3>
-                <span className="text-xs text-stone-500">Placed on {new Date(selectedOrder.createdAt).toLocaleString()}</span>
+                <h3 className="text-lg font-bold font-serif text-stone-900 dark:text-white">{selectedOrder.orderNumber}</h3>
+                <span className="text-xs text-stone-500 dark:text-slate-400">Placed on {new Date(selectedOrder.createdAt).toLocaleString()}</span>
               </div>
               <button
                 onClick={() => setSelectedOrder(null)}
-                className="text-stone-400 hover:text-stone-900 font-bold text-lg"
+                className="text-stone-400 hover:text-stone-900 dark:hover:text-white font-bold text-lg p-1.5"
               >
                 ✕
               </button>
             </div>
 
             {/* Customer & Address */}
-            <div className="grid grid-cols-2 gap-4 text-xs">
-              <div className="p-4 bg-stone-50 rounded-xl border border-stone-200">
-                <h4 className="font-bold text-stone-900 mb-1">Customer</h4>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+              <div className="p-4 bg-stone-50 dark:bg-slate-800/80 rounded-xl border border-stone-200 dark:border-slate-700">
+                <h4 className="font-bold text-stone-900 dark:text-white mb-1">Customer</h4>
                 <p>{selectedOrder.customer.name}</p>
                 <p className="font-mono">{selectedOrder.customer.phone}</p>
                 <p>{selectedOrder.customer.email || 'No email provided'}</p>
               </div>
-              <div className="p-4 bg-stone-50 rounded-xl border border-stone-200">
-                <h4 className="font-bold text-stone-900 mb-1">Shipping Destination</h4>
+              <div className="p-4 bg-stone-50 dark:bg-slate-800/80 rounded-xl border border-stone-200 dark:border-slate-700">
+                <h4 className="font-bold text-stone-900 dark:text-white mb-1">Shipping Destination</h4>
                 <p>{selectedOrder.shippingAddress.address}</p>
                 <p>{selectedOrder.shippingAddress.thana}, {selectedOrder.shippingAddress.district}</p>
                 <p>Division: {selectedOrder.shippingAddress.division}</p>

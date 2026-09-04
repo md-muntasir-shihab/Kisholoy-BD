@@ -1,0 +1,96 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 370" width="100%" height="100%">
+  <defs>
+    <!-- Dark Mode Brand Color Definitions -->
+    <style>
+      .stroke-light { stroke: #f8fafc; }
+      .fill-light { fill: #f8fafc; }
+      .stroke-botanical-dark { stroke: #34d399; }
+      .fill-botanical-dark { fill: #34d399; }
+      .fill-terracotta-dark { fill: #f43f5e; }
+      .fill-orange-dark { fill: #fb923c; }
+    </style>
+  </defs>
+
+  <g id="kisholoy-wordmark-dark">
+    <!-- ==================== LETTER 1: 'কি' ==================== -->
+    <!-- 'ি'-kar Top Botanical Arc -->
+    <path d="M 68 126 A 78 78 0 0 1 232 110" fill="none" stroke="#34d399" stroke-width="26" stroke-linecap="round" />
+    <!-- Left red terminal dot of arc -->
+    <circle cx="58" cy="132" r="18" fill="#f43f5e" />
+    
+    <!-- Vertical stem of 'ি' dropping down and curving right at bottom -->
+    <path d="M 108 116 L 108 274 Q 108 316 148 316 L 174 316" fill="none" stroke="#f8fafc" stroke-width="26" stroke-linecap="round" />
+
+    <!-- Top bar / matra of 'ক' -->
+    <line x1="108" y1="124" x2="282" y2="124" stroke="#f8fafc" stroke-width="26" stroke-linecap="round" />
+
+    <!-- Loop of 'ক' -->
+    <path d="M 194 124 C 146 148 142 222 186 242 C 228 260 252 206 226 168 C 206 142 194 124 194 124" fill="none" stroke="#f8fafc" stroke-width="26" stroke-linecap="round" stroke-linejoin="round" />
+    
+    <!-- Descending right stroke of 'ক' -->
+    <path d="M 224 200 Q 242 254 262 316" fill="none" stroke="#f8fafc" stroke-width="26" stroke-linecap="round" />
+
+    <!-- Inside Terracotta Orange Circle for 'ক' -->
+    <circle cx="272" cy="226" r="28" fill="#fb923c" />
+
+    <!-- ==================== LETTER 2: 'শ' ==================== -->
+    <!-- Upper accent red dot above loop -->
+    <circle cx="396" cy="74" r="18" fill="#f43f5e" />
+
+    <!-- Left circular loop of 'শ' -->
+    <circle cx="396" cy="220" r="56" fill="none" stroke="#f8fafc" stroke-width="26" />
+
+    <!-- Inside center deep red circle -->
+    <circle cx="396" cy="220" r="24" fill="#f43f5e" />
+
+    <!-- Lower accent orange dot below loop -->
+    <circle cx="396" cy="326" r="18" fill="#fb923c" />
+
+    <!-- Top connecting bar between loop and stem -->
+    <path d="M 324 124 L 484 124" fill="none" stroke="#f8fafc" stroke-width="26" stroke-linecap="round" />
+
+    <!-- Upper accent red dot above stem -->
+    <circle cx="484" cy="74" r="18" fill="#f43f5e" />
+
+    <!-- Right vertical stem of 'শ' -->
+    <line x1="484" y1="124" x2="484" y2="292" stroke="#f8fafc" stroke-width="26" stroke-linecap="round" />
+
+    <!-- Lower accent orange dot on stem -->
+    <circle cx="484" cy="340" r="18" fill="#fb923c" />
+
+    <!-- ==================== LETTER 3: 'ল' ==================== -->
+    <!-- Left arching loop of 'ল' -->
+    <path d="M 494 124 C 540 120 574 162 562 216 C 550 268 506 280 484 238" fill="none" stroke="#f8fafc" stroke-width="26" stroke-linecap="round" />
+
+    <!-- Inside Terracotta Orange Circle for 'ল' -->
+    <circle cx="568" cy="220" r="28" fill="#fb923c" />
+
+    <!-- Upper accent red dot above 'ল' -->
+    <circle cx="568" cy="74" r="18" fill="#f43f5e" />
+
+    <!-- Lower accent orange dot below 'ল' -->
+    <circle cx="568" cy="326" r="18" fill="#fb923c" />
+
+    <!-- Right vertical stem of 'ল' -->
+    <path d="M 554 124 L 652 124 L 652 292" fill="none" stroke="#f8fafc" stroke-width="26" stroke-linecap="round" stroke-linejoin="round" />
+
+    <!-- Lower botanical green accent dot below 'ল' stem -->
+    <circle cx="652" cy="340" r="18" fill="#34d399" />
+
+    <!-- ==================== LETTER 4: 'য়' ==================== -->
+    <!-- Upper accent orange dot above 'য়' -->
+    <circle cx="724" cy="74" r="18" fill="#fb923c" />
+
+    <!-- Top connecting curve of 'য়' -->
+    <path d="M 652 124 C 684 116 732 114 772 130 C 812 148 834 186 834 238 L 834 292" fill="none" stroke="#f8fafc" stroke-width="26" stroke-linecap="round" />
+
+    <!-- Inner sweep and counter of 'য়' -->
+    <path d="M 724 124 C 724 190 706 254 756 274 C 798 284 832 246 832 198" fill="none" stroke="#f8fafc" stroke-width="26" stroke-linecap="round" />
+
+    <!-- Inside Terracotta Orange Circle for 'য়' -->
+    <circle cx="788" cy="220" r="26" fill="#fb923c" />
+
+    <!-- Right vertical terminal stem -->
+    <line x1="864" y1="124" x2="864" y2="292" stroke="#f8fafc" stroke-width="26" stroke-linecap="round" />
+  </g>
+</svg>

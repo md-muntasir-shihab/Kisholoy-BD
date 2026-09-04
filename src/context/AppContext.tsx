@@ -44,6 +44,7 @@ interface AppContextType {
   deleteProduct: (id: string) => void;
   addCategory: (category: Omit<Category, 'id'>) => void;
   updateCategory: (id: string, updates: Partial<Category>) => void;
+  deleteCategory?: (id: string) => void;
   
   // Cart
   cart: CartItem[];
@@ -173,25 +174,17 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [language, setLanguage] = useState<Language>('EN');
   const [currentRole, setCurrentRole] = useState<Role>('SUPER_ADMIN');
-  // ---------------- Theme (Light / Dark / System) ----------------
+  // ---------------- Theme (Light / Dark) Default: Day Theme ----------------
   const [theme, setThemeState] = useState<ThemePreference>(() => {
     if (typeof window !== 'undefined') {
- arena/01a06a72-kisholoy-bd
       const saved = localStorage.getItem('kisholoy-theme');
-      const valid: ThemePreference[] = ['light', 'dark', 'system'];
-      if (saved && valid.includes(saved as ThemePreference)) return saved as ThemePreference;
-      return 'system';
-
-      const saved = localStorage.getItem('theme');
-      if (saved) return saved === 'dark';
-main
+      if (saved === 'dark') return 'dark';
+      // Default is always Day (Light) theme for both Storefront and Admin
+      return 'light';
     }
-    return 'system';
+    return 'light';
   });
-  const [systemDark, setSystemDark] = useState<boolean>(() => {
-    if (typeof window !== 'undefined') return window.matchMedia('(prefers-color-scheme: dark)').matches;
-    return false;
-  });
+  const [systemDark, setSystemDark] = useState<boolean>(false);
 
   const isDarkMode = theme === 'dark' || (theme === 'system' && systemDark);
 
@@ -273,6 +266,20 @@ main
     safeFetchJson('/api/orders').then(data => {
       if (data?.success && Array.isArray(data.orders) && data.orders.length > 0) {
         setOrders(data.orders);
+      }
+    });
+
+    // Sync authoritative products catalog from server API
+    safeFetchJson('/api/products').then(data => {
+      if (data?.success && Array.isArray(data.products) && data.products.length > 0) {
+        setProducts(data.products);
+      }
+    });
+
+    // Sync categories from server API
+    safeFetchJson('/api/categories').then(data => {
+      if (data?.success && Array.isArray(data.categories) && data.categories.length > 0) {
+        setCategories(data.categories);
       }
     });
 
@@ -616,12 +623,26 @@ main
       id: `prod-${Date.now()}`
     };
     setProducts(prev => [newProd, ...prev]);
+    // Sync with backend API
+    fetch('/api/products', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...newProd, operator: currentRole })
+    }).catch(err => console.warn('Failed to sync product to server:', err));
+
     addAuditLog('CREATE_PRODUCT', 'Product', newProd.sku, `Created product "${newProd.title}"`);
     showToast('Product added successfully to catalog');
   };
 
   const updateProduct = (id: string, updates: Partial<Product>) => {
     setProducts(prev => prev.map(p => p.id === id ? { ...p, ...updates } : p));
+    // Sync with backend API
+    fetch(`/api/products/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...updates, operator: currentRole })
+    }).catch(err => console.warn('Failed to sync product update to server:', err));
+
     addAuditLog('UPDATE_PRODUCT', 'Product', id, `Updated product details`);
     showToast('Product updated successfully');
   };
@@ -629,6 +650,11 @@ main
   const deleteProduct = (id: string) => {
     const prod = products.find(p => p.id === id);
     setProducts(prev => prev.filter(p => p.id !== id));
+    // Sync with backend API
+    fetch(`/api/products/${id}?operator=${encodeURIComponent(currentRole)}`, {
+      method: 'DELETE'
+    }).catch(err => console.warn('Failed to sync product deletion to server:', err));
+
     addAuditLog('DELETE_PRODUCT', 'Product', prod?.sku || id, `Deleted product "${prod?.title}"`);
     showToast('Product removed from catalog');
   };
@@ -640,13 +666,39 @@ main
       id: `cat-${Date.now()}`
     };
     setCategories(prev => [...prev, newCat]);
+    // Sync with backend API
+    fetch('/api/categories', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...newCat, operator: currentRole })
+    }).catch(err => console.warn('Failed to sync category to server:', err));
+
     addAuditLog('CREATE_CATEGORY', 'Category', newCat.slug, `Added category "${newCat.name}"`);
     showToast('Category created');
   };
 
   const updateCategory = (id: string, updates: Partial<Category>) => {
     setCategories(prev => prev.map(c => c.id === id ? { ...c, ...updates } : c));
+    // Sync with backend API
+    fetch(`/api/categories/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...updates, operator: currentRole })
+    }).catch(err => console.warn('Failed to sync category update to server:', err));
+
     showToast('Category updated');
+  };
+
+  const deleteCategory = (id: string) => {
+    const target = categories.find(c => c.id === id);
+    setCategories(prev => prev.filter(c => c.id !== id));
+    // Sync with backend API
+    fetch(`/api/categories/${id}?operator=${encodeURIComponent(currentRole)}`, {
+      method: 'DELETE'
+    }).catch(err => console.warn('Failed to sync category deletion to server:', err));
+
+    addAuditLog('DELETE_CATEGORY', 'Category', target?.slug || id, `Deleted category "${target?.name}"`);
+    showToast('Category removed');
   };
 
   // Inventory Adjustment & Audit
@@ -1922,6 +1974,7 @@ main
         deleteProduct,
         addCategory,
         updateCategory,
+        deleteCategory,
         cart,
         addToCart,
         removeFromCart,

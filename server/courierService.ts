@@ -653,6 +653,21 @@ export class CourierService {
           3
         );
       });
+      import('./supplierEngine').then(({ supplierEngine }) => {
+        try {
+          supplierEngine.processDeliveredOrder(order, 'COURIER_WEBHOOK');
+        } catch (e) {
+          console.warn('Courier webhook supplier delivery trigger error:', e);
+        }
+      });
+    } else if (nextOrderStatus === 'RETURNED') {
+      import('./supplierEngine').then(({ supplierEngine }) => {
+        try {
+          supplierEngine.adjustReturnedOrder(order.id, { reason: payload.note || 'Courier returned package' }, 'COURIER_WEBHOOK');
+        } catch (e) {
+          console.warn('Courier webhook supplier return adjustment error:', e);
+        }
+      });
     }
 
     serverDb.addAuditLog(

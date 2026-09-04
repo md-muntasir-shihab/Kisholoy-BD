@@ -1,29 +1,130 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { ShoppingBag, Search, Menu, X, ShieldCheck, User, Heart, LogIn, Sparkles, PhoneCall } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
+import {
+  ShoppingBag,
+  Search,
+  Menu,
+  X,
+  ShieldCheck,
+  User,
+  Heart,
+  LogIn,
+  Sparkles,
+  PhoneCall,
+  ChevronRight,
+  ChevronDown,
+  Package,
+  Layers,
+  Sparkle,
+  Truck,
+  ArrowRight,
+  Languages,
+  LogOut,
+  Settings,
+  Check
+} from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { CustomerAuthModal } from '../auth/CustomerAuthModal';
 import { BrandLogo } from '../brand/BrandLogo';
-import { LanguageButton } from './LanguageButton';
 import { ThemeButton } from './ThemeButton';
 
 export function Header() {
-  const { language, cartCount, siteContent, wishlist, currentCustomerId } = useApp();
+  const { 
+    language, 
+    setLanguage, 
+    cartCount, 
+    siteContent, 
+    wishlist, 
+    currentCustomerId, 
+    customerProfile, 
+    logoutCustomer 
+  } = useApp();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [authModalMode, setAuthModalMode] = useState<'login' | 'register' | 'guest' | 'link_order'>('login');
+  const [announcementDismissed, setAnnouncementDismissed] = useState(false);
+
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const accountMenuRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
   const location = useLocation();
   const isBn = language === 'BN';
+
+  // Close menus on route change
+  useEffect(() => {
+    setIsAccountMenuOpen(false);
+    setIsMobileMenuOpen(false);
+  }, [location.pathname]);
+
+  // Click outside to close account menu
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (accountMenuRef.current && !accountMenuRef.current.contains(event.target as Node)) {
+        setIsAccountMenuOpen(false);
+      }
+    };
+    if (isAccountMenuOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isAccountMenuOpen]);
+
+  // Keyboard shortcut (⌘K / Ctrl+K) to open search
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        setIsSearchOpen((prev) => !prev);
+      } else if (e.key === 'Escape') {
+        setIsSearchOpen(false);
+        setIsMobileMenuOpen(false);
+        setIsAccountMenuOpen(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  // Focus input when search modal opens
+  useEffect(() => {
+    if (isSearchOpen) {
+      setTimeout(() => {
+        searchInputRef.current?.focus();
+      }, 50);
+    }
+  }, [isSearchOpen]);
+
+  // Lock body scroll when mobile menu is open
+  useEffect(() => {
+    if (isMobileMenuOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isMobileMenuOpen]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchQuery.trim()) {
       navigate(`/shop?q=${encodeURIComponent(searchQuery.trim())}`);
       setIsSearchOpen(false);
+      setSearchQuery('');
     }
+  };
+
+  const handleQuickSearch = (term: string) => {
+    navigate(`/shop?q=${encodeURIComponent(term)}`);
+    setIsSearchOpen(false);
+    setSearchQuery('');
   };
 
   const navLinks = [
@@ -31,241 +132,698 @@ export function Header() {
     { name: isBn ? 'সকল পণ্য' : 'Shop All', path: '/shop' },
     { name: isBn ? 'পোশাক ও শাড়ি' : 'Apparel & Sarees', path: '/category/traditional-clothing' },
     { name: isBn ? 'হস্তশিল্প ও সাজসজ্জা' : 'Handicrafts & Decor', path: '/category/handicrafts-decor' },
-    { name: isBn ? 'খাঁটি খাদ্য' : 'Organic Pantry', path: '/category/organic-pantry' },
-    { name: isBn ? 'অর্ডার ট্র্যাক' : 'Track Order', path: '/track-order' }
+    { name: isBn ? 'খাঁটি খাদ্য' : 'Organic Pantry', path: '/category/organic-pantry' }
   ];
 
-  const iconBtn =
-    'relative inline-flex h-10 w-10 items-center justify-center rounded-full text-stone-600 dark:text-slate-300 hover:text-teal-900 dark:hover:text-teal-300 hover:bg-stone-100 dark:hover:bg-slate-800 transition-colors';
+  const popularSearches = isBn
+    ? ['জামদানি শাড়ি', 'সুন্দরবনের মধু', 'নকশিকাঁথা', 'রাজশাহী সিল্ক', 'পিতলের সামগ্রী']
+    : ['Jamdani Saree', 'Sundarban Honey', 'Nakshi Kantha', 'Rajshahi Silk', 'Brass Decor'];
 
   return (
-    <header className="sticky top-0 z-40 w-full border-b border-stone-200/80 dark:border-slate-800 bg-white/95 dark:bg-slate-950/95 backdrop-blur-md transition-all shadow-xs">
-      {/* Announcement Bar from CMS */}
-      {siteContent.announcementBar.enabled && (
-        <div className="bg-stone-950 text-stone-200 text-xs py-2 px-4 text-center font-medium tracking-wide flex items-center justify-center gap-3 border-b border-stone-800">
-          <span className="flex items-center gap-1.5">
-            <Sparkles className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" />
-            {isBn ? siteContent.announcementBar.textBn : siteContent.announcementBar.text}
-          </span>
-          {siteContent.contact?.phone && (
-            <>
-              <span className="hidden md:inline-block text-stone-600">|</span>
-              <a
-                href={`tel:${siteContent.contact.phone}`}
-                className="hidden md:inline-flex items-center gap-1 text-teal-300 hover:text-teal-200 transition-colors"
-              >
-                <PhoneCall className="w-3 h-3" /> {siteContent.contact.phone}
-              </a>
-            </>
-          )}
-        </div>
-      )}
+    <>
+      <header className="sticky top-0 z-40 w-full border-b border-stone-200/70 dark:border-slate-800/70 bg-white/80 dark:bg-slate-950/80 backdrop-blur-xl transition-all duration-300 shadow-2xs">
+        {/* Announcement Bar */}
+        {siteContent.announcementBar.enabled && !announcementDismissed && (
+          <div className="bg-stone-950/90 dark:bg-slate-900/90 text-stone-200 text-xs py-2 px-4 border-b border-stone-800/80 backdrop-blur-md">
+            <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
+              <div className="flex-1 flex items-center justify-center gap-2 text-center text-[11px] sm:text-xs font-medium tracking-wide">
+                <Sparkles className="w-3.5 h-3.5 text-amber-400 flex-shrink-0 animate-pulse" />
+                <span>{isBn ? siteContent.announcementBar.textBn : siteContent.announcementBar.text}</span>
+              </div>
 
-      {/* Main Header Container */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex h-16 items-center justify-between gap-3 sm:gap-4">
-          {/* Mobile menu toggle */}
-          <div className="flex items-center lg:hidden">
-            <button
-              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className={iconBtn}
-              aria-label="Toggle menu"
-            >
-              {isMobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-            </button>
-          </div>
-
-          {/* Logo & Brand Identity */}
-          <div className="flex items-center flex-1 lg:flex-none">
-            <BrandLogo variant="light" size="md" />
-          </div>
-
-          {/* Desktop Navigation Links */}
-          <nav className="hidden lg:flex items-center gap-5 xl:gap-7 mx-4">
-            {navLinks.map((link) => {
-              const isActive = location.pathname === link.path;
-              return (
-                <Link
-                  key={link.path}
-                  to={link.path}
-                  className={`relative text-sm font-semibold transition-all py-1.5 px-1 ${
-                    isActive
-                      ? 'text-teal-900 dark:text-teal-300 font-bold'
-                      : 'text-stone-600 dark:text-slate-300 hover:text-teal-900 dark:hover:text-teal-300'
-                  }`}
+              <div className="hidden md:flex items-center gap-3 text-[11px]">
+                {siteContent.contact?.phone && (
+                  <a
+                    href={`tel:${siteContent.contact.phone}`}
+                    className="inline-flex items-center gap-1.5 text-teal-300 hover:text-teal-200 transition-colors font-mono"
+                  >
+                    <PhoneCall className="w-3 h-3 text-teal-400" />
+                    <span>{siteContent.contact.phone}</span>
+                  </a>
+                )}
+                <button
+                  onClick={() => setAnnouncementDismissed(true)}
+                  aria-label="Dismiss banner"
+                  className="text-stone-400 hover:text-stone-200 p-0.5 rounded transition-colors"
                 >
-                  {link.name}
-                  {isActive && (
-                    <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-teal-700 dark:bg-teal-400 rounded-full"></span>
-                  )}
-                </Link>
-              );
-            })}
-          </nav>
+                  <X className="w-3 h-3" />
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
-          {/* Actions & Utilities */}
-          <div className="flex items-center gap-1 sm:gap-1.5">
-            {/* Search Button & Overlay */}
-            <div className="relative">
+        {/* Main Header Grid Container */}
+        <div className="max-w-7xl 2xl:max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-[auto_1fr_auto] items-center h-16 sm:h-18 lg:h-20 gap-2 sm:gap-4 lg:gap-6 w-full">
+            
+            {/* Left Column (Logo & Mobile Menu) */}
+            <div className="col-start-1 justify-self-start flex items-center gap-2 sm:gap-3 shrink-0">
               <button
-                onClick={() => setIsSearchOpen(!isSearchOpen)}
-                className={iconBtn}
-                title={isBn ? 'পণ্য খুঁজুন' : 'Search products'}
+                onClick={() => setIsMobileMenuOpen(true)}
+                className="xl:hidden inline-flex h-9 w-9 items-center justify-center rounded-full border border-stone-200/80 dark:border-slate-800/80 bg-white/70 dark:bg-slate-900/70 backdrop-blur-md text-stone-700 dark:text-slate-200 hover:text-teal-900 dark:hover:text-teal-300 active:scale-95 transition-all shadow-2xs"
+                aria-label="Open mobile menu"
               >
-                <Search className="h-5 w-5" />
+                <Menu className="h-5 w-5" />
               </button>
 
-              {isSearchOpen && (
-                <div className="absolute right-0 top-12 w-72 sm:w-88 bg-white dark:bg-slate-900 p-3.5 rounded-2xl border border-stone-200 dark:border-slate-700 shadow-2xl z-50 animate-in fade-in zoom-in-95 duration-150">
-                  <form onSubmit={handleSearch} className="flex gap-2">
+              <div className="flex items-center shrink-0">
+                <BrandLogo
+                  variant="light"
+                  size="md"
+                  showTagline={false}
+                />
+              </div>
+            </div>
+
+            {/* Center Column (Navigation Menu) */}
+            <div className="col-start-2 justify-self-center flex items-center justify-center min-w-0 w-full px-1 sm:px-2 lg:px-4">
+              <nav className="hidden xl:flex items-center gap-1 min-w-0">
+                <div className="flex items-center gap-0.5 2xl:gap-1 p-1 rounded-full bg-stone-100/70 dark:bg-slate-900/70 border border-stone-200/70 dark:border-slate-800/70 backdrop-blur-md shadow-2xs">
+                  {navLinks.map((link) => {
+                    const isActive = location.pathname === link.path;
+                    return (
+                      <Link
+                        key={link.path}
+                        to={link.path}
+                        className={`whitespace-nowrap px-3 2xl:px-3.5 py-1.5 rounded-full text-xs font-semibold tracking-normal transition-all duration-200 ${
+                          isActive
+                            ? 'bg-white dark:bg-slate-800 text-teal-950 dark:text-teal-300 font-bold shadow-xs border border-stone-200/80 dark:border-slate-700/80'
+                            : 'text-stone-600 dark:text-slate-300 hover:text-teal-950 dark:hover:text-white hover:bg-white/60 dark:hover:bg-slate-800/60'
+                        }`}
+                      >
+                        {link.name}
+                      </Link>
+                    );
+                  })}
+                </div>
+              </nav>
+            </div>
+
+            {/* Right Column (Actions, Utilities: Search, Theme, Account, Cart) */}
+            <div className="col-start-3 justify-self-end flex items-center justify-end gap-1.5 sm:gap-2.5 shrink-0">
+              {/* Search Trigger Button */}
+              <button
+                onClick={() => setIsSearchOpen(true)}
+                className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-stone-200/80 dark:border-slate-800/80 bg-white/70 dark:bg-slate-900/70 backdrop-blur-md text-stone-700 dark:text-slate-200 hover:text-teal-900 dark:hover:text-teal-300 hover:border-teal-700/60 active:scale-95 transition-all shadow-2xs"
+                aria-label="Search"
+                title={isBn ? 'পণ্য অনুসন্ধান (⌘K)' : 'Search products (⌘K)'}
+              >
+                <Search className="w-4 h-4 text-teal-700 dark:text-teal-400" />
+              </button>
+
+              {/* Display Mode Switcher */}
+              <ThemeButton />
+
+              {/* User Account with Interactive Dropdown (Houses Track Order, Wishlist / Favorite Items, Language Settings) */}
+              <div className="relative" ref={accountMenuRef}>
+                <button
+                  onClick={() => setIsAccountMenuOpen(!isAccountMenuOpen)}
+                  className={`inline-flex h-9 px-2 sm:px-3 items-center justify-center gap-1.5 rounded-full border backdrop-blur-md text-xs font-semibold shadow-2xs active:scale-95 transition-all ${
+                    isAccountMenuOpen
+                      ? 'border-teal-700 bg-teal-50/80 dark:bg-teal-950/50 text-teal-900 dark:text-teal-300'
+                      : 'border-stone-200/80 dark:border-slate-800/80 bg-white/70 dark:bg-slate-900/70 text-stone-800 dark:text-slate-200 hover:border-teal-700/60 hover:text-teal-900 dark:hover:text-teal-300'
+                  }`}
+                  aria-expanded={isAccountMenuOpen}
+                  title={isBn ? 'ইউজার অ্যাকাউন্ট ও সেবা' : 'User Account & Services'}
+                >
+                  <User className="w-3.5 h-3.5 text-teal-700 dark:text-teal-400 shrink-0" />
+                  <span className="hidden sm:inline">
+                    {currentCustomerId
+                      ? (customerProfile?.name ? customerProfile.name.split(' ')[0] : (isBn ? 'প্রোফাইল' : 'Profile'))
+                      : (isBn ? 'অ্যাকাউন্ট' : 'Account')}
+                  </span>
+                  {wishlist.length > 0 && (
+                    <span className="inline-flex items-center justify-center w-2 h-2 rounded-full bg-rose-500 ring-2 ring-white dark:ring-slate-900" />
+                  )}
+                  <ChevronDown className={`w-3.5 h-3.5 text-stone-400 transition-transform duration-200 ${isAccountMenuOpen ? 'rotate-180 text-teal-700 dark:text-teal-400' : ''}`} />
+                </button>
+
+                {/* User Account Dropdown Menu */}
+                {isAccountMenuOpen && (
+                  <div className="absolute right-0 mt-2 w-72 sm:w-80 rounded-2xl bg-white dark:bg-slate-900 border border-stone-200/90 dark:border-slate-800 shadow-2xl p-2.5 z-50 animate-in fade-in zoom-in-95 duration-150 backdrop-blur-xl">
+                    {/* Header: Customer Info or Guest Welcome */}
+                    {currentCustomerId ? (
+                      <div className="p-3 bg-stone-50/80 dark:bg-slate-800/80 rounded-xl border border-stone-200/60 dark:border-slate-700/60 mb-2">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-full bg-teal-900 text-white flex items-center justify-center font-bold text-sm shadow-xs flex-shrink-0">
+                            {customerProfile?.name ? customerProfile.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() : 'KH'}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-xs font-bold text-stone-900 dark:text-white truncate block">
+                                {customerProfile?.name || 'Customer Account'}
+                              </span>
+                            </div>
+                            <span className="text-[11px] text-stone-500 dark:text-slate-400 truncate block">
+                              {customerProfile?.phone || customerProfile?.email || 'Active Member'}
+                            </span>
+                          </div>
+                          <Link
+                            to="/account?tab=profile"
+                            onClick={() => setIsAccountMenuOpen(false)}
+                            className="p-1.5 rounded-lg text-stone-400 hover:text-teal-700 dark:hover:text-teal-400 hover:bg-white dark:hover:bg-slate-700 transition-colors"
+                            title={isBn ? 'প্রোফাইল সেটিংস' : 'Profile Settings'}
+                          >
+                            <Settings className="w-4 h-4" />
+                          </Link>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="p-3 bg-stone-50/80 dark:bg-slate-800/80 rounded-xl border border-stone-200/60 dark:border-slate-700/60 mb-2">
+                        <div className="text-xs font-bold text-stone-900 dark:text-white mb-1">
+                          {isBn ? 'স্বাগতম কিশলয়ে!' : 'Welcome to KISHOLOY!'}
+                        </div>
+                        <p className="text-[11px] text-stone-500 dark:text-slate-400 mb-2.5 leading-snug">
+                          {isBn ? 'অর্ডার ট্র্যাকিং ও ফেভারিট আইটেম সেভ করতে সাইন ইন করুন।' : 'Sign in to track orders and access your favorite items.'}
+                        </p>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => {
+                              setIsAccountMenuOpen(false);
+                              setAuthModalMode('login');
+                              setAuthModalOpen(true);
+                            }}
+                            className="flex-1 py-1.5 px-3 bg-teal-900 hover:bg-teal-950 text-white rounded-lg text-xs font-semibold text-center transition-colors shadow-2xs"
+                          >
+                            {isBn ? 'লগইন' : 'Sign In'}
+                          </button>
+                          <button
+                            onClick={() => {
+                              setIsAccountMenuOpen(false);
+                              setAuthModalMode('register');
+                              setAuthModalOpen(true);
+                            }}
+                            className="flex-1 py-1.5 px-3 bg-white dark:bg-slate-800 border border-stone-200 dark:border-slate-700 hover:bg-stone-100 dark:hover:bg-slate-700 text-stone-800 dark:text-slate-200 rounded-lg text-xs font-semibold text-center transition-colors"
+                          >
+                            {isBn ? 'রেজিস্টার' : 'Register'}
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Features Moved Inside User Account */}
+                    <div className="space-y-1">
+                      {/* 1. Track Order (অর্ডার ট্র্যাক) */}
+                      <Link
+                        to="/track-order"
+                        onClick={() => setIsAccountMenuOpen(false)}
+                        className="flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-medium text-stone-700 dark:text-slate-200 hover:bg-teal-50/80 dark:hover:bg-teal-950/40 hover:text-teal-950 dark:hover:text-teal-300 transition-colors group"
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <div className="p-1.5 rounded-lg bg-teal-50 dark:bg-teal-950/60 text-teal-700 dark:text-teal-400 group-hover:bg-teal-100 dark:group-hover:bg-teal-900/60 transition-colors">
+                            <Truck className="w-4 h-4" />
+                          </div>
+                          <div>
+                            <span className="font-semibold block text-stone-900 dark:text-slate-100">
+                              {isBn ? 'অর্ডার ট্র্যাক' : 'Track Order'}
+                            </span>
+                            <span className="text-[10px] text-stone-400 dark:text-slate-500">
+                              {isBn ? 'পার্সেল ও কুরিয়ার লাইভ স্ট্যাটাস' : 'Live parcel & courier status'}
+                            </span>
+                          </div>
+                        </div>
+                        <ChevronRight className="w-4 h-4 text-stone-400 group-hover:translate-x-0.5 transition-transform" />
+                      </Link>
+
+                      {/* 2. Favorite Items / Wishlist (ফেভারিট আইটেম) */}
+                      <Link
+                        to="/account?tab=wishlist"
+                        onClick={() => setIsAccountMenuOpen(false)}
+                        className="flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-medium text-stone-700 dark:text-slate-200 hover:bg-rose-50/80 dark:hover:bg-rose-950/40 hover:text-rose-900 dark:hover:text-rose-300 transition-colors group"
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <div className="p-1.5 rounded-lg bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 group-hover:bg-rose-100 dark:group-hover:bg-rose-900/60 transition-colors">
+                            <Heart className="w-4 h-4" />
+                          </div>
+                          <div>
+                            <span className="font-semibold block text-stone-900 dark:text-slate-100">
+                              {isBn ? 'ফেভারিট আইটেম' : 'Favorite Items'}
+                            </span>
+                            <span className="text-[10px] text-stone-400 dark:text-slate-500">
+                              {isBn ? 'সংরক্ষিত পছন্দের তালিকা' : 'Saved wishlist items'}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          {wishlist.length > 0 && (
+                            <span className="px-2 py-0.5 rounded-full bg-rose-600 text-white text-[10px] font-bold shadow-2xs">
+                              {wishlist.length}
+                            </span>
+                          )}
+                          <ChevronRight className="w-4 h-4 text-stone-400 group-hover:translate-x-0.5 transition-transform" />
+                        </div>
+                      </Link>
+
+                      {/* 3. Language Settings (ল্যাঙ্গুয়েজ সেটিংস) */}
+                      <div className="px-3 py-2 rounded-xl text-xs font-medium text-stone-700 dark:text-slate-200 hover:bg-stone-50/80 dark:hover:bg-slate-800/60 transition-colors">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2.5">
+                            <div className="p-1.5 rounded-lg bg-stone-100 dark:bg-slate-800 text-stone-700 dark:text-slate-300">
+                              <Languages className="w-4 h-4 text-teal-700 dark:text-teal-400" />
+                            </div>
+                            <div>
+                              <span className="font-semibold block text-stone-900 dark:text-slate-100">
+                                {isBn ? 'ল্যাঙ্গুয়েজ সেটিংস' : 'Language Settings'}
+                              </span>
+                              <span className="text-[10px] text-stone-400 dark:text-slate-500">
+                                {isBn ? 'ভাষা পরিবর্তন করুন' : 'Change interface language'}
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Language Switcher Buttons */}
+                          <div className="inline-flex p-0.5 rounded-lg bg-stone-100 dark:bg-slate-800 border border-stone-200 dark:border-slate-700">
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setLanguage('BN');
+                              }}
+                              className={`px-2 py-1 rounded-md text-[11px] font-bold transition-all ${
+                                language === 'BN'
+                                  ? 'bg-teal-900 text-white shadow-2xs'
+                                  : 'text-stone-600 dark:text-slate-400 hover:text-stone-900 dark:hover:text-white'
+                              }`}
+                            >
+                              বাংলা
+                            </button>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setLanguage('EN');
+                              }}
+                              className={`px-2 py-1 rounded-md text-[11px] font-bold transition-all ${
+                                language === 'EN'
+                                  ? 'bg-teal-900 text-white shadow-2xs'
+                                  : 'text-stone-600 dark:text-slate-400 hover:text-stone-900 dark:hover:text-white'
+                              }`}
+                            >
+                              EN
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Secondary Account Options */}
+                    <div className="my-1.5 border-t border-stone-100 dark:border-slate-800 pt-1 space-y-0.5">
+                      <Link
+                        to="/account?tab=orders"
+                        onClick={() => setIsAccountMenuOpen(false)}
+                        className="flex items-center justify-between px-3 py-2 rounded-xl text-xs text-stone-700 dark:text-slate-300 hover:bg-stone-50 dark:hover:bg-slate-800/60 transition-colors"
+                      >
+                        <span className="flex items-center gap-2.5">
+                          <Package className="w-3.5 h-3.5 text-stone-500" />
+                          <span>{isBn ? 'আমার অর্ডারসমূহ' : 'My Orders'}</span>
+                        </span>
+                        <ChevronRight className="w-3.5 h-3.5 text-stone-400" />
+                      </Link>
+
+                      <Link
+                        to="/account?tab=profile"
+                        onClick={() => setIsAccountMenuOpen(false)}
+                        className="flex items-center justify-between px-3 py-2 rounded-xl text-xs text-stone-700 dark:text-slate-300 hover:bg-stone-50 dark:hover:bg-slate-800/60 transition-colors"
+                      >
+                        <span className="flex items-center gap-2.5">
+                          <User className="w-3.5 h-3.5 text-stone-500" />
+                          <span>{isBn ? 'অ্যাকাউন্ট ড্যাশবোর্ড' : 'Account Dashboard'}</span>
+                        </span>
+                        <ChevronRight className="w-3.5 h-3.5 text-stone-400" />
+                      </Link>
+                    </div>
+
+                    {/* Sign Out (for logged-in customers) */}
+                    {currentCustomerId && (
+                      <div className="pt-1 border-t border-stone-100 dark:border-slate-800 mt-1">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsAccountMenuOpen(false);
+                            logoutCustomer();
+                          }}
+                          className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-xl text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors"
+                        >
+                          <LogOut className="w-3.5 h-3.5" />
+                          <span>{isBn ? 'সাইন আউট করুন' : 'Sign Out'}</span>
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Cart Conversion Button (Highlighted Luxury Pill) */}
+              <Link
+                to="/cart"
+                className="inline-flex h-9 px-3 sm:px-3.5 items-center justify-center gap-2 rounded-full bg-teal-900 hover:bg-teal-950 dark:bg-teal-600 dark:hover:bg-teal-500 text-white text-xs font-bold shadow-xs active:scale-95 transition-all flex-shrink-0"
+                title={isBn ? 'শপিং ব্যাগ' : 'Shopping Cart'}
+              >
+                <ShoppingBag className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">{isBn ? 'কার্ট' : 'Cart'}</span>
+                <span className="min-w-[18px] h-[18px] px-1 rounded-full bg-amber-400 text-stone-950 text-[10px] font-extrabold flex items-center justify-center shadow-2xs">
+                  {cartCount}
+                </span>
+              </Link>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {/* Global Interactive Search Modal / Command Palette */}
+      <AnimatePresence>
+        {isSearchOpen && (
+          <div className="fixed inset-0 z-50 flex items-start justify-center pt-16 sm:pt-24 px-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="fixed inset-0 bg-stone-950/60 backdrop-blur-sm"
+              onClick={() => setIsSearchOpen(false)}
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: -10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: -10 }}
+              transition={{ duration: 0.18, ease: 'easeOut' }}
+              className="relative w-full max-w-2xl bg-white dark:bg-slate-900 rounded-3xl border border-stone-200 dark:border-slate-800 shadow-2xl overflow-hidden z-10"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Search Input Bar */}
+              <form onSubmit={handleSearch} className="relative flex items-center border-b border-stone-200 dark:border-slate-800 p-4 sm:p-5">
+                <Search className="w-5 h-5 text-teal-700 dark:text-teal-400 mr-3 flex-shrink-0" />
+                <input
+                  ref={searchInputRef}
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder={
+                    isBn
+                      ? 'জামদানি, নকশিকাঁথা, সুন্দরবনের মধু, তসর সিল্ক খুঁজুন...'
+                      : 'Search Jamdani sarees, Nakshi Kantha, Honey, Silk, Pottery...'
+                  }
+                  className="w-full text-sm sm:text-base bg-transparent border-0 text-stone-900 dark:text-white placeholder-stone-400 dark:placeholder-slate-500 focus:outline-none focus:ring-0"
+                />
+                {searchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => setSearchQuery('')}
+                    className="p-1 rounded-full text-stone-400 hover:text-stone-600 dark:hover:text-stone-200 mr-2"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-teal-900 hover:bg-teal-950 dark:bg-teal-600 dark:hover:bg-teal-500 text-white rounded-xl text-xs font-semibold shadow-xs flex-shrink-0"
+                >
+                  {isBn ? 'খুঁজুন' : 'Search'}
+                </button>
+              </form>
+
+              {/* Suggestions & Quick Links */}
+              <div className="p-4 sm:p-6 space-y-4 bg-stone-50/50 dark:bg-slate-900/50">
+                <div>
+                  <span className="text-[11px] font-bold text-stone-400 dark:text-slate-500 uppercase tracking-wider block mb-2.5">
+                    {isBn ? 'জনপ্রিয় অনুসন্ধান' : 'Popular Searches'}
+                  </span>
+                  <div className="flex flex-wrap gap-2">
+                    {popularSearches.map((term) => (
+                      <button
+                        key={term}
+                        onClick={() => handleQuickSearch(term)}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-white dark:bg-slate-800 border border-stone-200 dark:border-slate-700 text-stone-700 dark:text-slate-300 hover:border-teal-700 dark:hover:border-teal-500 hover:text-teal-900 dark:hover:text-teal-300 transition-colors shadow-2xs"
+                      >
+                        <Sparkle className="w-3 h-3 text-amber-500" />
+                        <span>{term}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Quick Categories */}
+                <div className="pt-3 border-t border-stone-200/70 dark:border-slate-800">
+                  <span className="text-[11px] font-bold text-stone-400 dark:text-slate-500 uppercase tracking-wider block mb-2.5">
+                    {isBn ? 'প্রধান ক্যাটাগরি' : 'Top Categories'}
+                  </span>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                    <Link
+                      to="/category/traditional-clothing"
+                      onClick={() => setIsSearchOpen(false)}
+                      className="flex items-center justify-between p-2.5 rounded-xl bg-white dark:bg-slate-800 border border-stone-200/80 dark:border-slate-700 hover:border-teal-700 text-xs text-stone-800 dark:text-slate-200 font-medium transition-all group"
+                    >
+                      <span>{isBn ? 'পোশাক ও শাড়ি' : 'Traditional Clothing'}</span>
+                      <ArrowRight className="w-3.5 h-3.5 text-stone-400 group-hover:text-teal-700 transition-colors" />
+                    </Link>
+                    <Link
+                      to="/category/handicrafts-decor"
+                      onClick={() => setIsSearchOpen(false)}
+                      className="flex items-center justify-between p-2.5 rounded-xl bg-white dark:bg-slate-800 border border-stone-200/80 dark:border-slate-700 hover:border-teal-700 text-xs text-stone-800 dark:text-slate-200 font-medium transition-all group"
+                    >
+                      <span>{isBn ? 'হস্তশিল্প ও সাজসজ্জা' : 'Handicrafts & Decor'}</span>
+                      <ArrowRight className="w-3.5 h-3.5 text-stone-400 group-hover:text-teal-700 transition-colors" />
+                    </Link>
+                    <Link
+                      to="/category/organic-pantry"
+                      onClick={() => setIsSearchOpen(false)}
+                      className="flex items-center justify-between p-2.5 rounded-xl bg-white dark:bg-slate-800 border border-stone-200/80 dark:border-slate-700 hover:border-teal-700 text-xs text-stone-800 dark:text-slate-200 font-medium transition-all group"
+                    >
+                      <span>{isBn ? 'খাঁটি অর্গানিক খাদ্য' : 'Organic Pantry'}</span>
+                      <ArrowRight className="w-3.5 h-3.5 text-stone-400 group-hover:text-teal-700 transition-colors" />
+                    </Link>
+                  </div>
+                </div>
+
+                {/* Close helper hint */}
+                <div className="flex items-center justify-between pt-2 text-[11px] text-stone-400 dark:text-slate-500">
+                  <span>{isBn ? 'অনুসন্ধান করতে এন্টার চাপুন' : 'Press Enter to search'}</span>
+                  <button
+                    onClick={() => setIsSearchOpen(false)}
+                    className="hover:text-stone-700 dark:hover:text-stone-300 underline"
+                  >
+                    {isBn ? 'বন্ধ করুন (ESC)' : 'Close (ESC)'}
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Slide-out Mobile Navigation Drawer with Smooth Slide-in Motion Animations */}
+      <AnimatePresence>
+        {isMobileMenuOpen && (
+          <div className="fixed inset-0 z-50 xl:hidden">
+            {/* Backdrop overlay with smooth fade transition */}
+            <motion.div
+              key="mobile-menu-backdrop"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.25, ease: 'easeInOut' }}
+              className="fixed inset-0 bg-stone-950/60 backdrop-blur-sm"
+              onClick={() => setIsMobileMenuOpen(false)}
+              aria-hidden="true"
+            />
+
+            {/* Drawer Panel with spring physics slide-in */}
+            <motion.div
+              key="mobile-menu-drawer-panel"
+              initial={{ x: '-100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '-100%' }}
+              transition={{ type: 'spring', damping: 28, stiffness: 280, mass: 0.8 }}
+              className="fixed inset-y-0 left-0 w-full max-w-xs sm:max-w-sm bg-white dark:bg-slate-950 shadow-2xl flex flex-col z-10 border-r border-stone-200 dark:border-slate-800"
+            >
+              {/* Drawer Header */}
+              <div className="p-4 sm:p-5 border-b border-stone-200 dark:border-slate-800 flex items-center justify-between">
+                <BrandLogo variant="light" size="sm" showTagline={false} />
+                <button
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="p-2 rounded-full text-stone-400 hover:text-stone-700 dark:hover:text-white transition-colors active:scale-95"
+                  aria-label="Close menu"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Mobile Search Bar */}
+              <div className="p-4 border-b border-stone-100 dark:border-slate-800">
+                <form onSubmit={(e) => { handleSearch(e); setIsMobileMenuOpen(false); }} className="flex gap-2">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-400" />
                     <input
                       type="text"
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
-                      placeholder={isBn ? 'জামদানি, খাঁটি মধু, নকশিকাঁথা খুঁজুন...' : 'Search Jamdani, Honey, Tea, Pottery...'}
-                      className="w-full text-xs px-3.5 py-2.5 border border-stone-300 dark:border-slate-600 bg-stone-50 dark:bg-slate-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-800/30 focus:border-teal-800"
-                      autoFocus
+                      placeholder={isBn ? 'পণ্য খুঁজুন...' : 'Search products...'}
+                      className="w-full text-xs pl-9 pr-3 py-2.5 rounded-xl border border-stone-200 dark:border-slate-700 bg-stone-50 dark:bg-slate-900 text-stone-900 dark:text-stone-100 placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-teal-700/30"
                     />
-                    <button
-                      type="submit"
-                      className="px-4 py-2.5 bg-teal-900 dark:bg-teal-600 text-white rounded-xl text-xs font-semibold hover:bg-teal-950 dark:hover:bg-teal-500 shadow-xs"
-                    >
-                      {isBn ? 'খুঁজুন' : 'Search'}
-                    </button>
-                  </form>
-                  <div className="mt-2.5 pt-2 border-t border-stone-100 dark:border-slate-800 flex items-center gap-1.5 text-[11px] text-stone-400 dark:text-slate-500">
-                    <span className="font-semibold">{isBn ? 'জনপ্রিয়:' : 'Popular:'}</span>
-                    <button type="button" onClick={() => { setSearchQuery('Jamdani'); navigate('/shop?q=Jamdani'); setIsSearchOpen(false); }} className="hover:text-teal-900 dark:hover:text-teal-300 underline">Jamdani</button>
-                    <span>•</span>
-                    <button type="button" onClick={() => { setSearchQuery('Honey'); navigate('/shop?q=Honey'); setIsSearchOpen(false); }} className="hover:text-teal-900 dark:hover:text-teal-300 underline">Honey</button>
-                    <span>•</span>
-                    <button type="button" onClick={() => { setSearchQuery('Nakshi'); navigate('/shop?q=Nakshi'); setIsSearchOpen(false); }} className="hover:text-teal-900 dark:hover:text-teal-300 underline">Nakshi</button>
                   </div>
+                  <button
+                    type="submit"
+                    className="px-3.5 py-2.5 bg-teal-900 dark:bg-teal-600 hover:bg-teal-950 dark:hover:bg-teal-500 text-white rounded-xl text-xs font-semibold active:scale-95 transition-all shadow-2xs"
+                  >
+                    {isBn ? 'খুঁজুন' : 'Go'}
+                  </button>
+                </form>
+              </div>
+
+              {/* Navigation Links & Categories */}
+              <div className="flex-1 overflow-y-auto p-4 space-y-1">
+                <div className="text-[10px] font-bold text-stone-400 dark:text-slate-500 uppercase tracking-wider px-3.5 block mb-1">
+                  {isBn ? 'ক্যাটাগরি ও ব্রাউজ' : 'Categories & Navigation'}
                 </div>
-              )}
-            </div>
+                {navLinks.map((link, idx) => {
+                  const isActive = location.pathname === link.path;
+                  return (
+                    <motion.div
+                      key={link.path}
+                      initial={{ opacity: 0, x: -12 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: 0.04 * (idx + 1), duration: 0.2 }}
+                    >
+                      <Link
+                        to={link.path}
+                        onClick={() => setIsMobileMenuOpen(false)}
+                        className={`flex items-center justify-between px-3.5 py-3 rounded-xl text-sm font-semibold transition-all ${
+                          isActive
+                            ? 'bg-teal-50 dark:bg-teal-950/40 text-teal-900 dark:text-teal-300'
+                            : 'text-stone-700 dark:text-slate-300 hover:bg-stone-50 dark:hover:bg-slate-900'
+                        }`}
+                      >
+                        <span>{link.name}</span>
+                        <ChevronRight className="w-4 h-4 text-stone-400" />
+                      </Link>
+                    </motion.div>
+                  );
+                })}
 
-            {/* Language toggle (separate button) */}
-            <LanguageButton />
+                {/* User Account & Services Section in Drawer */}
+                <motion.div
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.25, duration: 0.2 }}
+                  className="pt-3 border-t border-stone-200/80 dark:border-slate-800 space-y-1"
+                >
+                  <span className="text-[10px] font-bold text-stone-400 dark:text-slate-500 uppercase tracking-wider px-3.5 block mb-1">
+                    {isBn ? 'ইউজার অ্যাকাউন্ট ও সেবা' : 'Account & Services'}
+                  </span>
 
-            {/* Display mode toggle (separate button) */}
-            <ThemeButton />
+                  {/* 1. Track Order */}
+                  <Link
+                    to="/track-order"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className="flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-semibold text-stone-700 dark:text-slate-300 hover:bg-stone-50 dark:hover:bg-slate-900"
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <Truck className="w-4 h-4 text-teal-700 dark:text-teal-400" />
+                      <span>{isBn ? 'অর্ডার ট্র্যাক' : 'Track Order'}</span>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-stone-400" />
+                  </Link>
 
-            {/* Wishlist */}
-            <Link
-              to="/account?tab=wishlist"
-              className={`${iconBtn} hidden sm:inline-flex`}
-              title={isBn ? 'উইশলিস্ট' : 'Wishlist'}
-            >
-              <Heart className="h-5 w-5" />
-              {wishlist.length > 0 && (
-                <span className="absolute top-0.5 right-0.5 flex h-4 min-w-[16px] px-1 items-center justify-center rounded-full bg-rose-600 text-[9px] font-bold text-white shadow-xs border-2 border-white dark:border-slate-950">
-                  {wishlist.length}
-                </span>
-              )}
-            </Link>
+                  {/* 2. Favorite Items / Wishlist */}
+                  <Link
+                    to="/account?tab=wishlist"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className="flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-semibold text-stone-700 dark:text-slate-300 hover:bg-stone-50 dark:hover:bg-slate-900"
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <Heart className="w-4 h-4 text-rose-500" />
+                      <span>{isBn ? 'ফেভারিট আইটেম' : 'Favorite Items'}</span>
+                    </div>
+                    {wishlist.length > 0 && (
+                      <span className="px-2 py-0.5 rounded-full bg-rose-600 text-white text-xs font-bold">
+                        {wishlist.length}
+                      </span>
+                    )}
+                  </Link>
 
-            {/* Account / Sign In */}
-            <button
-              onClick={() => {
-                if (currentCustomerId) {
-                  navigate('/account');
-                } else {
-                  setAuthModalMode('login');
-                  setAuthModalOpen(true);
-                }
-              }}
-              className={iconBtn}
-              title={currentCustomerId ? (isBn ? 'আমার অ্যাকাউন্ট' : 'My Account') : (isBn ? 'সাইন ইন' : 'Sign In')}
-            >
-              {currentCustomerId ? <User className="h-5 w-5" /> : <LogIn className="h-5 w-5" />}
-            </button>
+                  {/* 3. Language Settings Switcher */}
+                  <div className="flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-semibold text-stone-700 dark:text-slate-300">
+                    <div className="flex items-center gap-2.5">
+                      <Languages className="w-4 h-4 text-teal-700 dark:text-teal-400" />
+                      <span>{isBn ? 'ল্যাঙ্গুয়েজ সেটিংস' : 'Language Settings'}</span>
+                    </div>
+                    <div className="inline-flex p-0.5 rounded-lg bg-stone-100 dark:bg-slate-800 border border-stone-200 dark:border-slate-700">
+                      <button
+                        type="button"
+                        onClick={() => setLanguage('BN')}
+                        className={`px-2 py-1 rounded-md text-xs font-bold transition-all ${
+                          language === 'BN'
+                            ? 'bg-teal-900 text-white shadow-2xs'
+                            : 'text-stone-600 dark:text-slate-400'
+                        }`}
+                      >
+                        বাংলা
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setLanguage('EN')}
+                        className={`px-2 py-1 rounded-md text-xs font-bold transition-all ${
+                          language === 'EN'
+                            ? 'bg-teal-900 text-white shadow-2xs'
+                            : 'text-stone-600 dark:text-slate-400'
+                        }`}
+                      >
+                        EN
+                      </button>
+                    </div>
+                  </div>
+                </motion.div>
+              </div>
 
-            {/* Cart */}
-            <Link to="/cart" className={iconBtn} title={isBn ? 'কার্ট' : 'Cart'}>
-              <ShoppingBag className="h-5 w-5" />
-              {cartCount > 0 && (
-                <span className="absolute top-0.5 right-0.5 flex h-4 min-w-[16px] px-1 items-center justify-center rounded-full bg-teal-900 dark:bg-teal-600 text-[9px] font-bold text-white shadow-xs border-2 border-white dark:border-slate-950">
-                  {cartCount}
-                </span>
-              )}
-            </Link>
+              {/* Drawer Footer Actions */}
+              <div className="p-4 border-t border-stone-200 dark:border-slate-800 space-y-3 bg-stone-50/50 dark:bg-slate-900/50">
+                {/* Customer Account Button */}
+                {currentCustomerId ? (
+                  <Link
+                    to="/account"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className="flex items-center justify-center gap-2 w-full py-2.5 px-4 rounded-xl bg-teal-900 hover:bg-teal-950 dark:bg-teal-600 dark:hover:bg-teal-500 text-white text-xs font-bold shadow-xs active:scale-95 transition-all"
+                  >
+                    <User className="w-4 h-4" />
+                    <span>{isBn ? 'আমার অ্যাকাউন্ট' : 'My Account'}</span>
+                  </Link>
+                ) : (
+                  <button
+                    onClick={() => {
+                      setIsMobileMenuOpen(false);
+                      setAuthModalMode('login');
+                      setAuthModalOpen(true);
+                    }}
+                    className="flex items-center justify-center gap-2 w-full py-2.5 px-4 rounded-xl bg-teal-900 hover:bg-teal-950 dark:bg-teal-600 dark:hover:bg-teal-500 text-white text-xs font-bold shadow-xs active:scale-95 transition-all"
+                  >
+                    <LogIn className="w-4 h-4" />
+                    <span>{isBn ? 'লগইন / রেজিস্টার' : 'Sign In / Register'}</span>
+                  </button>
+                )}
 
-            {/* Admin (subtle icon) */}
-            <Link
-              to="/admin"
-              className={`${iconBtn} hidden sm:inline-flex`}
-              title="Admin Operations"
-            >
-              <ShieldCheck className="h-5 w-5" />
-            </Link>
+                {/* Quick Admin Shortcut */}
+                <Link
+                  to="/admin"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="flex items-center justify-center gap-2 w-full py-2 px-3 rounded-xl border border-stone-200 dark:border-slate-700 text-stone-600 dark:text-slate-400 text-xs font-semibold hover:text-teal-900 dark:hover:text-white transition-colors"
+                >
+                  <ShieldCheck className="w-3.5 h-3.5 text-teal-700 dark:text-teal-400" />
+                  <span>{isBn ? 'অ্যাডমিন অপারেশনস' : 'Admin Operations'}</span>
+                </Link>
+
+                {/* Phone Helpline */}
+                {siteContent.contact?.phone && (
+                  <div className="pt-2 text-center text-xs text-stone-500 dark:text-slate-400 flex items-center justify-center gap-1.5">
+                    <PhoneCall className="w-3.5 h-3.5 text-teal-600" />
+                    <span>{siteContent.contact.phone}</span>
+                  </div>
+                )}
+              </div>
+            </motion.div>
           </div>
-        </div>
-      </div>
-
-      {/* Mobile Drawer Menu */}
-      {isMobileMenuOpen && (
-        <div className="lg:hidden bg-white dark:bg-slate-950 border-b border-stone-200 dark:border-slate-800 shadow-xl px-4 pt-3 pb-6 space-y-3">
-          <form onSubmit={handleSearch} className="flex gap-2 mb-4">
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder={isBn ? 'পণ্য খুঁজুন...' : 'Search products...'}
-              className="w-full text-sm px-3 py-2 border border-stone-300 dark:border-slate-600 bg-stone-50 dark:bg-slate-800 rounded-lg focus:outline-none focus:border-teal-800"
-            />
-            <button
-              type="submit"
-              className="px-4 py-2 bg-teal-900 dark:bg-teal-600 text-white rounded-lg text-sm font-semibold"
-            >
-              {isBn ? 'খুঁজুন' : 'Search'}
-            </button>
-          </form>
-
-          <div className="space-y-1">
-            {navLinks.map((link) => (
-              <Link
-                key={link.path}
-                to={link.path}
-                className="block px-3 py-2 rounded-lg text-sm font-medium text-stone-800 dark:text-slate-200 hover:bg-stone-100 dark:hover:bg-slate-800 hover:text-teal-900 dark:hover:text-teal-300"
-                onClick={() => setIsMobileMenuOpen(false)}
-              >
-                {link.name}
-              </Link>
-            ))}
-          </div>
-
-          <div className="pt-3 border-t border-stone-200 dark:border-slate-800 flex flex-col gap-2">
-            <button
-              onClick={() => {
-                setIsMobileMenuOpen(false);
-                setAuthModalMode('login');
-                setAuthModalOpen(true);
-              }}
-              className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-stone-800 dark:text-slate-200 hover:bg-stone-100 dark:hover:bg-slate-800 rounded-lg text-left"
-            >
-              <LogIn className="h-4 w-4 text-stone-500 dark:text-slate-400" />
-              {isBn ? 'লগইন / রেজিস্ট্রেশন / গেস্ট অর্ডার লিংক' : 'Sign In / Register / Link Guest Order'}
-            </button>
-            <Link
-              to="/account"
-              className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-stone-800 dark:text-slate-200 hover:bg-stone-100 dark:hover:bg-slate-800 rounded-lg"
-              onClick={() => setIsMobileMenuOpen(false)}
-            >
-              <User className="h-4 w-4 text-stone-500 dark:text-slate-400" />
-              {isBn ? 'আমার অ্যাকাউন্ট' : 'My Account'}
-            </Link>
-            <Link
-              to="/admin"
-              className="flex items-center gap-2 px-3 py-2 text-sm font-semibold text-teal-900 dark:text-teal-300 bg-teal-50 dark:bg-teal-500/10 border border-teal-200 dark:border-teal-500/30 rounded-lg"
-              onClick={() => setIsMobileMenuOpen(false)}
-            >
-              <ShieldCheck className="h-4 w-4 text-teal-700 dark:text-teal-400" />
-              {isBn ? 'অ্যাডমিন কন্ট্রোল সেন্টার' : 'Admin Control Center'}
-            </Link>
-          </div>
-        </div>
-      )}
+        )}
+      </AnimatePresence>
 
       {/* Customer Identity, Registration, & Guest Order Linking Modal */}
       <CustomerAuthModal
@@ -273,6 +831,6 @@ export function Header() {
         onClose={() => setAuthModalOpen(false)}
         initialMode={authModalMode}
       />
-    </header>
+    </>
   );
 }
