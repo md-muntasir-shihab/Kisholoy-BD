@@ -213,6 +213,8 @@ export interface Order {
   createdAt: string;
   orderSource?: OrderSourceChannel;
   channelDetails?: OrderChannelDetails;
+  /** Marketing Command Center: read-only UTM auto-tag captured at checkout (never affects money fields) */
+  utm?: OrderUtmTag;
   advancePayment?: OrderAdvancePayment;
   customer: {
     id: string;
@@ -2266,4 +2268,204 @@ export interface PrintOrderPayload {
     qrs: Record<string, string>;
   };
   siteContent: SiteContent;
+}
+
+// ============================================================================
+// MARKETING COMMAND CENTER (Phases MC-1 .. MC-5)
+// ----------------------------------------------------------------------------
+// Rule: This module NEVER mutates Finance or Order records. Spend entries are
+// a parallel marketing ledger; reconciliation against the Finance module is
+// strictly read-only. All ROI math is computed server-side.
+// ============================================================================
+
+/** Registry channel types for the Marketing Command Center (distinct from the
+ *  campaign-delivery MarketingChannel union used by the Campaigns module) */
+export type AdChannelType = 'FACEBOOK' | 'INSTAGRAM' | 'WHATSAPP' | 'TELEGRAM' | 'OTHER';
+
+export type AdChannelStatus = 'ACTIVE' | 'PAUSED' | 'ARCHIVED';
+
+export interface AdChannelStatusEvent {
+  status: AdChannelStatus;
+  changedAt: string;
+  changedBy: string;
+  note?: string;
+}
+
+/** Phase MC-1: MarketingChannel registry (pages/handles & their lifecycle status) */
+export interface MarketingChannelRegistry {
+  id: string;
+  type: AdChannelType;
+  name: string;              // e.g. "Kisholoy Official Facebook Page"
+  handle: string;            // page/channel handle, e.g. "kisholoy.bd" or "+8801700000000"
+  pageUrl?: string;          // full profile/page URL
+  status: AdChannelStatus;
+  /** Extra utm_source tokens that map orders/traffic onto this channel (besides built-in aliases) */
+  utmSourcePatterns: string[];
+  notes?: string;
+  statusHistory: AdChannelStatusEvent[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** Spend ledger entry kinds: paid ad, page post boost, or a broadcast/send cost */
+export type MarketingSpendType = 'AD' | 'BOOST' | 'SEND';
+
+export type MarketingLedgerStatus = 'ACTIVE' | 'VOID';
+
+/** Phase MC-1/MC-2: MarketingSpendEntry (boost / ad / send logging, BDT) */
+export interface MarketingSpendEntry {
+  id: string;
+  entryType: MarketingSpendType;
+  channelId: string;                     // references MarketingChannelRegistry.id
+  campaignId?: string;                   // links to existing Campaigns module (MarketingCampaign.id)
+  campaignNameSnapshot?: string;
+  dateFrom: string;                      // period start YYYY-MM-DD
+  dateTo: string;                        // period end   YYYY-MM-DD
+  amountBdt: number;                     // authoritative value re-validated server-side
+  impressions: number;
+  clicks: number;
+  sends: number;                         // messages/conversations delivered (whatsapp/telegram/sms)
+  utmSource?: string;                    // UTM used in the destination links
+  utmCampaign?: string;
+  utmContent?: string;
+  notes?: string;
+  /** Optional read-only cross-reference to a Finance expense id (never auto-created here) */
+  financeExpenseRef?: string;
+  status: MarketingLedgerStatus;
+  voidReason?: string;
+  voidedAt?: string;
+  editHistory: {
+    editedAt: string;
+    editedBy: string;
+    summary: string;
+  }[];
+  recordedBy: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** Attribution source provenance for revenue/order attribution records */
+export type AttributionSourceType = 'UTM' | 'ADS_MANAGER' | 'WHATSAPP' | 'TELEGRAM' | 'MANUAL';
+
+/** Phase MC-3: manual/recorded attribution of revenue & orders to channel/campaign */
+export interface MarketingAttributionEntry {
+  id: string;
+  channelId: string;
+  campaignId?: string;
+  campaignNameSnapshot?: string;
+  date: string;                          // attribution date YYYY-MM-DD
+  attributedRevenueBdt: number;
+  attributedOrders: number;
+  orderNumbers: string[];                // read-only references to Order.orderNumber
+  source: AttributionSourceType;
+  notes?: string;
+  recordedBy: string;
+  createdAt: string;
+}
+
+/** UTM tag captured on the storefront at order time (additive on Order only) */
+export interface OrderUtmTag {
+  utmSource?: string;
+  utmMedium?: string;
+  utmCampaign?: string;
+  utmContent?: string;
+  gclid?: string;
+  fbclid?: string;
+  landingPath?: string;
+  capturedAt: string;
+}
+
+/** One computed row of the server-side ROI engine output */
+export interface MarketingRoiRow {
+  key: string;                           // channel id or campaign id (or 'UNASSIGNED')
+  label: string;
+  labelBn: string;
+  meta?: string;                         // channel type / campaign type context
+  spendBdt: number;
+  attributedRevenueBdt: number;
+  attributedOrders: number;
+  impressions: number;
+  clicks: number;
+  sends: number;
+  roas: number;                          // revenue / spend (0 when spend = 0)
+  roiPct: number;                        // (revenue - spend) / spend * 100
+  cpoBdt: number;                        // cost per attributed order
+  costPerClickBdt: number;
+  costPerSendBdt: number;                  // cost per message/conversation
+}
+
+/** Monthly bucket summary (server-side) */
+export interface MarketingMonthlySummaryRow {
+  month: string;                         // YYYY-MM
+  spendBdt: number;
+  attributedRevenueBdt: number;
+  attributedOrders: number;
+  clicks: number;
+  sends: number;
+  roas: number;
+  roiPct: number;
+}
+
+/** Full ROI report payload returned by the ROI engine */
+export interface MarketingRoiReport {
+  period: { from: string; to: string };
+  totals: {
+    spendBdt: number;
+    attributedRevenueBdt: number;
+    attributedOrders: number;
+    impressions: number;
+    clicks: number;
+    sends: number;
+    roas: number;
+    roiPct: number;
+    cpoBdt: number;
+    costPerClickBdt: number;
+    costPerSendBdt: number;
+  };
+  byChannel: MarketingRoiRow[];
+  byCampaign: MarketingRoiRow[];
+  monthly: MarketingMonthlySummaryRow[];
+  generatedAt: string;
+}
+
+/** Auto-tagged order insight (derived read-only from Order.utm tags) */
+export interface AutoAttributedOrderRow {
+  orderNumber: string;
+  orderDate: string;
+  totalBdt: number;
+  paymentStatus: string;
+  orderStatus: string;
+  utmSource?: string;
+  utmCampaign?: string;
+  matchedChannelId?: string;
+  matchedChannelLabel?: string;
+  matchedCampaignId?: string;
+  matchedCampaignName?: string;
+  /** UTM_SOURCE = matched via utm_source/handle alias; ORDER_SOURCE = in-house channel desk provenance; NONE = not auto-attributable */
+  matchBasis: 'UTM_SOURCE' | 'ORDER_SOURCE' | 'NONE';
+}
+
+/** Future/OPTIONal API connectors — never fabricated, always reported as unavailable */
+export type ConnectorStatus = 'FUTURE' | 'DISABLED';
+
+export interface MarketingSyncConnector {
+  id: string;
+  label: string;
+  labelBn: string;
+  provider: 'META_CAPI' | 'WHATSAPP_BUSINESS_API' | 'TELEGRAM_BOT_API';
+  status: ConnectorStatus;
+  autoSyncImplemented: false;            // hard-coded false until a real integration ships
+  description: string;
+  descriptionBn: string;
+}
+
+/** Read-only finance reconciliation block (Marketing ledger vs Finance MARKETING expenses) */
+export interface MarketingFinanceReconciliation {
+  financeMarketingSpendBdt: number;      // sum of Finance expenses (category MARKETING)
+  commandCenterSpendBdt: number;         // sum of ACTIVE marketing spend ledger
+  gapBdt: number;                        // finance - command center
+  financeRows: { id: string; date: string; vendor: string; amount: number; reference: string }[];
+  commandRows: { id: string; dateFrom: string; dateTo: string; amount: number; financeExpenseRef?: string; entryType: MarketingSpendType }[];
+  note: string;
+  noteBn: string;
 }

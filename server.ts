@@ -20,6 +20,16 @@ import { fraudEngine } from './server/fraudEngine';
 import { fulfillmentEngine } from './server/fulfillmentEngine';
 import { promotionEngine } from './server/promotionEngine';
 import { marketingService } from './server/marketingService';
+import { marketingCommandCenter } from './server/marketingCommandCenter';
+import {
+  marketingChannelCreateSchema,
+  marketingChannelUpdateSchema,
+  marketingChannelStatusSchema,
+  marketingSpendEntrySchema,
+  marketingSpendUpdateSchema,
+  marketingSpendVoidSchema,
+  marketingAttributionEntrySchema,
+} from './src/lib/validations';
 import { securityEngine } from './server/securityEngine';
 import { backupEngine } from './server/backupEngine';
 import { supplierEngine } from './server/supplierEngine';
@@ -65,7 +75,7 @@ async function startServer() {
       tier = 'CHECKOUT';
     } else if (req.path.startsWith('/api/auth') || req.path.startsWith('/api/security/auth')) {
       tier = 'AUTH';
-    } else if (req.path.startsWith('/api/admin') || req.path.startsWith('/api/security')) {
+    } else if (req.path.startsWith('/api/admin') || req.path.startsWith('/api/security') || req.path.startsWith('/api/marketing/command')) {
       tier = 'ADMIN';
     } else if (req.path.startsWith('/api/webhooks')) {
       tier = 'WEBHOOK';
@@ -207,6 +217,9 @@ async function startServer() {
       const isAutoBlocked = fraudRisk.recommendation === 'BLOCK';
       const orderSource: OrderSourceChannel = req.body.orderSource || 'WEB';
       const channelDetails = req.body.channelDetails;
+      // Marketing Command Center: persist the captured UTM auto-tag as additive,
+      // sanitized metadata. It never participates in money math.
+      const orderUtm = marketingCommandCenter.sanitizeOrderUtm(req.body.utm);
       const advancePayment = req.body.advancePayment;
       const advancePaymentAmount = advancePayment?.amount || req.body.advancePaymentAmount || 0;
       const balanceDueCod = req.body.balanceDueCod ?? Math.max(0, calculation.grandTotal - advancePaymentAmount);
@@ -217,6 +230,7 @@ async function startServer() {
         createdAt: new Date().toISOString(),
         orderSource,
         channelDetails,
+        utm: orderUtm,
         advancePayment,
         advancePaymentAmount,
         balanceDueCod,
@@ -3104,6 +3118,202 @@ async function startServer() {
         return res.status(400).json({ error: result.message });
       }
       res.json({ success: true, ...result });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  // -------------------------------------------------------------
+  // 4e. Marketing Command Center (MC-1..MC-5)
+  //     Channel registry, spend ledger, attribution, and the ROI engine.
+  //     Strictly additive: this section NEVER writes to Finance or Order
+  //     records — reads are used for reconciliation & attribution only.
+  //     All monetary metrics are computed server-side by the engine.
+  // -------------------------------------------------------------
+  const parseMktRange = (req: express.Request): { from?: string; to?: string } => {
+    const from = typeof req.query.from === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(req.query.from) ? req.query.from : undefined;
+    const to = typeof req.query.to === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(req.query.to) ? req.query.to : undefined;
+    return { from, to };
+  };
+
+  // --- Channel Registry ---
+  app.get('/api/marketing/command/channels', (req, res) => {
+    try {
+      const includeArchived = req.query.includeArchived === '1' || req.query.includeArchived === 'true';
+      res.json({ success: true, channels: marketingCommandCenter.listChannels(includeArchived) });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.post('/api/marketing/command/channels', (req, res) => {
+    try {
+      const parsed = marketingChannelCreateSchema.safeParse(req.body);
+      if (!parsed.success) return res.status(400).json({ error: formatZodError(parsed.error) });
+      const channel = marketingCommandCenter.createChannel(parsed.data);
+      res.status(201).json({ success: true, channel });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.put('/api/marketing/command/channels/:id', (req, res) => {
+    try {
+      const parsed = marketingChannelUpdateSchema.safeParse(req.body);
+      if (!parsed.success) return res.status(400).json({ error: formatZodError(parsed.error) });
+      const { actor, ...patch } = parsed.data;
+      const channel = marketingCommandCenter.updateChannel(req.params.id, patch, actor);
+      if (!channel) return res.status(404).json({ error: 'Channel not found' });
+      res.json({ success: true, channel });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.post('/api/marketing/command/channels/:id/status', (req, res) => {
+    try {
+      const parsed = marketingChannelStatusSchema.safeParse(req.body);
+      if (!parsed.success) return res.status(400).json({ error: formatZodError(parsed.error) });
+      const channel = marketingCommandCenter.setChannelStatus(req.params.id, parsed.data.status, parsed.data.note, parsed.data.actor);
+      if (!channel) return res.status(404).json({ error: 'Channel not found' });
+      res.json({ success: true, channel });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  // --- Spend Ledger (Boost / Ad / Send logging) ---
+  app.get('/api/marketing/command/spends', (req, res) => {
+    try {
+      const { from, to } = parseMktRange(req);
+      const spends = marketingCommandCenter.listSpends({
+        channelId: typeof req.query.channelId === 'string' && req.query.channelId ? req.query.channelId : undefined,
+        campaignId: typeof req.query.campaignId === 'string' && req.query.campaignId ? req.query.campaignId : undefined,
+        from,
+        to,
+        includeVoided: req.query.includeVoided === '1' || req.query.includeVoided === 'true',
+      });
+      res.json({ success: true, spends });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.post('/api/marketing/command/spends', (req, res) => {
+    try {
+      const parsed = marketingSpendEntrySchema.safeParse(req.body);
+      if (!parsed.success) return res.status(400).json({ error: formatZodError(parsed.error) });
+      const result = marketingCommandCenter.createSpend(parsed.data);
+      if (result.error) return res.status(400).json({ error: result.error });
+      res.status(201).json({ success: true, entry: result.entry });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.put('/api/marketing/command/spends/:id', (req, res) => {
+    try {
+      const parsed = marketingSpendUpdateSchema.safeParse(req.body);
+      if (!parsed.success) return res.status(400).json({ error: formatZodError(parsed.error) });
+      const { actor, ...patch } = parsed.data;
+      const result = marketingCommandCenter.updateSpend(req.params.id, patch, actor);
+      if (result.error) return res.status(400).json({ error: result.error });
+      res.json({ success: true, entry: result.entry });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.post('/api/marketing/command/spends/:id/void', (req, res) => {
+    try {
+      const parsed = marketingSpendVoidSchema.safeParse(req.body);
+      if (!parsed.success) return res.status(400).json({ error: formatZodError(parsed.error) });
+      const result = marketingCommandCenter.voidSpend(req.params.id, parsed.data.reason, parsed.data.actor);
+      if (result.error) return res.status(400).json({ error: result.error });
+      res.json({ success: true, entry: result.entry });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  // --- Attribution (Phase MC-3) ---
+  app.get('/api/marketing/command/attributions', (req, res) => {
+    try {
+      const { from, to } = parseMktRange(req);
+      const attributions = marketingCommandCenter.listAttributions({
+        channelId: typeof req.query.channelId === 'string' && req.query.channelId ? req.query.channelId : undefined,
+        campaignId: typeof req.query.campaignId === 'string' && req.query.campaignId ? req.query.campaignId : undefined,
+        from,
+        to,
+      });
+      res.json({ success: true, attributions });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.post('/api/marketing/command/attributions', (req, res) => {
+    try {
+      const parsed = marketingAttributionEntrySchema.safeParse(req.body);
+      if (!parsed.success) return res.status(400).json({ error: formatZodError(parsed.error) });
+      const result = marketingCommandCenter.createAttribution(parsed.data);
+      if (result.error) return res.status(400).json({ error: result.error });
+      res.status(201).json({ success: true, entry: result.entry });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  // Read-only preview of orders auto-tagged with UTM provenance at checkout
+  app.get('/api/marketing/command/auto-orders', (req, res) => {
+    try {
+      const { from, to } = parseMktRange(req);
+      res.json({ success: true, rows: marketingCommandCenter.autoAttributedOrders(from, to) });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  // --- ROI Engine (Phase MC-4) — authoritative server-side math ---
+  app.get('/api/marketing/command/roi', (req, res) => {
+    try {
+      const { from, to } = parseMktRange(req);
+      res.json({ success: true, report: marketingCommandCenter.computeRoiReport(from, to) });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  // Read-only reconciliation against the Finance ledger (never mutates Finance)
+  app.get('/api/marketing/command/finance-reconciliation', (req, res) => {
+    try {
+      const { from, to } = parseMktRange(req);
+      res.json({ success: true, reconciliation: marketingCommandCenter.financeReconciliation(from, to) });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  // FUTURE/OPTIONAL connector registry — honest status, never fabricated
+  app.get('/api/marketing/command/sync-status', (req, res) => {
+    try {
+      res.json({ success: true, ...marketingCommandCenter.syncStatus() });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  // --- CSV export (Phase MC-5), server-generated with UTF-8 BOM for Bangla Excel ---
+  app.get('/api/marketing/command/export', (req, res) => {
+    try {
+      const rawType = String(req.query.type || 'ROI_CHANNELS').toUpperCase();
+      const valid = ['SPENDS', 'ATTRIBUTIONS', 'ROI_CHANNELS', 'ROI_CAMPAIGNS', 'MONTHLY', 'CHANNELS'];
+      const type = (valid.includes(rawType) ? rawType : 'ROI_CHANNELS') as 'SPENDS' | 'ATTRIBUTIONS' | 'ROI_CHANNELS' | 'ROI_CAMPAIGNS' | 'MONTHLY' | 'CHANNELS';
+      const { from, to } = parseMktRange(req);
+      const csvData = marketingCommandCenter.buildCsv(type, from, to);
+      res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+      res.setHeader('Content-Disposition', `attachment; filename="Kisholoy_Marketing_${type}_${Date.now()}.csv"`);
+      res.send(csvData);
     } catch (e: any) {
       res.status(500).json({ error: e.message });
     }

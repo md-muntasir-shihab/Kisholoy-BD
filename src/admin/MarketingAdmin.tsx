@@ -6,7 +6,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { 
-  Users, Target, ShoppingBag, Gift, Megaphone, Send, Sparkles, 
+  Users, Target, ShoppingBag, Gift, Megaphone, Send, Sparkles, Radio, 
   Search, Filter, CheckCircle2, AlertTriangle, Clock, RefreshCw, 
   ArrowUpRight, Phone, Mail, MapPin, Tag, Plus, MessageSquare, 
   ShieldAlert, Award, TrendingUp, DollarSign, ChevronRight, X, 
@@ -20,12 +20,22 @@ import {
 } from '../types';
 import { AdminHelpButton } from '../components/admin/AdminHelpModal';
 import { MARKETING_HELP_DATA } from './marketingHelpData';
+import { MarketingCommandCenter } from './MarketingCommandCenter';
 
-type ActiveTab = 'SEGMENTS' | 'CARTS' | 'CAMPAIGNS' | 'REFERRALS' | 'CRM';
+type ActiveTab = 'SEGMENTS' | 'CARTS' | 'CAMPAIGNS' | 'REFERRALS' | 'CRM' | 'COMMAND';
 
 export function MarketingAdmin() {
   const { language, showToast, logAudit } = useApp();
-  const [activeTab, setActiveTab] = useState<ActiveTab>('SEGMENTS');
+  const [activeTab, setActiveTab] = useState<ActiveTab>(() => {
+    // Deep-link support: /admin/marketing?tab=command lands directly on the Command Center
+    try {
+      const t = new URLSearchParams(window.location.search).get('tab');
+      if (t && ['SEGMENTS', 'CARTS', 'CAMPAIGNS', 'REFERRALS', 'CRM', 'COMMAND'].includes(t)) return t as ActiveTab;
+    } catch {
+      /* ignore */
+    }
+    return 'SEGMENTS';
+  });
   const [loading, setLoading] = useState(true);
 
   // Data states
@@ -442,6 +452,18 @@ export function MarketingAdmin() {
           <span className="px-1.5 py-0.5 rounded text-[10px] bg-stone-700 text-white">
             {rfmScores.length}
           </span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('COMMAND')}
+          className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold rounded-lg transition-colors whitespace-nowrap ${
+            activeTab === 'COMMAND' 
+              ? 'bg-teal-800 text-white shadow-xs' 
+              : 'text-teal-900 hover:bg-teal-50'
+          }`}
+        >
+          <Radio className="w-4 h-4" />
+          <span>{language === 'BN' ? 'কমান্ড সেন্টার (ROI)' : 'Command Center (ROI)'}</span>
         </button>
       </div>
 
@@ -1105,6 +1127,11 @@ export function MarketingAdmin() {
           </div>
         </div>
       )}
+
+      {/* ===================================================================== */}
+      {/* TAB 6: MARKETING COMMAND CENTER (Spend ledger, Attribution & ROI)      */}
+      {/* ===================================================================== */}
+      {activeTab === 'COMMAND' && <MarketingCommandCenter />}
 
       {/* ===================================================================== */}
       {/* MODAL: CUSTOMER 360° DRAWER                                          */}

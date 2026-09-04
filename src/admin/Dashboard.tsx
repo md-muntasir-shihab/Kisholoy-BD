@@ -4,9 +4,10 @@ import {
   TrendingUp, ShoppingCart, Receipt, Wallet, Package, DollarSign, Users,
   Repeat, Award, AlertTriangle, Banknote, RotateCcw, Ticket, Truck,
   BarChart3, MapPin, PieChart, Filter, Calendar, ArrowRight, Sparkles,
-  Layers, Landmark, Tag, PackagePlus, ChevronRight,
+  Layers, Landmark, Tag, PackagePlus, ChevronRight, ArrowUpRight,
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
+import { ADMIN_SECTIONS_DATA } from './adminModulesData';
 import {
   Order, CategoryMetric, DistrictMetric, CustomerCohortMetric,
   CourierPerformanceMetric, SalesTrendPoint, FinancialPnLReport, InventoryVelocityMetric,
@@ -222,6 +223,7 @@ export function Dashboard() {
   const [report, setReport] = useState<DashboardReport | null>(null);
   const [loading, setLoading] = useState(false);
   const [suppliers, setSuppliers] = useState<{ id: string; companyName: string; totalDue: number }[]>([]);
+  const [activeSectionFilter, setActiveSectionFilter] = useState<string>('all');
 
   // Fetch server analytics report (range-aware)
   useEffect(() => {
@@ -607,9 +609,101 @@ export function Dashboard() {
           <div className="grid grid-cols-2 gap-3 text-xs mt-2">
             <Metric label={isBn ? 'নিজস্ব বিক্রয়' : 'In-house'} value={fmtMoney(inHouseVsPartner.inHouse)} />
             <Metric label={isBn ? 'পার্টনার বিক্রয়' : 'Partner'} value={fmtMoney(inHouseVsPartner.partner)} />
+ arena/01a06c02-kisholoy-bd
           </div>
         </section>
+      </div>
 
+      {/* SECTION DIRECTORY & WORK BREAKDOWN */}
+      <section id="work-directory-section" className="space-y-6">
+        <div className="bg-white dark:bg-stone-950 text-stone-900 dark:text-white p-6 sm:p-8 rounded-3xl border border-stone-200/90 dark:border-stone-850 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-6 transition-colors">
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-2">
+              <span className="px-3 py-0.5 rounded-full text-[10px] font-bold tracking-wider uppercase bg-teal-50 dark:bg-teal-500/20 text-teal-950 dark:text-teal-300 border border-teal-200 dark:border-teal-500/30">
+                {isBn ? 'অপারেশনাল ডিরেক্টরি' : 'OPERATIONAL WORK DESKS'}
+              </span>
+              <span className="text-xs text-stone-500 dark:text-stone-400 font-mono">23 Connected Desks</span>
+            </div>
+            <h2 className="text-2xl sm:text-3xl font-serif font-black text-stone-900 dark:text-white tracking-tight">
+              {isBn 
+                ? 'এডমিন সেকশন ও কাজের পূর্ণ বিবরণী' 
+                : 'Admin Workspaces & Operational Matrix'}
+            </h2>
+            <p className="text-xs sm:text-sm text-stone-600 dark:text-stone-300 max-w-2xl leading-relaxed">
+              {isBn
+                ? 'প্রতিটি বিভাগের সুনির্দিষ্ট কাজের পরিধি, দায়িত্ব এবং সরাসরি কাজ শুরু করার জন্য পাশে দেয়া বাটন ব্যবহার করুন।'
+                : 'Full architectural breakdown of operational responsibilities and direct 1-click workspace entry buttons.'}
+            </p>
+          </div>
+
+          {/* Section Filter Pills */}
+          <div className="flex flex-wrap items-center gap-2 shrink-0">
+            <button
+              id="filter-sec-all"
+              onClick={() => setActiveSectionFilter('all')}
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all shadow-2xs ${
+                activeSectionFilter === 'all'
+                  ? 'bg-teal-900 text-white dark:bg-teal-400 dark:text-stone-950 font-black shadow-xs'
+                  : 'bg-stone-100 dark:bg-stone-900 text-stone-700 dark:text-stone-300 hover:bg-stone-200 dark:hover:bg-stone-850 hover:text-stone-900 dark:hover:text-white border border-stone-200 dark:border-stone-800'
+              }`}
+            >
+              {isBn ? 'সকল সেকশন (২৩)' : 'All Desks (23)'}
+            </button>
+            {ADMIN_SECTIONS_DATA.map(sec => (
+              <button
+                key={sec.id}
+                id={`filter-sec-${sec.id}`}
+                onClick={() => setActiveSectionFilter(sec.id)}
+                className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all shadow-2xs ${
+                  activeSectionFilter === sec.id
+                    ? 'bg-teal-900 text-white dark:bg-teal-400 dark:text-stone-950 font-black shadow-xs'
+                    : 'bg-stone-100 dark:bg-stone-900 text-stone-700 dark:text-stone-300 hover:bg-stone-200 dark:hover:bg-stone-850 hover:text-stone-900 dark:hover:text-white border border-stone-200 dark:border-stone-800'
+                }`}
+              >
+                {isBn ? sec.titleBn : sec.title} ({sec.items.length})
+              </button>
+            ))}
+main
+          </div>
+        </div>
+
+        {/* Directory cards: operational desks, filtered by the section pills */}
+        <div className="space-y-4">
+          {ADMIN_SECTIONS_DATA.filter((sec) => activeSectionFilter === 'all' || sec.id === activeSectionFilter).map((sec) => (
+            <div key={`dash-sec-${sec.id}`} className="bg-white dark:bg-slate-800 rounded-3xl border border-stone-200/90 dark:border-slate-700 shadow-xs p-5 sm:p-6">
+              <div className="flex items-center justify-between gap-3 flex-wrap">
+                <h3 className="text-sm font-black text-stone-900 dark:text-slate-100">{isBn ? sec.titleBn : sec.title}</h3>
+                <span className="text-[10px] font-mono font-bold text-stone-400 dark:text-slate-500">{sec.items.length} {isBn ? 'ডেস্ক' : 'desks'}</span>
+              </div>
+              <p className="text-[11px] text-stone-500 dark:text-slate-400 mt-1 mb-3 max-w-3xl leading-relaxed">{isBn ? sec.summaryBn : sec.summary}</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
+                {sec.items.map((item) => {
+                  const ItemIcon = item.icon;
+                  return (
+                    <Link
+                      key={item.id}
+                      id={`dash-desk-${item.id}`}
+                      to={item.path}
+                      className="group border border-stone-200 dark:border-slate-700 rounded-2xl p-3.5 hover:border-teal-400 dark:hover:border-teal-600 hover:shadow-sm transition-all bg-stone-50/60 dark:bg-slate-900/40"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="p-1.5 rounded-lg bg-teal-900/5 text-teal-800 dark:bg-teal-400/10 dark:text-teal-300 border border-teal-200/60 dark:border-teal-700/40">
+                          <ItemIcon className="w-4 h-4" />
+                        </div>
+                        <ArrowUpRight className="w-3.5 h-3.5 text-stone-300 dark:text-slate-600 group-hover:text-teal-700 dark:group-hover:text-teal-300 transition-colors" />
+                      </div>
+                      <p className="text-xs font-black text-stone-900 dark:text-slate-100 mt-2">{isBn ? item.labelBn : item.label}</p>
+                      <p className="text-[10px] text-stone-500 dark:text-slate-400 mt-0.5 line-clamp-2">{isBn ? item.taglineBn : item.tagline}</p>
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Profit by product */}
         <section className="bg-white dark:bg-slate-800 rounded-3xl border border-stone-200/90 dark:border-slate-700 shadow-xs p-6">
           <SectionHeader title="Profit by Product" titleBn="পণ্য অনুযায়ী মুনাফা" icon={<Package className="w-4 h-4" />} link="/admin/products" linkText={isBn ? 'পণ্য' : 'Products'} isBn={isBn} />

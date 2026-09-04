@@ -120,3 +120,110 @@ export function formatZodError(error: z.ZodError): string {
   return error.issues.map((issue) => issue.message).join(' | ');
 }
 
+// ============================================================================
+// MARKETING COMMAND CENTER VALIDATION SCHEMAS (Phase MC-1 / MC-2 / MC-3)
+// ============================================================================
+
+const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+export const marketingChannelCreateSchema = z.object({
+  type: z.enum(['FACEBOOK', 'INSTAGRAM', 'WHATSAPP', 'TELEGRAM', 'OTHER'], {
+    message: 'Channel type must be FACEBOOK, INSTAGRAM, WHATSAPP, TELEGRAM or OTHER',
+  }),
+  name: z.string().min(2, { message: 'Channel name must be at least 2 characters' }).max(120),
+  handle: z.string().min(1, { message: 'Page/Channel handle is required' }).max(120),
+  pageUrl: z.string().max(500).optional().or(z.literal('')),
+  status: z.enum(['ACTIVE', 'PAUSED', 'ARCHIVED']).default('ACTIVE'),
+  utmSourcePatterns: z.array(z.string().min(1).max(40)).max(20).default([]),
+  notes: z.string().max(500).optional().or(z.literal('')),
+  actor: z.string().max(80).optional(),
+});
+
+export const marketingChannelUpdateSchema = z.object({
+  name: z.string().min(2, { message: 'Channel name must be at least 2 characters' }).max(120).optional(),
+  handle: z.string().min(1, { message: 'Page/Channel handle is required' }).max(120).optional(),
+  pageUrl: z.string().max(500).optional().or(z.literal('')),
+  utmSourcePatterns: z.array(z.string().min(1).max(40)).max(20).optional(),
+  notes: z.string().max(500).optional().or(z.literal('')),
+  actor: z.string().max(80).optional(),
+});
+
+export const marketingChannelStatusSchema = z.object({
+  status: z.enum(['ACTIVE', 'PAUSED', 'ARCHIVED'], { message: 'Invalid status value' }),
+  note: z.string().max(300).optional().or(z.literal('')),
+  actor: z.string().max(80).optional(),
+});
+
+export const marketingSpendEntrySchema = z.object({
+  entryType: z.enum(['AD', 'BOOST', 'SEND'], { message: 'Entry type must be AD, BOOST or SEND' }),
+  channelId: z.string().min(1, { message: 'Marketing channel selection is required' }),
+  campaignId: z.string().min(1).optional().or(z.literal('')),
+  dateFrom: z.string().regex(ISO_DATE_RE, { message: 'Start date must be in YYYY-MM-DD format' }),
+  dateTo: z.string().regex(ISO_DATE_RE, { message: 'End date must be in YYYY-MM-DD format' }),
+  amountBdt: z
+    .number({ message: 'Spend amount must be a number' })
+    .min(0.01, { message: 'Spend amount must be greater than 0 BDT' })
+    .max(100000000, { message: 'Spend amount exceeds the allowed ledger limit' }),
+  impressions: z.number().int().min(0, { message: 'Impressions cannot be negative' }).default(0),
+  clicks: z.number().int().min(0, { message: 'Clicks cannot be negative' }).default(0),
+  sends: z.number().int().min(0, { message: 'Sends cannot be negative' }).default(0),
+  utmSource: z.string().max(60).optional().or(z.literal('')),
+  utmCampaign: z.string().max(120).optional().or(z.literal('')),
+  utmContent: z.string().max(120).optional().or(z.literal('')),
+  notes: z.string().max(500).optional().or(z.literal('')),
+  financeExpenseRef: z.string().max(60).optional().or(z.literal('')),
+  actor: z.string().max(80).optional(),
+});
+
+export const marketingSpendUpdateSchema = z.object({
+  entryType: z.enum(['AD', 'BOOST', 'SEND']).optional(),
+  channelId: z.string().min(1, { message: 'Marketing channel selection is required' }).optional(),
+  campaignId: z.string().min(1).optional().or(z.literal('')),
+  dateFrom: z.string().regex(ISO_DATE_RE, { message: 'Start date must be in YYYY-MM-DD format' }).optional(),
+  dateTo: z.string().regex(ISO_DATE_RE, { message: 'End date must be in YYYY-MM-DD format' }).optional(),
+  amountBdt: z
+    .number({ message: 'Spend amount must be a number' })
+    .min(0.01, { message: 'Spend amount must be greater than 0 BDT' })
+    .max(100000000, { message: 'Spend amount exceeds the allowed ledger limit' })
+    .optional(),
+  impressions: z.number().int().min(0).optional(),
+  clicks: z.number().int().min(0).optional(),
+  sends: z.number().int().min(0).optional(),
+  utmSource: z.string().max(60).optional().or(z.literal('')),
+  utmCampaign: z.string().max(120).optional().or(z.literal('')),
+  utmContent: z.string().max(120).optional().or(z.literal('')),
+  notes: z.string().max(500).optional().or(z.literal('')),
+  financeExpenseRef: z.string().max(60).optional().or(z.literal('')),
+  actor: z.string().max(80).optional(),
+});
+
+export const marketingSpendVoidSchema = z.object({
+  reason: z.string().min(3, { message: 'A void reason is required to preserve ledger history' }).max(300),
+  actor: z.string().max(80).optional(),
+});
+
+export const marketingAttributionEntrySchema = z.object({
+  channelId: z.string().min(1, { message: 'Attribution requires a marketing channel' }),
+  campaignId: z.string().min(1).optional().or(z.literal('')),
+  date: z.string().regex(ISO_DATE_RE, { message: 'Attribution date must be in YYYY-MM-DD format' }),
+  attributedRevenueBdt: z
+    .number({ message: 'Attributed revenue must be a number' })
+    .min(0, { message: 'Attributed revenue cannot be negative' })
+    .max(1000000000, { message: 'Attributed revenue exceeds the allowed ledger limit' }),
+  attributedOrders: z
+    .number()
+    .int({ message: 'Attributed orders must be a whole number' })
+    .min(0, { message: 'Attributed orders cannot be negative' })
+    .default(0),
+  orderNumbers: z.array(z.string().min(1).max(40)).max(200).default([]),
+  source: z.enum(['UTM', 'ADS_MANAGER', 'WHATSAPP', 'TELEGRAM', 'MANUAL'], {
+    message: 'Attribution source must be UTM, ADS_MANAGER, WHATSAPP, TELEGRAM or MANUAL',
+  }),
+  notes: z.string().max(500).optional().or(z.literal('')),
+  actor: z.string().max(80).optional(),
+});
+
+export type MarketingChannelCreateInput = z.infer<typeof marketingChannelCreateSchema>;
+export type MarketingSpendEntryInput = z.infer<typeof marketingSpendEntrySchema>;
+export type MarketingAttributionEntryInput = z.infer<typeof marketingAttributionEntrySchema>;
+

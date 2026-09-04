@@ -237,5 +237,34 @@ export const MARKETING_HELP_DATA: Record<string, AdminFunctionHelpData> = {
     riskWarningBn: 'অভ্যন্তরীণ নোটে কখনো গ্রাহকের পাসওয়ার্ড বা সংবেদনশীল পেমেন্ট তথ্য সংরক্ষণ করবেন না।',
     whoCanChange: 'Super Admin, Order Manager, Support Specialist',
     whoCanChangeBn: 'সুপার অ্যাডমিন, অর্ডার ম্যানেজার, সাপোর্ট স্পেশালিস্ট'
+  },
+
+  MARKETING_COMMAND_CENTER: {
+    id: 'MARKETING_COMMAND_CENTER',
+    title: 'Marketing Command Center — Channel Registry, Spend Ledger, Attribution & ROI Engine',
+    titleBn: 'মার্কেটিং কমান্ড সেন্টার — চ্যানেল রেজিস্ট্রি, স্পেন্ড লেজার, অ্যাট্রিবিউশন ও ROI ইঞ্জিন',
+    whatIsThis: 'A dedicated marketing performance desk that registers social/messaging channels (Facebook, Instagram, WhatsApp, Telegram, Other), logs every boost/ad/broadcast send cost in BDT with impressions/clicks/sends, records attributed revenue and orders per channel or campaign, and computes ROAS, ROI%, CPO, cost-per-click and cost-per-conversation entirely on the server.',
+    whatIsThisBn: 'মার্কেটিং পারফরম্যান্সের স্বতন্ত্র ডেস্ক — সোশ্যাল/মেসেজিং চ্যানেল (ফেসবুক, ইনস্টাগ্রাম, হোয়াটসঅ্যাপ, টেলিগ্রাম, অন্যান্য) নিবন্ধন, প্রতিটি বুস্ট/অ্যাড/ব্রডকাস্ট সেন্ড খরচ (ইম্প্রেশন-ক্লিক-সেন্ডসহ), চ্যানেল/ক্যাম্পেইনভিত্তিক রেভিনিউ-অর্ডার অ্যাট্রিবিউশন, আর ROAS, ROI%, CPO, কস্ট-পার-ক্লিক ও কস্ট-পার-কথোপকথন হিসাব সম্পূর্ণ সার্ভার-সাইডে।',
+    whyUsed: 'Marketing money currently disappears into the general Finance expense list with no feedback loop. This ledger closes the loop: which page, which campaign, which UTM actually returned orders — so boost budgets get allocated by evidence instead of gut feeling.',
+    whyUsedBn: 'মার্কেটিং খরচ সাধারণ ফাইন্যান্স খরচের তালিকায় মিশে গিয়ে কোনো ফিডব্যাক লুপ দেয় না। এই লেজার লুপ বন্ধ করে: কোন পেজ, কোন ক্যাম্পেইন, কোন UTM সত্যিই অর্ডার এনেছে — প্রমাণের ভিত্তিতে বাজেট ভাগ করার জন্য।',
+    howItWorks: 'Admins register channels and log spend entries (AD/BOOST/SEND) optionally linked to Campaigns module entries and Finance expense references. Storefront orders are auto-tagged with first-touch utm_source/campaign at checkout; the server matches these tags (and Ads Manager-style manual records) to channels/campaigns and produces ROI rows, monthly summaries and CSV exports. Voided ledger entries and archived channels are hidden from math but permanently retained.',
+    howItWorksBn: 'অ্যাডমিন চ্যানেল নিবন্ধন ও স্পেন্ড (অ্যাড/বুস্ট/সেন্ড) লগ করেন — চাইলে ক্যাম্পেইন বা ফাইন্যান্স খরচ রেফারেন্সের সাথে লিংক করে। চেকআউটে অর্ডারে প্রথম-টাচ UTM ট্যাগ বসে; সার্ভার তা (এবং ম্যানুয়াল অ্যাডস ম্যানেজার রেকর্ড) মিলিয়ে চ্যানেল/ক্যাম্পেইনের ROI, মাসিক সারাংশ ও CSV বানায়। বাতিল/আর্কাইভ করা রেকর্ড হিসাব থেকে বাদ পড়লেও ইতিহাসে চিরকাল থাকে।',
+    connectedTo: ['Campaigns module (broadcast campaigns)', 'Finance ledger (read-only MARKETING expense reconciliation)', 'Orders database (read-only UTM attribution)', 'Audit Chain'],
+    connectedToBn: ['ক্যাম্পেইন মডিউল', 'ফাইন্যান্স লেজার (শুধু-পড়া মিলানো)', 'অর্ডার ডাটাবেজ (শুধু-পড়া UTM ম্যাচিং)', 'অডিট চেইন'],
+    whatHappensIfChanged: 'Editing or voiding a spend entry instantly re-weights channel/campaign ROAS and the monthly summary on the next fetch. Changing a channel status only gates new entries — history stays whole.',
+    whatHappensIfChangedBn: 'স্পেন্ড এন্ট্রি বদালো বা বাতিল করলে পরবর্তী লোডেই চ্যানেল/ক্যাম্পেইনের ROAS ও মাসিক সারাংশ নতুন করে ওজন করে; চ্যানেল স্ট্যাটাস বদালো শুধু নতুন এন্ট্রিকে বাধা দেয়, পুরোনো ইতিহাস অটুট থাকে।',
+    affects: ['ROI dashboard and charts', 'Monthly marketing summary', 'CSV marketing reports', 'Channel status history'],
+    affectsBn: ['ROI ড্যাশবোর্ড ও চার্ট', 'মাসিক মার্কেটিং সারাংশ', 'CSV রিপোর্ট', 'চ্যানেল স্ট্যাটাস ইতিহাস'],
+    doesNotAffect: ['Finance expense records', 'Order totals or payment statuses', 'Product prices or inventory', 'Customer balances'],
+    doesNotAffectBn: ['ফাইন্যান্সের খরচ রেকর্ড', 'অর্ডারের মোট টাকা বা পেমেন্ট স্ট্যাটাস', 'পণ্যের দাম বা স্টক', 'গ্রাহকের ব্যালেন্স'],
+    requirements: ['Registered channel entry before logging spend', 'Valid YYYY-MM-DD period and positive BDT amounts', 'Order references must exist for manual attribution'],
+    requirementsBn: ['স্পেন্ড লগের আগে চ্যানেল নিবন্ধন', 'সঠিক তারিখ ও ধনাত্মক BDT পরিমাণ', 'ম্যানুয়াল অ্যাট্রিবিউশনে অর্ডার নম্বর অবশ্যই বিদ্যমান হতে হবে'],
+    currentStatus: 'Active ledger + server-side ROI engine. API auto-import (Meta CAPI / WhatsApp Cloud / Telegram Bot) is a documented FUTURE hook — never simulated.',
+    currentStatusBn: 'লেজার ও সার্ভার-সাইড ROI ইঞ্জিন সক্রিয়। API অটো-ইমপোর্ট (Meta CAPI / WhatsApp Cloud / Telegram Bot) শুধু নথিভুক্ত FUTURE হুক — কখনো সিমুলেট করা হয় না।',
+    riskLevel: 'LOW',
+    riskWarning: 'This desk must never edit finance or order data; if a booked expense is wrong, fix it in the Finance module, then mirror the correction here as a new entry — do not fabricate attribution revenue to force ROAS.',
+    riskWarningBn: 'এই ডেস্ক ফাইন্যান্স/অর্ডার ডেটা কখনো বদলাবে না; ভুল খরচ হলে ফাইন্যান্স মডিউলে ঠিক করুন, তারপর এখানে নতুন সংশোধনী এন্ট্রি দিন — ROAS সুন্দর দেখাতে কাল্পনিক রেভিনিউ অ্যাট্রিবিউশন করা কঠোরভাবে নিষিদ্ধ।',
+    whoCanChange: 'Super Admin, Admin (Marketing lead), Finance (read access to reconciliation)',
+    whoCanChangeBn: 'সুপার অ্যাডমিন, অ্যাডমিন (মার্কেটিং প্রধান), ফাইন্যান্স (মিলানো শুধু পড়তে পারবে)'
   }
 };
