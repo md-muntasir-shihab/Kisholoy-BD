@@ -163,8 +163,13 @@ for (const file of ADMIN_FILES) {
       it.kind === 'effect' ? 'data load / sync on mount or dependency change' : `${it.name} action`,
       apis.join(' | ') || 'NONE',
       reads.join(' ') || '-', writes.join(' ') || '-', ls.join(' ') || '-',
-      /audit/i.test(body) ? 'y' : 'n',
-      /(notification|showToast|dispatch-event|sms|whatsapp)/i.test(body) ? 'y' : 'n',
+      // Audit emission only counts when the body actually posts to an audit sink
+      // (a bare "audit" word in a label/filename is not an emission).
+      /\/api\/(security\/audit-chain\/log|admin\/audit-logs)/.test(body) ? 'y'
+        : (apis.length && /auditLog|addAuditLog|operator:/.test(body)) ? 'server-side?' : 'n',
+      // Real outbound customer/staff notification, NOT a local UI toast.
+      /(\/api\/notifications\/|dispatch-event|sendSms|whatsapp-link|quick-communication)/i.test(body) ? 'y'
+        : /showToast/.test(body) ? 'ui-toast-only' : 'n',
       perm,
     ]);
   }
@@ -260,11 +265,23 @@ const orphanComponents = ADMIN_FILES
 const md = [];
 md.push('# PHASE 1B addendum — Orphans\n');
 md.push(`_Generated ${new Date().toISOString().slice(0, 10)} by \`scripts/audit/build-inventory.mjs\`_\n`);
+// Classify orphans: some are legitimately callable only by external systems.
+const EXTERNAL_BY_DESIGN = [
+  /^\/api\/payments\/ipn$/,               // gateway server-to-server callback
+  /^\/api\/health$/,                      // infra/uptime probe
+  /^\/api\/webhooks\//,                   // outbound webhook tooling / external ping
+  /^\/api\/security\/audit-chain\/log$/,  // internal engine sink
+];
+const classify = (r) =>
+  EXTERNAL_BY_DESIGN.some((re) => re.test(r.path))
+    ? 'EXTERNAL/INFRA by design — document, do not wire'
+    : 'UNSURFACED capability — decide: wire into UI, or mark deprecated';
+
 md.push(`## Orphan server endpoints (${orphans.length} of ${routes.length})\n`);
 md.push('No client file references these paths. Decide per endpoint: **(a) wire into UI**, **(b) document as internal/webhook**, **(c) flag deprecated**. Do not delete.\n');
-md.push('| Method | Path | Handler | Engines |');
-md.push('|---|---|---|---|');
-for (const r of orphans) md.push(`| ${r.method} | \`${r.path}\` | server.ts:${r.line} | ${r.engines.join(', ') || '-'} |`);
+md.push('| Method | Path | Handler | Engines | Classification |');
+md.push('|---|---|---|---|---|');
+for (const r of orphans) md.push(`| ${r.method} | \`${r.path}\` | server.ts:${r.line} | ${r.engines.join(', ') || '-'} | ${classify(r)} |`);
 md.push(`\n## Orphan admin components (${orphanComponents.length})\n`);
 md.push('| Component | File | Note |');
 md.push('|---|---|---|');

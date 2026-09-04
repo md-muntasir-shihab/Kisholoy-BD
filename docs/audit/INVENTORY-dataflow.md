@@ -67,7 +67,7 @@ If any one is missing in code, PHASE 2 marks that connectivity row `BROKEN`.
 | **Reads** | `GET /api/inventory/stats` *(orphan)* · `GET /api/inventory/transactions` *(orphan)* · `GET /api/inventory/export` *(orphan)* · `GET /api/warehouses/stock-matrix` |
 | **UIs** | InventoryAdmin, FulfillmentAdmin, Dashboard badge, ProductsAdmin |
 | **Obligatory** | every quantity delta has exactly one ledger row with reason + operator; restore guards prevent double-restore; warehouse matrix stays consistent with product totals |
-| **Gap** | InventoryAdmin does **not** call `/api/inventory/transactions|stats|export` — it derives from context. Verify the ledger is actually surfaced anywhere. |
+| **Gap (S2-4, confirmed)** | `AppContext.inventoryTransactions` is seeded from mock data and **never replaced by a server payload**; `InventoryAdmin` makes zero API calls. Server ledger had 7 rows while the UI can only show the 6 seeded ones. `/api/inventory/stats\|transactions\|export` all orphan. |
 
 ## 5. Customer
 
@@ -100,7 +100,7 @@ If any one is missing in code, PHASE 2 marks that connectivity row `BROKEN`.
 | **Reads** | `GET /api/payments/transactions` |
 | **UIs** | PaymentsAdmin, Checkout, FinanceAdmin, ReturnsRefundsAdmin |
 | **Obligatory** | refund idempotency guard (already fixed once — must not regress); gateway callback → order status + ledger + notification; money never computed client-side |
-| **Gap** | `sslcommerz/init` and `bkash/create` are orphan while `validate`/`execute` are wired — the initiation half may be dead or bypassed. **Verify the checkout gateway path end-to-end.** |
+| **Gap (S4-2, clarified)** | `sslcommerz/init` and `bkash/create` are uncalled; Checkout opens gateway **modals** and then posts `validate`/`execute` (both wired). The simulated path works end-to-end; the real init handshake is merely unsurfaced. |
 
 ## 8. Shipment / Courier
 
@@ -151,9 +151,9 @@ If any one is missing in code, PHASE 2 marks that connectivity row `BROKEN`.
 | **Source of truth** | `serverDb.siteContent` + `contentRevisions` + `printSettings` |
 | **Writes** | `PUT /api/content` · `POST /api/content/publish` · `POST /api/content/restore/:revisionId` · `POST /api/content/upload-image` *(orphan)* · `PUT /api/print/settings` |
 | **Reads** | `GET /api/content|/revisions` · `GET /api/print/settings` |
-| **UIs** | ContentAdmin, **SettingsAdmin (no API calls at all — context only)**, PrintSettingsPanel, storefront Home/Footer/PolicyPage |
+| **UIs** | ContentAdmin, SettingsAdmin, PrintSettingsPanel, storefront Home/Footer/PolicyPage |
 | **Obligatory** | publish → storefront reflects immediately; every change → revision row; **store settings (shipping/COD/tax) must reach checkout math server-side** |
-| **Gap** | SettingsAdmin persists nothing to the server → **S2** |
+| **Verified OK** | SettingsAdmin → `updateSiteContent()` → `PUT /api/content` persists, and `financeEngine` consumes `siteContent.shippingFees` for checkout math (live-probed). |
 
 ## 13. Security / RBAC / Audit
 
@@ -173,7 +173,7 @@ If any one is missing in code, PHASE 2 marks that connectivity row `BROKEN`.
 | **Source of truth** | `backupEngine` snapshots + `/api/system/export|import` over `serverDb` |
 | **UIs** | BackupAdmin |
 | **Obligatory** | pre-restore snapshot before restore; export covers **every** collection |
-| **Gap** | `marketingCommandCenter` and `securityEngine` state live outside `serverDb` → likely **not** in export/restore. Must verify in PHASE 3. |
+| **Gap (S1-3, confirmed)** | `extractDatabaseSnapshotPayload()` covers **11 of 35** `serverDb` collections; restore covers 10. 24 collections (incl. `paymentTransactions`, `blacklists`, `loyaltyWallets`, `customerAddresses`, `gatewayConfig`, `fraudSettings`) are in neither. `marketingCommandCenter` + `securityEngine` state is outside `serverDb` entirely. A restore would silently destroy them. |
 
 ---
 
