@@ -427,6 +427,20 @@ async function startServer() {
         return res.status(404).json({ error: 'Order not found' });
       }
 
+      // When an order is cancelled, restore the sold stock exactly once so we
+      // never leak inventory. Guarded against double-restoration per order.
+      if (status === 'CANCELLED' && !(updatedOrder as any).stockRestoredOnCancel && updatedOrder.items?.length) {
+        for (const it of updatedOrder.items) {
+          serverDb.adjustInventory({
+            productId: (it as any).productId || it.sku,
+            quantityChange: it.quantity,
+            reason: `Restock after order ${updatedOrder.orderNumber} cancellation`,
+            operator: 'ORDER_STATUS'
+          });
+        }
+        (updatedOrder as any).stockRestoredOnCancel = true;
+      }
+
       // Automatically dispatch confirmation notification via configured gateways
       let eventKey: any = null;
       if (status === 'SHIPPED') eventKey = 'ORDER_SHIPPED';
@@ -1152,9 +1166,25 @@ async function startServer() {
 
   app.post('/api/admin/returns/approve', async (req, res) => {
     const { orderId } = req.body;
+    const target = serverDb.getOrderById(orderId);
+    if (!target) return res.status(404).json({ error: 'Order not found' });
+
+    // Restore sold stock exactly once on return (guarded against double-restock).
+    if (!(target as any).stockRestoredOnReturn && target.items?.length) {
+      for (const it of target.items) {
+        serverDb.adjustInventory({
+          productId: (it as any).productId || it.sku,
+          quantityChange: it.quantity,
+          reason: `Restock after order ${target.orderNumber} return`,
+          operator: 'RMA_SYSTEM'
+        });
+      }
+      (target as any).stockRestoredOnReturn = true;
+    }
+
     const order = serverDb.updateOrderStatus(orderId, 'RETURNED', 'RMA Approved & Item Inspected at Hub');
     if (!order) return res.status(404).json({ error: 'Order not found' });
-    serverDb.addAuditLog('APPROVE_RETURN', 'Order', orderId, 'Approved RMA and marked for restock');
+    serverDb.addAuditLog('APPROVE_RETURN', 'Order', orderId, 'Approved RMA, restored stock, and marked for restock');
     
     // Auto-adjust supplier eligible sale if linked
     try {

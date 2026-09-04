@@ -209,9 +209,16 @@ export function calculateFinancialSummary() {
     .filter(e => e.category === 'PACKAGING')
     .reduce((sum, e) => sum + e.amount, 0);
 
-  const courierFeesTotal = expenses
+  // Courier cost: use recorded COURIER_FEES expenses when present; otherwise
+  // fall back to a baseline fulfillment estimate. Never add both — that would
+  // double-count the same courier cost.
+  const recordedCourierFees = expenses
     .filter(e => e.category === 'COURIER_FEES')
-    .reduce((sum, e) => sum + e.amount, 0) + (nonCancelledOrders.length * 80); // baseline fulfillment cost
+    .reduce((sum, e) => sum + e.amount, 0);
+
+  const courierFeesTotal = recordedCourierFees > 0
+    ? recordedCourierFees
+    : (nonCancelledOrders.length * 80); // baseline fulfillment estimate
 
   const marketingTotal = expenses
     .filter(e => e.category === 'MARKETING')
