@@ -14,9 +14,10 @@ import {
   PickList, DispatchManifest,
   CouponRule, FlashDeal, CustomerLoyaltyWallet, PromotionSystemStats, LoyaltyPointsTransaction,
   CustomerAddress, WishlistItem, CustomerReturnRequest, CustomerProfile, CustomerNotification,
-  AuditSeverity, AuditCategory
+  AuditSeverity, AuditCategory, PrintSettings
 } from '../src/types';
 import { securityEngine } from './securityEngine';
+import { defaultPrintSettings } from '../src/lib/printFormats';
 import { 
   INITIAL_PRODUCTS, INITIAL_CATEGORIES, INITIAL_ORDERS, 
   INITIAL_CUSTOMERS, INITIAL_CONTENT, INITIAL_AUDIT_LOGS, 
@@ -67,6 +68,9 @@ class ServerDatabase {
   wishlists: WishlistItem[] = JSON.parse(JSON.stringify(INITIAL_WISHLISTS));
   customerReturns: CustomerReturnRequest[] = JSON.parse(JSON.stringify(INITIAL_CUSTOMER_RETURNS));
   customerProfiles: CustomerProfile[] = JSON.parse(JSON.stringify(INITIAL_CUSTOMER_PROFILES));
+
+  // Unified Print & Document Engine settings (output-only, non-mutating)
+  printSettings: PrintSettings = JSON.parse(JSON.stringify(defaultPrintSettings()));
 
   // Product methods
   getProductById(id: string): Product | undefined {

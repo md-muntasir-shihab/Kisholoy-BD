@@ -5,7 +5,7 @@ import {
   Search, Phone, DollarSign, Globe, Settings2, AlertCircle, Info, RefreshCw
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
-import { ShippingLabelModal } from '../components/admin/ShippingLabelModal';
+import { PrintOrderDocumentsModal } from '../components/print/PrintOrderDocumentsModal';
 import { Order, CustomCourierConfig } from '../types';
 
 export function ShipmentsAdmin() {
@@ -14,6 +14,7 @@ export function ShipmentsAdmin() {
     dispatchCourier, 
     showToast, 
     language,
+    siteContent,
     customCouriers,
     addCustomCourier,
     updateCustomCourier,
@@ -925,12 +926,14 @@ export function ShipmentsAdmin() {
         </div>
       )}
 
-      {/* PRINT LABEL MODAL */}
-      <ShippingLabelModal
-        isOpen={!!labelOrder}
-        onClose={() => setLabelOrder(null)}
-        order={labelOrder}
-      />
+      {/* UNIFIED PRINT DOCUMENTS MODAL */}
+      {labelOrder && (
+        <PrintOrderDocumentsModal
+          order={labelOrder}
+          siteContent={siteContent}
+          onClose={() => setLabelOrder(null)}
+        />
+      )}
     </div>
   );
 }

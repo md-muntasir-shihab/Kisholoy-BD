@@ -9,13 +9,12 @@ import {
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { Order, OrderStatus, OrderSourceChannel } from '../types';
-import { BusinessDocumentModal } from '../components/admin/BusinessDocumentModal';
-import { InvoiceGeneratorModal } from '../components/admin/InvoiceGeneratorModal';
+import { PrintOrderDocumentsModal } from '../components/print/PrintOrderDocumentsModal';
+import { BulkPrintModal } from '../components/print/BulkPrintModal';
 import { DateRangeFilterBar } from '../components/admin/DateRangeFilterBar';
 import { DateWiseDataHubModal } from '../components/admin/DateWiseDataHubModal';
 import { ManualOrderModal } from '../components/admin/ManualOrderModal';
 import { OrderCourierDispatchModal } from '../components/admin/OrderCourierDispatchModal';
-import { ShippingLabelModal } from '../components/admin/ShippingLabelModal';
 import { OrderLiveTrackingTimeline } from '../components/admin/OrderLiveTrackingTimeline';
 import { 
   DateFilterConfig, 
@@ -32,17 +31,15 @@ export function OrdersAdmin() {
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
   const [channelFilter, setChannelFilter] = useState<string>('ALL');
   const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || '');
-  const [selectedOrder, setSelectedOrder] = useState<any>(null);
-  const [printDoc, setPrintDoc] = useState<{ type: 'INVOICE' | 'PACKING_SLIP'; order: any } | null>(null);
-  const [showInvoiceGenerator, setShowInvoiceGenerator] = useState(false);
-  const [invoiceGeneratorOrderId, setInvoiceGeneratorOrderId] = useState<string | undefined>(undefined);
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [printOrder, setPrintOrder] = useState<Order | null>(null);
+  const [showBulkPrint, setShowBulkPrint] = useState(false);
   const [showDataHub, setShowDataHub] = useState(false);
   const [showManualOrderModal, setShowManualOrderModal] = useState(false);
   const [manualOrderInitialChannel, setManualOrderInitialChannel] = useState<OrderSourceChannel>('WHATSAPP');
   
   // Courier Integration states
   const [courierDispatchOrder, setCourierDispatchOrder] = useState<Order | null>(null);
-  const [shippingLabelOrder, setShippingLabelOrder] = useState<Order | null>(null);
   const [copiedTracking, setCopiedTracking] = useState(false);
 
   // Date Filter State
@@ -204,15 +201,11 @@ ${advancePaid > 0 ? `✅ *অগ্রিম পরিশোধ:* ৳${advancePa
             <span>{isBn ? 'মাস্টার ডেট হাব' : 'Date & Export Hub'}</span>
           </button>
           <button
-            onClick={() => {
-              setInvoiceGeneratorOrderId(undefined);
-              setShowInvoiceGenerator(true);
-            }}
+            onClick={() => setShowBulkPrint(true)}
             className="px-4 py-2 bg-teal-900 hover:bg-teal-950 text-white rounded-xl text-xs font-bold flex items-center gap-2 shadow-xs transition-all"
           >
-            <FileText className="w-4 h-4 text-teal-300" />
-            <span>Invoice Generator</span>
-            <span className="px-1.5 py-0.5 rounded text-[10px] bg-teal-800 text-teal-200 font-normal">PDF</span>
+            <Printer className="w-4 h-4 text-teal-300" />
+            <span>{isBn ? 'বাল্ক প্রিন্ট' : 'Bulk Print Orders'}</span>
           </button>
         </div>
       </div>
@@ -478,15 +471,12 @@ ${advancePaid > 0 ? `✅ *অগ্রিম পরিশোধ:* ৳${advancePa
                       </button>
 
                       <button
-                        onClick={() => {
-                          setInvoiceGeneratorOrderId(order.id);
-                          setShowInvoiceGenerator(true);
-                        }}
-                        title="Generate & Download Invoice (PDF)"
+                        onClick={() => setPrintOrder(order)}
+                        title="Print Order Documents (one PDF)"
                         className="px-2.5 py-1 bg-teal-50 hover:bg-teal-100 text-teal-900 border border-teal-200 rounded font-semibold flex items-center gap-1 transition-colors"
                       >
-                        <FileText className="w-3 h-3 text-teal-700" />
-                        <span>Invoice</span>
+                        <Printer className="w-3 h-3 text-teal-700" />
+                        <span>Print</span>
                       </button>
                       <button
                         onClick={() => setSelectedOrder(order)}
@@ -622,11 +612,11 @@ ${advancePaid > 0 ? `✅ *অগ্রিম পরিশোধ:* ৳${advancePa
                 />
                 <div className="flex justify-end gap-2 text-xs pt-1">
                   <button
-                    onClick={() => setShippingLabelOrder(selectedOrder)}
+                    onClick={() => setPrintOrder(selectedOrder)}
                     className="px-3 py-1.5 bg-stone-900 hover:bg-black text-white rounded-lg font-bold text-xs flex items-center gap-1 transition-colors shadow-2xs"
                   >
                     <Printer className="w-3.5 h-3.5 text-teal-300" />
-                    <span>Print Shipping Label</span>
+                    <span>Print Order Documents</span>
                   </button>
                   <button
                     onClick={() => setCourierDispatchOrder(selectedOrder)}
@@ -780,26 +770,12 @@ ${advancePaid > 0 ? `✅ *অগ্রিম পরিশোধ:* ৳${advancePa
                   <span>{selectedOrder.courier?.trackingId ? 'Manage Courier / Dispatch' : 'Dispatch via Steadfast/Pathao'}</span>
                 </button>
                 <button
-                  onClick={() => {
-                    setInvoiceGeneratorOrderId(selectedOrder.id);
-                    setShowInvoiceGenerator(true);
-                  }}
+                  onClick={() => setPrintOrder(selectedOrder)}
                   className="px-3.5 py-2 bg-teal-900 text-white rounded-lg text-xs font-bold hover:bg-teal-950 flex items-center gap-1.5 shadow-xs"
                 >
                   <FileText className="w-3.5 h-3.5 text-teal-300" />
-                  <span>Invoice Generator (PDF)</span>
-                </button>
-                <button
-                  onClick={() => setPrintDoc({ type: 'INVOICE', order: selectedOrder })}
-                  className="px-3 py-2 bg-stone-900 text-white rounded-lg text-xs font-bold hover:bg-black flex items-center gap-1.5 shadow-xs"
-                >
-                  <Receipt className="w-3.5 h-3.5" /> Mushak-6.3 Print
-                </button>
-                <button
-                  onClick={() => setPrintDoc({ type: 'PACKING_SLIP', order: selectedOrder })}
-                  className="px-3 py-2 bg-stone-100 text-stone-800 rounded-lg text-xs font-bold hover:bg-stone-200 flex items-center gap-1.5"
-                >
-                  <Layers className="w-3.5 h-3.5" /> Packing Slip
+                  <span>Print Order Documents</span>
+                  <span className="px-1.5 py-0.5 rounded text-[10px] bg-teal-800 text-teal-200 font-normal">One PDF</span>
                 </button>
               </div>
               <button
@@ -825,17 +801,26 @@ ${advancePaid > 0 ? `✅ *অগ্রিম পরিশোধ:* ৳${advancePa
             }
           }}
           onPrintLabel={(ord) => {
-            setShippingLabelOrder(ord);
+            setPrintOrder(ord);
           }}
         />
       )}
 
-      {/* Shipping Label Printable Modal */}
-      {shippingLabelOrder && (
-        <ShippingLabelModal
-          isOpen={!!shippingLabelOrder}
-          order={shippingLabelOrder}
-          onClose={() => setShippingLabelOrder(null)}
+      {/* Unified Single-Order Print Documents Modal */}
+      {printOrder && (
+        <PrintOrderDocumentsModal
+          order={printOrder}
+          siteContent={siteContent}
+          onClose={() => setPrintOrder(null)}
+        />
+      )}
+
+      {/* Unified Bulk Print Modal */}
+      {showBulkPrint && (
+        <BulkPrintModal
+          orders={orders}
+          siteContent={siteContent}
+          onClose={() => setShowBulkPrint(false)}
         />
       )}
 
@@ -845,30 +830,6 @@ ${advancePaid > 0 ? `✅ *অগ্রিম পরিশোধ:* ৳${advancePa
           isOpen={showManualOrderModal}
           onClose={() => setShowManualOrderModal(false)}
           defaultChannel={manualOrderInitialChannel}
-        />
-      )}
-
-      {/* Advanced Invoice Generator Modal */}
-      {showInvoiceGenerator && (
-        <InvoiceGeneratorModal
-          initialOrderId={invoiceGeneratorOrderId}
-          ordersList={orders}
-          siteContent={siteContent}
-          onClose={() => {
-            setShowInvoiceGenerator(false);
-            setInvoiceGeneratorOrderId(undefined);
-          }}
-        />
-      )}
-
-      {/* Printable Business Document Modal */}
-      {printDoc && (
-        <BusinessDocumentModal
-          type={printDoc.type}
-          order={printDoc.order}
-          ordersList={orders}
-          siteContent={siteContent}
-          onClose={() => setPrintDoc(null)}
         />
       )}
 

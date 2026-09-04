@@ -34,10 +34,10 @@ export function CartPage() {
   if (cart.length === 0) {
     return (
       <div className="max-w-3xl mx-auto px-4 py-24 text-center">
-        <div className="w-20 h-20 bg-stone-100 rounded-3xl flex items-center justify-center mx-auto mb-6 text-stone-400 border border-stone-200">
+        <div className="w-20 h-20 bg-stone-100 dark:bg-slate-800 rounded-3xl flex items-center justify-center mx-auto mb-6 text-stone-400 border border-stone-200 dark:border-slate-700">
           <ShoppingBag className="w-10 h-10" />
         </div>
-        <h2 className="text-2xl sm:text-3xl font-serif font-black text-stone-900 mb-3 tracking-tight">
+        <h2 className="text-2xl sm:text-3xl font-serif font-black text-stone-900 dark:text-slate-100 mb-3 tracking-tight">
           {isBn ? 'আপনার শপিং ব্যাগটি খালি' : 'Your Shopping Bag is Empty'}
         </h2>
         <p className="text-stone-500 text-sm mb-8 max-w-md mx-auto leading-relaxed">
@@ -47,7 +47,7 @@ export function CartPage() {
         </p>
         <Link
           to="/shop"
-          className="inline-flex items-center gap-2 px-8 py-3.5 bg-teal-900 text-white rounded-2xl text-xs sm:text-sm font-bold hover:bg-teal-950 transition-all shadow-xs hover:shadow-sm"
+          className="inline-flex items-center gap-2 px-8 py-3.5 bg-teal-900 dark:bg-teal-600 text-white rounded-2xl text-xs sm:text-sm font-bold hover:bg-teal-950 dark:hover:bg-teal-500 transition-all shadow-xs hover:shadow-sm"
         >
           <span>{isBn ? 'পণ্য কেনাকাটা শুরু করুন' : 'Explore Artisanal Catalog'}</span>
           <ArrowRight className="w-4 h-4" />
@@ -58,17 +58,17 @@ export function CartPage() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
-      <div className="flex items-center justify-between mb-8 pb-4 border-b border-stone-200/80">
+      <div className="flex items-center justify-between mb-8 pb-4 border-b border-stone-200/80 dark:border-slate-800">
         <div>
-          <div className="flex items-center gap-2 text-xs font-bold text-teal-900 uppercase tracking-widest mb-1">
+          <div className="flex items-center gap-2 text-xs font-bold text-teal-800 dark:text-teal-300 uppercase tracking-widest mb-1">
             <Sparkles className="w-3.5 h-3.5 text-amber-500" />
             <span>{isBn ? 'অর্ডার রিভিউ' : 'Order Review'}</span>
           </div>
-          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-serif font-black text-stone-900 tracking-tight">
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-serif font-black text-stone-900 dark:text-slate-100 tracking-tight">
             {isBn ? 'শপিং কার্ট' : 'Shopping Cart'} ({cart.length} {cart.length === 1 ? 'item' : 'items'})
           </h1>
         </div>
-        <Link to="/shop" className="hidden sm:inline-flex items-center gap-1.5 text-xs font-bold text-teal-900 hover:text-teal-950 hover:underline">
+        <Link to="/shop" className="hidden sm:inline-flex items-center gap-1.5 text-xs font-bold text-teal-800 dark:text-teal-300 hover:text-teal-950 dark:hover:text-teal-200 hover:underline">
           <ArrowLeft className="w-3.5 h-3.5" />
           <span>{isBn ? 'শপে ফিরে যান' : 'Continue Shopping'}</span>
         </Link>
@@ -76,22 +76,22 @@ export function CartPage() {
 
       {/* Free Shipping Progress Alert */}
       {remainingForFreeShipping > 0 ? (
-        <div className="mb-8 bg-teal-50/90 border border-teal-200 rounded-2xl p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-2xs">
+        <div className="mb-8 bg-teal-50/90 dark:bg-teal-500/10 border border-teal-200 dark:border-teal-500/30 rounded-2xl p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-2xs">
           <div className="flex items-center gap-3.5">
-            <div className="w-10 h-10 rounded-xl bg-teal-100 text-teal-900 flex items-center justify-center shrink-0 border border-teal-200">
+            <div className="w-10 h-10 rounded-xl bg-teal-100 dark:bg-teal-500/20 text-teal-900 dark:text-teal-300 flex items-center justify-center shrink-0 border border-teal-200 dark:border-teal-500/30">
               <Truck className="w-5 h-5" />
             </div>
             <span className="text-xs sm:text-sm text-teal-950 font-medium">
               Add <span className="font-bold text-teal-900">৳ {remainingForFreeShipping.toLocaleString()}</span> more to qualify for <strong>FREE Delivery</strong> inside Dhaka!
             </span>
           </div>
-          <Link to="/shop" className="text-xs font-bold text-teal-900 hover:underline shrink-0 bg-white px-3.5 py-1.5 rounded-xl border border-teal-200 shadow-2xs">
+          <Link to="/shop" className="text-xs font-bold text-teal-900 hover:underline shrink-0 bg-white dark:bg-slate-800 px-3.5 py-1.5 rounded-xl border border-teal-200 dark:border-teal-500/30 shadow-2xs">
             Add More Items &rarr;
           </Link>
         </div>
       ) : (
-        <div className="mb-8 bg-emerald-50/90 border border-emerald-200 rounded-2xl p-5 flex items-center gap-3.5 text-emerald-900 text-xs sm:text-sm font-semibold shadow-2xs">
-          <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-900 flex items-center justify-center shrink-0 border border-emerald-200">
+        <div className="mb-8 bg-emerald-50/90 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/30 rounded-2xl p-5 flex items-center gap-3.5 text-emerald-900 dark:text-emerald-300 text-xs sm:text-sm font-semibold shadow-2xs">
+          <div className="w-10 h-10 rounded-xl bg-emerald-100 dark:bg-emerald-500/20 text-emerald-900 dark:text-emerald-300 flex items-center justify-center shrink-0 border border-emerald-200 dark:border-emerald-500/30">
             <ShieldCheck className="w-5 h-5 text-emerald-700" />
           </div>
           <span>Congratulations! You qualify for <strong>FREE Delivery</strong> anywhere in Dhaka!</span>
@@ -101,15 +101,15 @@ export function CartPage() {
       <div className="flex flex-col lg:flex-row gap-8 lg:gap-10">
         {/* Cart Items Table */}
         <div className="flex-1 space-y-4">
-          <div className="bg-white rounded-3xl border border-stone-200/90 divide-y divide-stone-100 shadow-sm overflow-hidden">
+          <div className="bg-white dark:bg-slate-800 rounded-3xl border border-stone-200/90 dark:border-slate-700 divide-y divide-stone-100 dark:divide-slate-700 shadow-sm overflow-hidden">
             {cart.map((item) => (
-              <div key={item.id} className="p-5 sm:p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5 hover:bg-stone-50/40 transition-colors">
+              <div key={item.id} className="p-5 sm:p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5 hover:bg-stone-50/40 dark:hover:bg-slate-700/40 transition-colors">
                 <div className="flex items-center gap-4">
-                  <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl overflow-hidden bg-stone-100 border border-stone-200 shrink-0 shadow-2xs">
+                  <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl overflow-hidden bg-stone-100 dark:bg-slate-700 border border-stone-200 dark:border-slate-600 shrink-0 shadow-2xs">
                     <img src={item.image} alt={item.title} className="w-full h-full object-cover" />
                   </div>
                   <div>
-                    <h3 className="text-sm sm:text-base font-serif font-bold text-stone-900 line-clamp-1">
+                    <h3 className="text-sm sm:text-base font-serif font-bold text-stone-900 dark:text-slate-100 line-clamp-1">
                       {isBn && item.titleBn ? item.titleBn : item.title}
                     </h3>
                     {item.variantName && (
@@ -120,7 +120,7 @@ export function CartPage() {
                     <span className="text-xs font-mono text-stone-400 block mt-0.5">
                       SKU: {item.sku}
                     </span>
-                    <span className="text-sm font-black text-stone-900 block mt-1.5 font-mono">
+                    <span className="text-sm font-black text-stone-900 dark:text-slate-100 block mt-1.5 font-mono">
                       ৳ {item.price.toLocaleString()}
                     </span>
                   </div>
@@ -128,7 +128,7 @@ export function CartPage() {
 
                 <div className="flex items-center justify-between w-full sm:w-auto gap-4 self-end sm:self-center">
                   {/* Quantity Stepper */}
-                  <div className="flex items-center border border-stone-300 rounded-2xl bg-stone-50 p-1">
+                  <div className="flex items-center border border-stone-300 dark:border-slate-600 rounded-2xl bg-stone-50 dark:bg-slate-700 p-1">
                     <button
                       onClick={() => updateCartQuantity(item.id, item.quantity - 1)}
                       className="w-8 h-8 flex items-center justify-center text-stone-600 hover:text-stone-900 hover:bg-stone-200/70 rounded-xl font-bold transition-colors"
@@ -152,7 +152,7 @@ export function CartPage() {
 
                   <button
                     onClick={() => removeFromCart(item.id)}
-                    className="p-2 text-stone-400 hover:text-rose-600 rounded-xl hover:bg-rose-50 transition-colors"
+                    className="p-2 text-stone-400 hover:text-rose-600 rounded-xl hover:bg-rose-50 dark:hover:bg-rose-500/20 transition-colors"
                     title="Remove item"
                   >
                     <Trash2 className="w-4 h-4" />
@@ -172,8 +172,8 @@ export function CartPage() {
 
         {/* Order Summary Card */}
         <div className="lg:w-96 shrink-0">
-          <div className="bg-white rounded-3xl border border-stone-200/90 p-6 sm:p-7 space-y-6 shadow-sm sticky top-24">
-            <h2 className="text-lg font-serif font-black text-stone-900">
+          <div className="bg-white dark:bg-slate-800 rounded-3xl border border-stone-200/90 dark:border-slate-700 p-6 sm:p-7 space-y-6 shadow-sm sticky top-24">
+            <h2 className="text-lg font-serif font-black text-stone-900 dark:text-slate-100">
               {isBn ? 'অর্ডারের বিবরণী' : 'Order Summary'}
             </h2>
 
@@ -207,14 +207,14 @@ export function CartPage() {
               </div>
               <button
                 type="submit"
-                className="px-4 py-2.5 bg-stone-900 hover:bg-stone-800 text-white rounded-xl text-xs font-bold shadow-2xs transition-colors"
+                className="px-4 py-2.5 bg-stone-900 dark:bg-slate-700 hover:bg-stone-800 dark:hover:bg-slate-600 text-white rounded-xl text-xs font-bold shadow-2xs transition-colors"
               >
                 {isBn ? 'প্রয়োগ' : 'Apply'}
               </button>
             </form>
 
             {/* Price Calculations */}
-            <div className="space-y-3 pt-4 border-t border-stone-100 text-xs sm:text-sm">
+            <div className="space-y-3 pt-4 border-t border-stone-100 dark:border-slate-700 text-xs sm:text-sm">
               <div className="flex justify-between text-stone-600">
                 <span>Subtotal</span>
                 <span className="font-bold text-stone-900 font-mono">৳ {cartSubtotal.toLocaleString()}</span>
@@ -231,16 +231,16 @@ export function CartPage() {
                   <span className="font-mono">- ৳ {discountAmount.toLocaleString()}</span>
                 </div>
               )}
-              <div className="pt-3 border-t border-stone-200 flex justify-between items-baseline">
-                <span className="font-black text-stone-900 text-base font-serif">Total Payable</span>
-                <span className="font-black text-2xl text-stone-900 font-mono">৳ {finalTotal.toLocaleString()}</span>
+              <div className="pt-3 border-t border-stone-200 dark:border-slate-700 flex justify-between items-baseline">
+                <span className="font-black text-stone-900 dark:text-slate-100 text-base font-serif">Total Payable</span>
+                <span className="font-black text-2xl text-stone-900 dark:text-slate-100 font-mono">৳ {finalTotal.toLocaleString()}</span>
               </div>
             </div>
 
             {/* Checkout CTA */}
             <button
               onClick={() => navigate('/checkout')}
-              className="w-full py-4 px-5 bg-teal-900 text-white font-bold rounded-2xl text-sm hover:bg-teal-950 active:scale-98 transition-all flex items-center justify-center gap-2 shadow-xs hover:shadow-sm"
+              className="w-full py-4 px-5 bg-teal-900 dark:bg-teal-600 text-white font-bold rounded-2xl text-sm hover:bg-teal-950 dark:hover:bg-teal-500 active:scale-98 transition-all flex items-center justify-center gap-2 shadow-xs hover:shadow-sm"
             >
               <span>{isBn ? 'চেকআউটে যান' : 'Proceed to Checkout'}</span>
               <ArrowRight className="w-4 h-4 text-teal-300" />

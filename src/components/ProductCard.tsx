@@ -21,7 +21,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
     : null;
 
   return (
-    <div className="group relative flex flex-col bg-white rounded-2xl border border-stone-200/90 overflow-hidden shadow-xs hover:shadow-xl hover:border-stone-300 transition-all duration-300">
+    <div className="group relative flex flex-col bg-white dark:bg-slate-800 rounded-2xl border border-stone-200/90 dark:border-slate-700 overflow-hidden shadow-xs hover:shadow-xl hover:border-stone-300 dark:hover:border-slate-600 transition-all duration-300">
       {/* Product Image Container */}
       <div className="relative aspect-square w-full overflow-hidden bg-stone-100">
         <Link to={`/product/${product.slug}`} className="block w-full h-full">
@@ -44,7 +44,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
           className={`absolute top-3 right-3 p-2.5 rounded-full transition-all duration-200 shadow-md backdrop-blur-md ${
             wishlisted
               ? 'bg-rose-50/95 text-rose-600 hover:bg-rose-100 scale-105'
-              : 'bg-white/85 text-stone-700 hover:text-rose-600 hover:bg-white hover:scale-105'
+              : 'bg-white/85 text-stone-700 hover:text-rose-600 hover:bg-white hover:scale-105 dark:bg-slate-800/80 dark:text-slate-200 dark:hover:bg-slate-700'
           }`}
         >
           <Heart className={`w-4 h-4 ${wishlisted ? 'fill-rose-600 stroke-rose-600' : ''}`} />
@@ -68,7 +68,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
 
         {/* In Stock & Origin Indicator */}
         <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between pointer-events-none">
-          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[10px] font-semibold bg-white/95 text-teal-900 backdrop-blur-md border border-stone-200/80 shadow-xs">
+          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[10px] font-semibold bg-white/95 text-teal-900 backdrop-blur-md border border-stone-200/80 shadow-xs dark:bg-slate-800/95 dark:text-teal-300 dark:border-slate-700">
             <CheckCircle2 className="w-3 h-3 text-teal-700" />
             {language === 'BN' ? 'স্টকে প্রস্তুত' : 'In Stock'}
           </span>
@@ -123,7 +123,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
           <button
             onClick={() => addToCart(product, 1)}
             aria-label={`Add ${product.title} to cart`}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-teal-900 hover:bg-teal-950 text-white active:scale-95 transition-all shadow-xs font-semibold text-xs flex-shrink-0"
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-teal-900 hover:bg-teal-950 text-white active:scale-95 transition-all shadow-xs font-semibold text-xs flex-shrink-0 dark:bg-teal-600 dark:hover:bg-teal-500"
           >
             <ShoppingBag className="w-3.5 h-3.5" />
             <span>{language === 'BN' ? 'কিনুন' : 'Add'}</span>

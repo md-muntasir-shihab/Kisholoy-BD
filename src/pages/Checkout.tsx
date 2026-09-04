@@ -100,9 +100,9 @@ export function Checkout() {
   if (cart.length === 0) {
     return (
       <div className="max-w-md mx-auto px-4 py-24 text-center">
-        <h2 className="text-2xl font-serif font-black mb-3 text-stone-900">Your cart is empty</h2>
+        <h2 className="text-2xl font-serif font-black mb-3 text-stone-900 dark:text-slate-100">Your cart is empty</h2>
         <p className="text-xs text-stone-500 mb-6">Add authentic items to proceed with fast checkout.</p>
-        <Link to="/shop" className="px-6 py-2.5 bg-teal-900 text-white rounded-xl text-xs font-bold hover:bg-teal-950 transition-colors shadow-xs">
+        <Link to="/shop" className="px-6 py-2.5 bg-teal-900 dark:bg-teal-600 text-white rounded-xl text-xs font-bold hover:bg-teal-950 dark:hover:bg-teal-500 transition-colors shadow-xs">
           Browse Catalog &rarr;
         </Link>
       </div>
@@ -280,35 +280,35 @@ export function Checkout() {
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
-      <Link to="/cart" className="inline-flex items-center gap-1.5 text-xs font-bold text-teal-900 hover:text-teal-950 mb-6">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 sm:pt-12 pb-28 lg:pb-12">
+      <Link to="/cart" className="inline-flex items-center gap-1.5 text-xs font-bold text-teal-800 dark:text-teal-300 hover:text-teal-950 dark:hover:text-teal-200 mb-6">
         <ArrowLeft className="w-4 h-4" />
         <span>Return to Shopping Cart</span>
       </Link>
 
       <div className="mb-8">
-        <div className="flex items-center gap-2 text-xs font-bold text-teal-900 uppercase tracking-widest mb-1">
+        <div className="flex items-center gap-2 text-xs font-bold text-teal-800 dark:text-teal-300 uppercase tracking-widest mb-1">
           <Lock className="w-3.5 h-3.5 text-emerald-600" />
           <span>256-Bit Encrypted Secure Checkout</span>
         </div>
-        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-serif font-black text-stone-900 tracking-tight">
+        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-serif font-black text-stone-900 dark:text-slate-100 tracking-tight">
           {language === 'BN' ? 'অর্ডার চেকআউট ও পেমেন্ট' : 'Complete Your Order'}
         </h1>
       </div>
 
       {errorMessage && (
-        <div className="mb-6 p-4 bg-rose-50 border border-rose-200 text-rose-900 text-xs sm:text-sm font-semibold rounded-2xl shadow-2xs">
+        <div className="mb-6 p-4 bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/30 text-rose-900 dark:text-rose-300 text-xs sm:text-sm font-semibold rounded-2xl shadow-2xs">
           {errorMessage}
         </div>
       )}
 
-      <form onSubmit={handleSubmitOrder} className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12">
+      <form id="checkout-form" onSubmit={handleSubmitOrder} className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12">
         {/* Left Column: Checkout Steps Form (7 cols) */}
         <div className="lg:col-span-7 space-y-6">
           
           {/* Section 1: Customer Contact */}
-          <div className="bg-white p-6 sm:p-7 rounded-3xl border border-stone-200/90 shadow-sm space-y-4">
-            <h2 className="text-base font-serif font-black text-stone-900 flex items-center gap-2.5">
+          <div className="bg-white dark:bg-slate-800 p-6 sm:p-7 rounded-3xl border border-stone-200/90 dark:border-slate-700 shadow-sm space-y-4">
+            <h2 className="text-base font-serif font-black text-stone-900 dark:text-slate-100 flex items-center gap-2.5">
               <span className="w-6 h-6 rounded-full bg-teal-900 text-white text-xs font-bold flex items-center justify-center font-sans">1</span>
               <span>Contact Information</span>
             </h2>
@@ -360,15 +360,15 @@ export function Checkout() {
           </div>
 
           {/* Section 2: Delivery Address */}
-          <div className="bg-white p-6 sm:p-7 rounded-3xl border border-stone-200/90 shadow-sm space-y-4">
-            <h2 className="text-base font-serif font-black text-stone-900 flex items-center gap-2.5">
+          <div className="bg-white dark:bg-slate-800 p-6 sm:p-7 rounded-3xl border border-stone-200/90 dark:border-slate-700 shadow-sm space-y-4">
+            <h2 className="text-base font-serif font-black text-stone-900 dark:text-slate-100 flex items-center gap-2.5">
               <span className="w-6 h-6 rounded-full bg-teal-900 text-white text-xs font-bold flex items-center justify-center font-sans">2</span>
               <span>Delivery Address in Bangladesh</span>
             </h2>
 
             {/* Saved Addresses Quick Selector */}
             {savedAddresses && savedAddresses.length > 0 && (
-              <div className="p-3.5 bg-stone-50 border border-stone-200 rounded-2xl space-y-2">
+              <div className="p-3.5 bg-stone-50 dark:bg-slate-800/70 border border-stone-200 dark:border-slate-700 rounded-2xl space-y-2">
                 <span className="text-[11px] font-bold text-stone-600 block uppercase tracking-wider">
                   {language === 'BN' ? 'সংরক্ষিত ঠিকানা থেকে বেছে নিন (Saved Addresses):' : 'Select from Saved Addresses:'}
                 </span>
@@ -391,7 +391,7 @@ export function Checkout() {
                         }
                         showToast(`Filled address: ${addr.label} (${addr.recipientName})`);
                       }}
-                      className="px-3.5 py-2 text-xs font-bold rounded-xl border border-stone-300 bg-white hover:border-teal-800 hover:bg-teal-50 text-stone-800 transition-all flex items-center gap-1.5 shadow-2xs"
+                      className="px-3.5 py-2 text-xs font-bold rounded-xl border border-stone-300 bg-white dark:bg-slate-800 hover:border-teal-800 hover:bg-teal-50 text-stone-800 dark:text-slate-100 transition-all flex items-center gap-1.5 shadow-2xs"
                     >
                       <MapPin className="w-3.5 h-3.5 text-teal-800" />
                       <span>{addr.label}:</span>
@@ -485,8 +485,8 @@ export function Checkout() {
           </div>
 
           {/* Section 3: Payment Method */}
-          <div className="bg-white p-6 sm:p-7 rounded-3xl border border-stone-200/90 shadow-sm space-y-4">
-            <h2 className="text-base font-serif font-black text-stone-900 flex items-center gap-2.5">
+          <div className="bg-white dark:bg-slate-800 p-6 sm:p-7 rounded-3xl border border-stone-200/90 dark:border-slate-700 shadow-sm space-y-4">
+            <h2 className="text-base font-serif font-black text-stone-900 dark:text-slate-100 flex items-center gap-2.5">
               <span className="w-6 h-6 rounded-full bg-teal-900 text-white text-xs font-bold flex items-center justify-center font-sans">3</span>
               <span>Payment Method</span>
             </h2>
@@ -496,8 +496,8 @@ export function Checkout() {
                 onClick={() => setPaymentMethod('COD')}
                 className={`flex items-start p-5 rounded-2xl border cursor-pointer transition-all ${
                   paymentMethod === 'COD' 
-                    ? 'border-teal-900 bg-teal-50/50 shadow-xs scale-101' 
-                    : 'border-stone-200 hover:bg-stone-50'
+                    ? 'border-teal-900 dark:border-teal-500 bg-teal-50/50 dark:bg-teal-500/10 shadow-xs scale-101' 
+                    : 'border-stone-200 hover:bg-stone-50 dark:border-slate-700 dark:hover:bg-slate-800'
                 }`}
               >
                 <input
@@ -509,11 +509,11 @@ export function Checkout() {
                 />
                 <div className="ml-3.5 flex-1">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm font-bold text-stone-900 flex items-center gap-2">
+                    <span className="text-sm font-bold text-stone-900 dark:text-slate-100 flex items-center gap-2">
                       <Banknote className="w-4 h-4 text-teal-800" />
                       Cash on Delivery (COD)
                     </span>
-                    <span className="text-[10px] font-bold text-teal-950 bg-teal-100 px-2.5 py-0.5 rounded-full border border-teal-200">
+                    <span className="text-[10px] font-bold text-teal-950 bg-teal-100 dark:bg-teal-500/20 px-2.5 py-0.5 rounded-full border border-teal-200 dark:border-teal-500/30">
                       Most Popular
                     </span>
                   </div>
@@ -527,8 +527,8 @@ export function Checkout() {
                 onClick={() => setPaymentMethod('SSLCOMMERZ')}
                 className={`flex items-start p-5 rounded-2xl border cursor-pointer transition-all ${
                   paymentMethod === 'SSLCOMMERZ' 
-                    ? 'border-teal-900 bg-teal-50/50 shadow-xs scale-101' 
-                    : 'border-stone-200 hover:bg-stone-50'
+                    ? 'border-teal-900 dark:border-teal-500 bg-teal-50/50 dark:bg-teal-500/10 shadow-xs scale-101' 
+                    : 'border-stone-200 hover:bg-stone-50 dark:border-slate-700 dark:hover:bg-slate-800'
                 }`}
               >
                 <input
@@ -540,11 +540,11 @@ export function Checkout() {
                 />
                 <div className="ml-3.5 flex-1">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm font-bold text-stone-900 flex items-center gap-2">
+                    <span className="text-sm font-bold text-stone-900 dark:text-slate-100 flex items-center gap-2">
                       <CreditCard className="w-4 h-4 text-teal-800" />
                       Online Payment (bKash / Nagad / Debit / Credit Cards)
                     </span>
-                    <span className="text-[10px] font-bold text-stone-700 bg-stone-100 px-2.5 py-0.5 rounded-full">
+                    <span className="text-[10px] font-bold text-stone-700 bg-stone-100 dark:bg-slate-700 px-2.5 py-0.5 rounded-full">
                       Instant Gateway
                     </span>
                   </div>
@@ -559,20 +559,20 @@ export function Checkout() {
 
         {/* Right Column: Order Summary (5 cols) */}
         <div className="lg:col-span-5">
-          <div className="bg-white rounded-3xl border border-stone-200/90 p-6 sm:p-7 space-y-6 shadow-sm sticky top-24">
-            <h3 className="text-lg font-serif font-black text-stone-900">
+          <div className="bg-white dark:bg-slate-800 rounded-3xl border border-stone-200/90 dark:border-slate-700 p-6 sm:p-7 space-y-6 shadow-sm sticky top-24">
+            <h3 className="text-lg font-serif font-black text-stone-900 dark:text-slate-100">
               Review Your Order ({cart.length})
             </h3>
 
-            <div className="divide-y divide-stone-100 max-h-72 overflow-y-auto pr-1">
+            <div className="divide-y divide-stone-100 dark:divide-slate-700 max-h-72 overflow-y-auto pr-1">
               {cart.map((item) => (
                 <div key={item.id} className="py-3.5 flex items-center gap-3.5">
-                  <img src={item.image} alt={item.title} className="w-14 h-14 rounded-2xl object-cover border border-stone-200 shrink-0 shadow-2xs" />
+                  <img src={item.image} alt={item.title} className="w-14 h-14 rounded-2xl object-cover border border-stone-200 dark:border-slate-600 shrink-0 shadow-2xs" />
                   <div className="flex-1 min-w-0">
-                    <h4 className="text-xs font-bold text-stone-900 truncate">{item.title}</h4>
+                    <h4 className="text-xs font-bold text-stone-900 dark:text-slate-100 truncate">{item.title}</h4>
                     <span className="text-[11px] text-stone-500 block mt-0.5 font-medium">Qty: {item.quantity} {item.variantName ? `• ${item.variantName}` : ''}</span>
                   </div>
-                  <span className="text-xs font-black text-stone-900 font-mono">
+                  <span className="text-xs font-black text-stone-900 dark:text-slate-100 font-mono">
                     ৳ {(item.price * item.quantity).toLocaleString()}
                   </span>
                 </div>
@@ -594,7 +594,7 @@ export function Checkout() {
                   type="button"
                   onClick={handleApplyCoupon}
                   disabled={isRecalculating || !couponCode.trim()}
-                  className="px-4 py-2.5 bg-stone-900 hover:bg-black text-white rounded-xl text-xs font-bold transition-colors disabled:opacity-50 shadow-2xs"
+                  className="px-4 py-2.5 bg-stone-900 dark:bg-slate-700 hover:bg-black dark:hover:bg-slate-600 text-white rounded-xl text-xs font-bold transition-colors disabled:opacity-50 shadow-2xs"
                 >
                   {isRecalculating ? 'Verifying...' : 'Apply'}
                 </button>
@@ -607,7 +607,7 @@ export function Checkout() {
             </div>
 
             {/* Calculations */}
-            <div className="pt-4 border-t border-stone-100 space-y-2.5 text-xs sm:text-sm">
+            <div className="pt-4 border-t border-stone-100 dark:border-slate-700 space-y-2.5 text-xs sm:text-sm">
               <div className="flex justify-between text-stone-600">
                 <span>Subtotal</span>
                 <span className="font-bold text-stone-900 font-mono">৳ {cartSubtotal.toLocaleString()}</span>
@@ -624,9 +624,9 @@ export function Checkout() {
                   {shippingFee === 0 ? <span className="text-emerald-700 font-bold">FREE</span> : `৳ ${shippingFee}`}
                 </span>
               </div>
-              <div className="pt-3 border-t border-stone-200 flex justify-between items-baseline">
-                <span className="font-black text-stone-900 text-base font-serif">Total Due</span>
-                <span className="font-black text-2xl text-stone-900 font-mono">৳ {grandTotal.toLocaleString()}</span>
+              <div className="pt-3 border-t border-stone-200 dark:border-slate-700 flex justify-between items-baseline">
+                <span className="font-black text-stone-900 dark:text-slate-100 text-base font-serif">Total Due</span>
+                <span className="font-black text-2xl text-stone-900 dark:text-slate-100 font-mono">৳ {grandTotal.toLocaleString()}</span>
               </div>
             </div>
 
@@ -634,7 +634,7 @@ export function Checkout() {
             <button
               type="submit"
               disabled={isSubmitting}
-              className="w-full py-4 px-5 bg-teal-900 text-white font-bold rounded-2xl text-sm hover:bg-teal-950 active:scale-98 transition-all shadow-xs hover:shadow-sm flex items-center justify-center gap-2 disabled:opacity-50"
+              className="w-full py-4 px-5 bg-teal-900 dark:bg-teal-600 text-white font-bold rounded-2xl text-sm hover:bg-teal-950 dark:hover:bg-teal-500 active:scale-98 transition-all shadow-xs hover:shadow-sm flex items-center justify-center gap-2 disabled:opacity-50"
             >
               <CheckCircle className="w-4 h-4 text-teal-300" />
               <span>{isSubmitting ? 'Processing Order...' : `Confirm Order (৳ ${grandTotal.toLocaleString()})`}</span>
@@ -686,6 +686,24 @@ export function Checkout() {
           }}
         />
       )}
+      {/* Mobile sticky confirm bar */}
+      <div className="fixed bottom-0 inset-x-0 z-40 lg:hidden bg-white/95 dark:bg-slate-900/95 backdrop-blur border-t border-stone-200 dark:border-slate-700 px-4 py-3 shadow-[0_-4px_20px_rgba(0,0,0,0.08)]">
+        <div className="max-w-7xl mx-auto flex items-center gap-3">
+          <div className="flex flex-col min-w-0 shrink-0">
+            <span className="text-[10px] text-stone-500 dark:text-slate-400">{language === 'BN' ? 'মোট প্রদেয়' : 'Total Due'}</span>
+            <span className="text-lg font-black text-stone-900 dark:text-slate-100 font-mono">৳ {grandTotal.toLocaleString()}</span>
+          </div>
+          <button
+            type="submit"
+            form="checkout-form"
+            disabled={isSubmitting}
+            className="flex-1 min-w-0 inline-flex items-center justify-center gap-2 py-3 px-3 bg-teal-900 dark:bg-teal-600 hover:bg-teal-950 dark:hover:bg-teal-500 text-white rounded-xl font-bold text-xs transition-colors disabled:opacity-50"
+          >
+            <CheckCircle className="w-4 h-4 text-teal-300" />
+            <span className="truncate">{isSubmitting ? 'Processing...' : (language === 'BN' ? 'অর্ডার নিশ্চিত করুন' : 'Confirm Order')}</span>
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

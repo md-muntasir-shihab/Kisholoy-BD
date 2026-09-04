@@ -217,3 +217,280 @@ html.dark .shadow-2xl {
   }
 }
 
+
+/* ====================================================================
+   KISHOLOY DESIGN TOKENS (centralized light + dark)
+   Single source of truth for semantic colors, surface, shadow & motion.
+   ==================================================================== */
+:root {
+  --k-bg: #f6f5f2;
+  --k-surface: #ffffff;
+  --k-surface-2: #f5f5f4;
+  --k-surface-3: #eceae6;
+  --k-border: #e7e5e4;
+  --k-border-strong: #d6d3d1;
+  --k-text: #1c1917;
+  --k-text-2: #44403c;
+  --k-muted: #78716c;
+  --k-accent: #0d9488;
+  --k-accent-strong: #0f766e;
+  --k-accent-soft: #f0fdfa;
+  --k-success: #047857;
+  --k-success-soft: #ecfdf5;
+  --k-warning: #b45309;
+  --k-warning-soft: #fffbeb;
+  --k-danger: #b91c1c;
+  --k-danger-soft: #fef2f2;
+  --k-info: #0369a1;
+  --k-info-soft: #f0f9ff;
+  --k-input-bg: #ffffff;
+  --k-input-border: #d6d3d1;
+  --k-radius: 0.75rem;
+  --k-radius-lg: 1rem;
+  --k-shadow: 0 1px 2px rgba(28,25,23,0.05), 0 6px 20px rgba(28,25,23,0.05);
+  --k-shadow-lg: 0 2px 6px rgba(28,25,23,0.08), 0 16px 40px rgba(28,25,23,0.10);
+  --k-transition: 150ms ease;
+  --k-transition-slow: 260ms cubic-bezier(0.2,0,0,1);
+}
+
+html.dark {
+  --k-bg: #0b1220;
+  --k-surface: #16203a;
+  --k-surface-2: #1e2a45;
+  --k-surface-3: #26334f;
+  --k-border: #2b3a55;
+  --k-border-strong: #3b4c6b;
+  --k-text: #f1f5f9;
+  --k-text-2: #cbd5e1;
+  --k-muted: #94a3b8;
+  --k-accent: #2dd4bf;
+  --k-accent-strong: #14b8a6;
+  --k-accent-soft: rgba(45,212,191,0.10);
+  --k-success: #34d399;
+  --k-success-soft: rgba(52,211,153,0.12);
+  --k-warning: #fbbf24;
+  --k-warning-soft: rgba(251,191,36,0.12);
+  --k-danger: #fb7185;
+  --k-danger-soft: rgba(251,113,133,0.12);
+  --k-info: #38bdf8;
+  --k-info-soft: rgba(56,189,248,0.12);
+  --k-input-bg: #0f1a33;
+  --k-input-border: #33445f;
+  --k-shadow: 0 1px 2px rgba(0,0,0,0.4), 0 8px 24px rgba(0,0,0,0.35);
+  --k-shadow-lg: 0 2px 8px rgba(0,0,0,0.5), 0 20px 48px rgba(0,0,0,0.45);
+}
+
+/* ====================================================================
+   GLOBAL RESPONSIVENESS + ACCESSIBILITY GUARDRAILS
+   ==================================================================== */
+html {
+  -webkit-text-size-adjust: 100%;
+  scroll-behavior: smooth;
+}
+
+html,
+body {
+  overflow-x: clip; /* prevents horizontal overflow without breaking sticky */
+  max-width: 100%;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+img,
+video,
+canvas {
+  max-width: 100%;
+  height: auto;
+}
+
+body {
+  overflow-wrap: break-word;
+  word-break: break-word;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+.flex > *,
+.grid > * {
+  min-width: 0;
+}
+
+/* Visible keyboard focus everywhere (theme-aware). */
+:focus-visible {
+  outline: 2px solid var(--k-accent);
+  outline-offset: 2px;
+  border-radius: var(--k-radius);
+}
+
+button,
+a,
+input,
+select,
+textarea {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Touch-friendly controls & readable tap targets on small screens. */
+@media (max-width: 640px) {
+  button,
+  a,
+  select,
+  input[type="submit"],
+  input[type="button"] {
+    touch-action: manipulation;
+  }
+}
+
+/* Respect user content-density preference. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Resize handles for admin scrollable regions; hides scrollbars on touch. */
+#admin-main-viewport {
+  overscroll-behavior: contain;
+}
+
+/* ====================================================================
+   ADMIN OPERATIONAL PANEL — responsive + dark refinements
+   ==================================================================== */
+
+/* Data tables: keep a readable minimum width so they scroll horizontally
+   on narrow screens instead of squashing each column into illegibility. */
+#admin-main-viewport .overflow-x-auto > table,
+#admin-main-viewport .overflow-x-auto table {
+  min-width: 960px;
+}
+#admin-main-viewport .overflow-x-auto > table.w-full,
+#admin-main-viewport .overflow-x-auto table.w-full {
+  width: 100%;
+}
+
+/* Compact data-dense tables within admin that are NOT in a scroll wrapper
+   still get a sane minimum so columns don't collapse on phones. */
+#admin-main-viewport table[data-compact] {
+  min-width: 0;
+}
+
+/* Sticky action bars inside admin (save/confirm footers) stay visible. */
+#admin-main-viewport .k-sticky-actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 10;
+  backdrop-filter: blur(8px);
+}
+
+/* --- Tinted surfaces/status accents the escape the earlier global dark
+       overrides (which only cover stone/teal/50-100, not /60 /70 /75). --- */
+html.dark #admin-main-viewport .bg-teal-50\/60,
+html.dark #admin-main-viewport .bg-teal-50\/70,
+html.dark #admin-main-viewport .bg-teal-50\/75 {
+  background-color: rgba(20, 184, 166, 0.15);
+}
+
+html.dark #admin-main-viewport .bg-emerald-50\/60,
+html.dark #admin-main-viewport .bg-emerald-50\/70,
+html.dark #admin-main-viewport .bg-emerald-50\/75 {
+  background-color: rgba(16, 185, 129, 0.15);
+}
+
+html.dark #admin-main-viewport .bg-amber-50\/60,
+html.dark #admin-main-viewport .bg-amber-50\/70,
+html.dark #admin-main-viewport .bg-amber-50\/75 {
+  background-color: rgba(245, 158, 11, 0.15);
+}
+
+html.dark #admin-main-viewport .bg-rose-50\/60,
+html.dark #admin-main-viewport .bg-rose-50\/70,
+html.dark #admin-main-viewport .bg-rose-50\/75,
+html.dark #admin-main-viewport .bg-rose-50\/80 {
+  background-color: rgba(244, 63, 94, 0.15);
+}
+
+html.dark #admin-main-viewport .bg-sky-50\/60,
+html.dark #admin-main-viewport .bg-blue-50\/60,
+html.dark #admin-main-viewport .bg-indigo-50\/60 {
+  color: #bae6fd;
+}
+
+html.dark #admin-main-viewport .bg-stone-100\/60,
+html.dark #admin-main-viewport .bg-stone-100\/70,
+html.dark #admin-main-viewport .bg-stone-100\/75,
+html.dark #admin-main-viewport .bg-stone-100\/90 {
+  background-color: rgba(30, 41, 59, 0.85);
+  color: #e2e8f0;
+}
+
+/* Tinted borders used by status badges/pills in dark mode. */
+html.dark #admin-main-viewport .border-teal-200,
+html.dark #admin-main-viewport .border-teal-300,
+html.dark #admin-main-viewport .border-teal-400 {
+  border-color: rgba(45, 212, 191, 0.35) !important;
+}
+
+html.dark #admin-main-viewport .border-emerald-200,
+html.dark #admin-main-viewport .border-emerald-300,
+html.dark #admin-main-viewport .border-emerald-400 {
+  border-color: rgba(52, 211, 153, 0.35) !important;
+}
+
+html.dark #admin-main-viewport .border-amber-200,
+html.dark #admin-main-viewport .border-amber-300,
+html.dark #admin-main-viewport .border-amber-400 {
+  border-color: rgba(251, 191, 36, 0.35) !important;
+}
+
+html.dark #admin-main-viewport .border-rose-200,
+html.dark #admin-main-viewport .border-rose-300,
+html.dark #admin-main-viewport .border-rose-400 {
+  border-color: rgba(251, 113, 133, 0.35) !important;
+}
+
+html.dark #admin-main-viewport .border-blue-200,
+html.dark #admin-main-viewport .border-blue-300,
+html.dark #admin-main-viewport .border-sky-200,
+html.dark #admin-main-viewport .border-sky-300 {
+  border-color: rgba(96, 165, 250, 0.35) !important;
+}
+
+/* Tinted status-badge TEXT colors in dark mode. The broad `html.dark .text-stone-900`
+   overrides force most text white, which risks flattening color-coded status badges
+   (e.g. "teal-800", "rose-800"). Keep those accents readable. */
+html.dark #admin-main-viewport .text-teal-800,
+html.dark #admin-main-viewport .text-teal-900,
+html.dark #admin-main-viewport .text-teal-950 {
+  color: #5eead4 !important;
+}
+html.dark #admin-main-viewport .text-emerald-800,
+html.dark #admin-main-viewport .text-emerald-900,
+html.dark #admin-main-viewport .text-emerald-950 {
+  color: #6ee7b7 !important;
+}
+html.dark #admin-main-viewport .text-amber-800,
+html.dark #admin-main-viewport .text-amber-900,
+html.dark #admin-main-viewport .text-amber-950 {
+  color: #fcd34d !important;
+}
+html.dark #admin-main-viewport .text-rose-800,
+html.dark #admin-main-viewport .text-rose-900,
+html.dark #admin-main-viewport .text-rose-950 {
+  color: #fda4af !important;
+}
+html.dark #admin-main-viewport .text-blue-800,
+html.dark #admin-main-viewport .text-blue-900,
+html.dark #admin-main-viewport .text-sky-800,
+html.dark #admin-main-viewport .text-sky-900 {
+  color: #93c5fd !important;
+}
+html.dark #admin-main-viewport .text-indigo-800,
+html.dark #admin-main-viewport .text-indigo-900 {
+  color: #a5b4fc !important;
+}

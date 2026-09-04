@@ -1428,7 +1428,7 @@ export function ProductsAdmin() {
               </div>
 
               {/* Footer */}
-              <div className="px-6 py-4 border-t border-stone-200 bg-stone-50 flex items-center justify-between">
+              <div className="k-sticky-actions px-6 py-4 border-t border-stone-200 bg-stone-50 dark:bg-slate-900/95 flex items-center justify-between gap-3 flex-wrap">
                 <div className="text-xs text-stone-500 hidden sm:block">
                   Fields with <span className="text-red-500 font-bold">*</span> are required.
                 </div>

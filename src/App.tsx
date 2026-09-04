@@ -50,8 +50,15 @@ import { AppProvider, useApp } from './context/AppContext';
 function StorefrontLayout() {
   return (
     <div className="min-h-screen flex flex-col bg-white dark:bg-slate-950 text-stone-900 dark:text-slate-100 font-sans transition-colors duration-200">
+      {/* Keyboard skip navigation */}
+      <a
+        href="#storefront-main"
+        className="sr-only focus:not-sr-only focus:absolute focus:z-[100] focus:top-3 focus:left-3 focus:px-4 focus:py-2 focus:rounded-lg focus:bg-teal-700 focus:text-white focus:text-sm focus:font-bold"
+      >
+        Skip to content
+      </a>
       <Header />
-      <main className="flex-grow flex flex-col">
+      <main id="storefront-main" className="flex-grow flex flex-col">
         <Outlet />
       </main>
       <Footer />

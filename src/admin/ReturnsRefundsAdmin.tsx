@@ -28,10 +28,12 @@ import {
   SlidersHorizontal,
   Box,
   CreditCard,
-  Wallet
+  Wallet,
+  Printer
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { Order, OrderStatus } from '../types';
+import { ReturnRefundPrintModal } from '../components/print/ReturnRefundPrintModal';
 
 export interface RmaRecord {
   id: string;
@@ -237,6 +239,7 @@ export function ReturnsRefundsAdmin() {
   const [selectedOrderForRma, setSelectedOrderForRma] = useState('');
   const [newRmaReason, setNewRmaReason] = useState<RmaRecord['reason']>('WRONG_SIZE');
   const [newRmaDetails, setNewRmaDetails] = useState('');
+  const [printRma, setPrintRma] = useState<RmaRecord | null>(null);
 
   // Key Metrics
   const activeCasesCount = rmaList.filter(r => r.stage !== 'REFUND_DISBURSED' && r.stage !== 'RESTOCKED' && r.stage !== 'REJECTED').length;
@@ -720,6 +723,16 @@ export function ReturnsRefundsAdmin() {
                       {/* Actions */}
                       <td className="p-4 text-right">
                         <div className="flex items-center justify-end gap-1.5">
+                          {/* Print Document */}
+                          <button
+                            onClick={() => setPrintRma(rma)}
+                            className="px-2.5 py-1 bg-stone-900 hover:bg-black text-white rounded-lg text-xs font-semibold shadow-xs flex items-center gap-1 transition-colors"
+                            title="Print Return / Refund Document (one PDF)"
+                          >
+                            <Printer className="w-3 h-3 text-teal-300" />
+                            <span>{isBn ? 'প্রিন্ট' : 'Print'}</span>
+                          </button>
+
                           {/* Inspect Button */}
                           {isPendingInspection && (
                             <button
@@ -1122,6 +1135,14 @@ export function ReturnsRefundsAdmin() {
             </div>
           </form>
         </div>
+      )}
+
+      {/* Unified Return / Refund Document Print Modal */}
+      {printRma && (
+        <ReturnRefundPrintModal
+          rma={printRma}
+          onClose={() => setPrintRma(null)}
+        />
       )}
     </div>
   );

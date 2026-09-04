@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { 
-  Menu, X, ExternalLink, UserCheck, Compass, 
-  BookOpen, HelpCircle, ArrowUpRight, Layers, ShieldCheck,
-  Lock, LogOut, KeyRound, Building2, Sun, Moon
+  Menu, X, ExternalLink, UserCheck, 
+  BookOpen, ArrowUpRight, Layers, ShieldCheck,
+  Lock, LogOut, KeyRound, Building2, ScanLine,
+  ChevronDown, ShoppingCart, Package, Users, Cpu
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { Role } from '../types';
@@ -14,6 +15,9 @@ import { IdentityAccessModal } from '../components/admin/IdentityAccessModal';
 import { SupplierPortalModal } from '../components/admin/SupplierPortalModal';
 import { AdminNotificationAlerts } from '../components/admin/AdminNotificationAlerts';
 import { AdminUrgentAlertBanner } from '../components/admin/AdminUrgentAlertBanner';
+import { ScannerModal } from '../components/scan/ScannerModal';
+import { LanguageButton } from '../components/layout/LanguageButton';
+import { ThemeButton } from '../components/layout/ThemeButton';
 
 // Route Access Control Matrix
 const ROUTE_PERMISSIONS: Record<string, { requiredPermission: string; allowedRoles: Role[] }> = {
@@ -43,14 +47,42 @@ const ROUTE_PERMISSIONS: Record<string, { requiredPermission: string; allowedRol
 };
 
 export function AdminLayout() {
-  const { currentRole, setCurrentRole, orders, products, language, setLanguage, siteContent, showToast, isDarkMode, toggleDarkMode } = useApp();
+  const { currentRole, setCurrentRole, orders, products, language, setLanguage, siteContent, showToast } = useApp();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [guideModalOpen, setGuideModalOpen] = useState(false);
   const [guideInitialSection, setGuideInitialSection] = useState<string>('all');
   const [inspectorOpen, setInspectorOpen] = useState(false);
   const [supplierPortalOpen, setSupplierPortalOpen] = useState(false);
+  const [scannerOpen, setScannerOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
+
+  // Sidebar accordion: expanded section ids (auto-open the active section).
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(() => new Set(['sales-operations']));
+  useEffect(() => {
+    setExpandedSections((prev) => {
+      const active = ADMIN_SECTIONS_DATA.find((s) => s.items.some((i) => i.path === location.pathname));
+      if (!active || prev.has(active.id)) return prev;
+      const next = new Set(prev);
+      next.add(active.id);
+      return next;
+    });
+  }, [location.pathname]);
+  const toggleSection = (id: string) => {
+    setExpandedSections((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const SECTION_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
+    'sales-operations': ShoppingCart,
+    'catalog-inventory': Package,
+    'customer-management': Users,
+    'system-administration': Cpu,
+  };
 
   const pendingOrdersCount = orders.filter(o => o.orderStatus === 'PENDING').length;
   const lowStockCount = products.filter(p => p.stock <= 5).length;
@@ -93,7 +125,7 @@ export function AdminLayout() {
   };
 
   return (
-    <div id="admin-root-layout" className="min-h-screen bg-stone-100/90 dark:bg-slate-950 text-stone-900 dark:text-slate-100 flex flex-col font-sans selection:bg-teal-900 selection:text-white transition-colors duration-200">
+    <div id="admin-root-layout" className="h-screen overflow-hidden flex flex-col bg-stone-100/90 dark:bg-slate-950 text-stone-900 dark:text-slate-100 font-sans selection:bg-teal-900 selection:text-white transition-colors duration-200">
       {/* Top Operational Header */}
       <header id="admin-top-header" className="sticky top-0 z-30 bg-white/95 text-stone-900 border-b border-stone-200/90 dark:bg-stone-950/95 dark:text-white dark:border-stone-800/80 h-16 flex items-center justify-between px-4 sm:px-6 shadow-xs backdrop-blur-md transition-colors">
         <div className="flex items-center gap-3">
@@ -157,6 +189,17 @@ export function AdminLayout() {
           {/* Real-time Notification Alert Center (Fraud Risks, Pending Settlements, RMA) */}
           <AdminNotificationAlerts />
 
+          {/* Global Code Scanner (Order / Tracking / SKU) */}
+          <button
+            id="admin-open-scanner-btn"
+            onClick={() => setScannerOpen(true)}
+            className="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-stone-900 hover:bg-stone-850 text-stone-200 border border-stone-800 text-xs font-semibold shadow-2xs hover:text-white transition-all"
+            title={isBn ? 'অর্ডার/ট্র্যাকিং/SKU স্ক্যান করুন' : 'Scan an order, tracking ID or SKU'}
+          >
+            <ScanLine className="w-3.5 h-3.5 text-teal-400" />
+            <span>{isBn ? 'স্ক্যান' : 'Scan'}</span>
+          </button>
+
           {/* Work Guide Button */}
           <button
             id="admin-open-work-guide-btn"
@@ -167,6 +210,15 @@ export function AdminLayout() {
             <BookOpen className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
             <span>{isBn ? 'কাজের গাইড' : 'Work Guide'}</span>
           </button>
+
+arena/01a06a72-kisholoy-bd
+          {/* Quick Language Toggle (icon-only) */}
+          <LanguageButton />
+
+          {/* Theme Mode Switcher (Light / Dark / System) */}
+          <span id="admin-theme-toggle-btn">
+            <ThemeButton />
+          </span>
 
           {/* Quick Language Toggle */}
           <button
@@ -198,6 +250,7 @@ export function AdminLayout() {
               </>
             )}
           </button>
+ main
 
           {/* Live Storefront Link */}
           <Link
@@ -215,15 +268,38 @@ export function AdminLayout() {
       {/* Real-time Urgent Operational Marquee/Banner (High Fraud Risk / Pending Settlements) */}
       <AdminUrgentAlertBanner />
 
-      <div className="flex-1 flex overflow-hidden">
+      <div className="flex-1 flex min-h-0 overflow-hidden">
         {/* Sidebar Navigation */}
         <aside
           id="admin-sidebar"
+ arena/01a06a72-kisholoy-bd
+          className={`fixed inset-y-0 left-0 z-20 w-72 bg-white text-stone-700 border-r border-stone-200 transform transition-transform duration-200 ease-in-out lg:translate-x-0 lg:static lg:inset-0 pt-16 lg:pt-0 min-h-0 flex flex-col ${
+
           className={`fixed inset-y-0 left-0 z-20 w-72 bg-white dark:bg-stone-950 text-stone-800 dark:text-stone-300 border-r border-stone-200/90 dark:border-stone-800/80 transform transition-transform duration-200 ease-in-out lg:translate-x-0 lg:static lg:inset-0 pt-16 lg:pt-0 flex flex-col ${
+main
             sidebarOpen ? 'translate-x-0' : '-translate-x-full'
           }`}
         >
           {/* Identity & Scope Indicator */}
+arena/01a06a72-kisholoy-bd
+          <div className="p-3 border-b border-stone-200">
+            <button
+              onClick={() => setInspectorOpen(true)}
+              className="flex items-center gap-2.5 text-left w-full p-2.5 rounded-2xl bg-stone-100 hover:bg-stone-200/70 border border-stone-200 text-stone-700 hover:text-stone-900 transition-all group shadow-sm"
+            >
+              <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-teal-700 to-teal-900 text-teal-100 flex items-center justify-center font-bold text-xs shadow-xs border border-teal-600/40">
+                {currentRole.slice(0, 2)}
+              </div>
+              <div className="min-w-0 flex-1">
+                <span className="text-xs font-bold text-stone-900 block truncate">
+                  {currentRole.replace('_', ' ')}
+                </span>
+                <span className="text-[10px] text-teal-700 dark:text-teal-300 font-mono block truncate">
+                  {isBn ? 'আরবিএসি সক্রিয়' : 'RBAC Active'} • {isBn ? 'রুলস দেখুন' : 'View rules'}
+                </span>
+              </div>
+              <KeyRound className="w-3.5 h-3.5 text-stone-400 group-hover:text-teal-600 transition-colors" />
+
           <div className="p-3 bg-stone-50/80 dark:bg-stone-950 border-b border-stone-200 dark:border-stone-850 flex items-center justify-between">
             <button
               onClick={() => setInspectorOpen(true)}
@@ -241,16 +317,75 @@ export function AdminLayout() {
                 </span>
               </div>
               <KeyRound className="w-3.5 h-3.5 text-stone-400 dark:text-stone-500 group-hover:text-teal-600 dark:group-hover:text-teal-400 transition-colors" />
+main
             </button>
           </div>
 
-          <nav id="admin-sidebar-nav" className="flex-1 overflow-y-auto p-3.5 space-y-5">
-            {ADMIN_SECTIONS_DATA.map((section, sectionIdx) => {
+          <nav id="admin-sidebar-nav" className="flex-1 min-h-0 overflow-y-auto p-3">
+            {ADMIN_SECTIONS_DATA.map((section) => {
               // Filter section items based on current role permissions
               const allowedItems = section.items.filter(item => isItemAllowed(item.path));
               if (allowedItems.length === 0) return null;
 
+              const isOpen = expandedSections.has(section.id);
+              const SectionIcon = SECTION_ICONS[section.id] || Layers;
+
               return (
+ arena/01a06a72-kisholoy-bd
+                <div key={section.id} id={`section-${section.id}`} className="mb-1.5">
+                  {/* Group Header (accordion) */}
+                  <button
+                    onClick={() => toggleSection(section.id)}
+                    className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl transition-all text-left ${
+                      isOpen
+                        ? 'bg-stone-100 text-stone-900'
+                        : 'text-stone-500 hover:bg-stone-100 hover:text-stone-800'
+                    }`}
+                  >
+                    <div className={`p-1.5 rounded-lg shrink-0 border ${
+                      isOpen
+                        ? 'bg-teal-50 text-teal-800 dark:text-teal-300 border-teal-200'
+                        : 'bg-stone-100 text-stone-500 dark:text-stone-400 border-stone-200'
+                    }`}>
+                      <SectionIcon className="w-4 h-4" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-[11px] font-bold truncate leading-tight">{isBn ? section.titleBn : section.title}</div>
+                      <div className="text-[10px] text-stone-400 truncate">
+                        {allowedItems.length} {isBn ? 'মডিউল' : 'modules'}
+                      </div>
+                    </div>
+                    <ChevronDown className={`w-4 h-4 text-stone-400 shrink-0 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
+                  </button>
+
+                  {/* Section Items */}
+                  {isOpen && (
+                    <div className="mt-1 space-y-0.5">
+                      {allowedItems.map((item) => {
+                        const Icon = item.icon;
+                        const isActive = location.pathname === item.path;
+                        const badge = getSectionBadgeCount(item.badgeKey, counts);
+
+                        return (
+                          <Link
+                            key={item.path}
+                            id={item.id}
+                            to={item.path}
+                            onClick={() => setSidebarOpen(false)}
+                            className={`relative flex items-center justify-between pl-4 pr-3 py-2 rounded-xl text-xs font-medium transition-all group ${
+                              isActive
+                                ? 'bg-teal-50 text-teal-900 font-semibold shadow-sm'
+                                : 'text-stone-500 hover:bg-stone-100 hover:text-stone-800'
+                            }`}
+                          >
+                            {isActive && (
+                              <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 rounded-r-full bg-teal-600" />
+                            )}
+                            <div className="flex items-center gap-2.5 truncate">
+                              <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-teal-700 dark:text-teal-300' : 'text-stone-400 dark:text-stone-500 group-hover:text-stone-600 dark:group-hover:text-stone-300'}`} />
+                              <span className="truncate">{isBn ? item.labelBn : item.label}</span>
+                            </div>
+
                 <div
                   key={section.id}
                   id={`section-${section.id}`}
@@ -306,22 +441,33 @@ export function AdminLayout() {
                           </div>
 
                           <div className="flex items-center gap-1.5 shrink-0 ml-2">
+ main
                             {badge && (
-                              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${badge.color}`}>
+                              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ml-2 ${badge.color}`}>
                                 {isBn ? badge.labelBn : badge.label}
                               </span>
                             )}
-                          </div>
-                        </Link>
-                      );
-                    })}
-                  </div>
+                          </Link>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               );
             })}
           </nav>
 
           {/* Sidebar Footer */}
+arena/01a06a72-kisholoy-bd
+          <div className="p-3.5 border-t border-stone-200 text-[11px] text-stone-500 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+              <span className="font-semibold text-stone-600">{isBn ? 'আরবিএসি সক্রিয়' : 'RBAC Active'}</span>
+            </div>
+            <button
+              onClick={() => setInspectorOpen(true)}
+              className="text-[11px] text-teal-700 hover:text-teal-900 dark:text-teal-300 dark:hover:text-teal-200 font-semibold underline underline-offset-2"
+
           <div className="p-3.5 border-t border-stone-200 dark:border-stone-800 bg-stone-50 dark:bg-stone-950/40 text-[11px] text-stone-500 dark:text-stone-400 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
@@ -330,14 +476,15 @@ export function AdminLayout() {
             <button
               onClick={() => setInspectorOpen(true)}
               className="text-[11px] text-teal-700 dark:text-teal-400 hover:text-teal-900 dark:hover:text-teal-300 font-semibold underline underline-offset-2"
+main
             >
-              Inspect Access
+              {isBn ? 'অ্যাক্সেস পরীক্ষা' : 'Inspect Access'}
             </button>
           </div>
         </aside>
 
         {/* Main Operational Workspace */}
-        <main id="admin-main-viewport" className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
+        <main id="admin-main-viewport" className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-6 lg:p-8">
           {/* Customer / Supplier Access Boundary Check */}
           {currentRole === 'CUSTOMER' ? (
             <AccessDenied
@@ -430,6 +577,12 @@ export function AdminLayout() {
             lastLoginAt: '2026-03-02T10:15:00Z'
           }
         }}
+      />
+
+      {/* Global Code Scanner Modal (Barcode / QR / Manual) */}
+      <ScannerModal
+        isOpen={scannerOpen}
+        onClose={() => setScannerOpen(false)}
       />
     </div>
   );

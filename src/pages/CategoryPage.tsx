@@ -13,8 +13,8 @@ export function CategoryPage() {
   if (!category && slug !== 'all') {
     return (
       <div className="max-w-7xl mx-auto px-4 py-16 text-center">
-        <h2 className="text-2xl font-bold font-serif mb-4">Category Not Found</h2>
-        <Link to="/shop" className="text-teal-900 font-semibold hover:underline">
+        <h2 className="text-2xl font-bold font-serif mb-4 text-stone-900 dark:text-slate-100">Category Not Found</h2>
+        <Link to="/shop" className="text-teal-800 dark:text-teal-300 font-semibold hover:underline">
           Return to Shop
         </Link>
       </div>
@@ -31,7 +31,7 @@ export function CategoryPage() {
         {language === 'BN' ? 'সকল ক্যাটাগরিতে ফিরে যান' : 'Back to All Products'}
       </Link>
 
-      <div className="relative rounded-2xl overflow-hidden bg-stone-900 text-white p-8 sm:p-12 mb-10 border border-stone-800">
+      <div className="relative rounded-2xl overflow-hidden bg-stone-900 text-white p-8 sm:p-12 mb-10 border border-stone-800 dark:border-slate-700">
         {category?.image && (
           <img
             src={category.image}

@@ -27,6 +27,8 @@ import {
   SalesTrendPoint
 } from '../types';
 import { BusinessDocumentModal } from '../components/admin/BusinessDocumentModal';
+import { PrintOrderDocumentsModal } from '../components/print/PrintOrderDocumentsModal';
+import { ReportPrintModal } from '../components/print/ReportPrintModal';
 import { AdminHelpButton } from '../components/admin/AdminHelpModal';
 import { REPORTS_HELP_DATA } from './reportsHelpData';
 
@@ -40,6 +42,7 @@ export function ReportsAdmin() {
   const [dateRange, setDateRange] = useState<'ALL' | 'TODAY' | '1D' | '2D' | '5D' | '7D' | '30D' | '90D' | 'YTD' | 'CUSTOM'>('30D');
   const [customFrom, setCustomFrom] = useState<string>('');
   const [customTo, setCustomTo] = useState<string>('');
+  const [reportPrintOpen, setReportPrintOpen] = useState(false);
   
   // Bilingual toggle (EN / BN)
   const [lang, setLang] = useState<'EN' | 'BN'>('EN');
@@ -469,6 +472,21 @@ export function ReportsAdmin() {
       {/* Tab 1: Executive Overview & Sales Velocity */}
       {activeTab === 'overview' && (
         <div className="space-y-6">
+          {/* Unified Report Print Action */}
+          <div className="flex items-center justify-between">
+            <p className="text-xs text-stone-500">
+              {lang === 'BN' ? 'এই রেজেঞ্জের সম্পূর্ণ ব্যবসায়িক রিপোর্ট এক পিডিএফে প্রিন্ট করুন।' : 'Print the full business report for this date range as one PDF.'}
+            </p>
+            <button
+              onClick={() => setReportPrintOpen(true)}
+              className="px-4 py-2 bg-teal-900 text-white rounded-xl text-xs font-bold flex items-center gap-2 hover:bg-teal-950 shadow-xs"
+            >
+              <Printer className="w-4 h-4 text-teal-300" />
+              {lang === 'BN' ? 'রিপোর্ট প্রিন্ট করুন' : 'Print Business Report'}
+              <span className="px-1.5 py-0.5 rounded text-[10px] bg-teal-800 text-teal-200 font-normal">One PDF</span>
+            </button>
+          </div>
+
           {/* Sales & Profit Velocity Bar Chart (Last 7 Days) */}
           <div className="bg-white rounded-xl border border-stone-200 shadow-xs p-5 space-y-4">
             <div className="flex items-center justify-between">
@@ -1275,8 +1293,17 @@ export function ReportsAdmin() {
         </div>
       )}
 
-      {/* Business Document Printable Modal */}
-      {documentModal.isOpen && (
+      {/* Unified Order Print Modal (Invoice / Packing Slip) */}
+      {documentModal.isOpen && documentModal.selectedOrder && (documentModal.type === 'INVOICE' || documentModal.type === 'PACKING_SLIP') && (
+        <PrintOrderDocumentsModal
+          order={documentModal.selectedOrder}
+          siteContent={siteContent}
+          onClose={() => setDocumentModal({ ...documentModal, isOpen: false })}
+        />
+      )}
+
+      {/* Business Document Printable Modal (Manifest / Tax Statement) */}
+      {documentModal.isOpen && !(documentModal.selectedOrder && (documentModal.type === 'INVOICE' || documentModal.type === 'PACKING_SLIP')) && (
         <BusinessDocumentModal
           type={documentModal.type}
           order={documentModal.selectedOrder}
@@ -1286,6 +1313,15 @@ export function ReportsAdmin() {
           onClose={() => setDocumentModal({ ...documentModal, isOpen: false })}
         />
       )}
+
+      {/* Unified Business Report Print Modal */}
+      <ReportPrintModal
+        isOpen={reportPrintOpen}
+        onClose={() => setReportPrintOpen(false)}
+        dateRange={dateRange}
+        from={customFrom}
+        to={customTo}
+      />
     </div>
   );
 }

@@ -2868,6 +2868,19 @@ class SupplierEngine {
     return this.settlements.get(id);
   }
 
+  public getPurchaseOrderById(id: string): SupplierPurchaseOrder | undefined {
+    return this.purchaseOrders.get(id);
+  }
+
+  public getAllPurchaseOrders(): SupplierPurchaseOrder[] {
+    return Array.from(this.purchaseOrders.values())
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }
+
+  public getPurchaseOrdersBySupplier(supplierId: string): SupplierPurchaseOrder[] {
+    return this.getAllPurchaseOrders().filter(p => p.supplierId === supplierId);
+  }
+
   public createSettlement(data: {
     supplierId: string;
     periodStart: string;
