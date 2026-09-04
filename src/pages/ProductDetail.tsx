@@ -50,7 +50,7 @@ export function ProductDetail() {
     .slice(0, 3);
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 sm:pt-12 pb-28 lg:pb-12">
       {/* Breadcrumb Navigation */}
       <nav className="flex items-center gap-2 text-xs text-stone-500 mb-8 overflow-x-auto whitespace-nowrap">
         <Link to="/" className="hover:text-stone-900 font-medium">Home</Link>
@@ -69,7 +69,7 @@ export function ProductDetail() {
         
         {/* Left Column: Image Gallery (5 cols on large screens) */}
         <div className="lg:col-span-6 space-y-4">
-          <div className="aspect-square w-full rounded-3xl overflow-hidden bg-stone-100 border border-stone-200/90 shadow-sm relative group">
+          <div className="aspect-square w-full rounded-3xl overflow-hidden bg-stone-100 dark:bg-slate-800/70 border border-stone-200/90 dark:border-slate-700 shadow-sm relative group">
             <img
               src={product.images[selectedImage] || product.images[0]}
               alt={title}
@@ -90,7 +90,7 @@ export function ProductDetail() {
                   key={idx}
                   onClick={() => setSelectedImage(idx)}
                   className={`w-20 h-20 rounded-2xl overflow-hidden border-2 flex-shrink-0 transition-all ${
-                    selectedImage === idx ? 'border-teal-900 shadow-xs scale-102' : 'border-stone-200 opacity-70 hover:opacity-100'
+                    selectedImage === idx ? 'border-teal-900 shadow-xs scale-102' : 'border-stone-200 opacity-70 hover:opacity-100 dark:border-slate-700'
                   }`}
                 >
                   <img src={img} alt={`Thumb ${idx}`} className="w-full h-full object-cover" />
@@ -101,7 +101,7 @@ export function ProductDetail() {
         </div>
 
         {/* Right Column: Details & Actions (6 cols on large screens) */}
-        <div className="lg:col-span-6 flex flex-col justify-between space-y-6 bg-white p-6 sm:p-8 rounded-3xl border border-stone-200/90 shadow-sm">
+        <div className="lg:col-span-6 flex flex-col justify-between space-y-6 bg-white dark:bg-slate-800 p-6 sm:p-8 rounded-3xl border border-stone-200/90 dark:border-slate-700 shadow-sm">
           <div className="space-y-4">
             <div className="flex items-center justify-between gap-4">
               <span className="text-xs font-bold text-teal-950 uppercase tracking-widest bg-teal-50 px-3 py-1 rounded-full border border-teal-200">
@@ -116,11 +116,11 @@ export function ProductDetail() {
 
             {/* Rating and Origin Badge */}
             <div className="flex flex-wrap items-center gap-3">
-              <div className="flex items-center text-amber-500 bg-amber-50/80 px-2.5 py-1 rounded-lg border border-amber-200">
+              <div className="flex items-center text-amber-500 bg-amber-50/80 dark:bg-amber-500/15 px-2.5 py-1 rounded-lg border border-amber-200 dark:border-amber-500/30">
                 {[...Array(5)].map((_, i) => (
                   <Star key={i} className="w-3.5 h-3.5 fill-amber-400 stroke-amber-400" />
                 ))}
-                <span className="text-xs font-bold text-amber-950 ml-1.5">{product.rating}</span>
+                <span className="text-xs font-bold text-amber-950 dark:text-amber-300 ml-1.5">{product.rating}</span>
               </div>
               <span className="text-xs text-stone-400">({product.reviewsCount} verified reviews)</span>
               
@@ -142,7 +142,7 @@ export function ProductDetail() {
                   ৳ {product.originalPrice.toLocaleString()}
                 </span>
               )}
-              <span className="text-xs text-emerald-800 font-bold bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200 ml-auto">
+              <span className="text-xs text-emerald-800 font-bold bg-emerald-50 dark:bg-emerald-500/15 px-2.5 py-1 rounded-full border border-emerald-200 dark:border-emerald-500/30 ml-auto">
                 {product.stock > 0 ? `Ready Stock (${product.stock} units)` : 'Out of stock'}
               </span>
             </div>
@@ -198,7 +198,7 @@ export function ProductDetail() {
 
                 <button
                   onClick={handleAddToCart}
-                  className="flex-1 flex items-center justify-center gap-2 py-3.5 px-6 bg-teal-900 text-white rounded-2xl font-bold text-xs sm:text-sm hover:bg-teal-950 shadow-xs hover:shadow-sm active:scale-98 transition-all"
+                  className="flex-1 flex items-center justify-center gap-2 py-3.5 px-6 bg-teal-900 dark:bg-teal-600 text-white rounded-2xl font-bold text-xs sm:text-sm hover:bg-teal-950 dark:hover:bg-teal-500 shadow-xs hover:shadow-sm active:scale-98 transition-all"
                 >
                   <ShoppingBag className="w-4 h-4 text-teal-300" />
                   <span>{language === 'BN' ? 'কার্টে যোগ করুন' : 'Add to Cart'}</span>
@@ -210,7 +210,7 @@ export function ProductDetail() {
                   className={`p-3.5 rounded-2xl border transition-all shadow-2xs ${
                     isWishlisted(product.id)
                       ? 'border-rose-200 bg-rose-50 text-rose-600 hover:bg-rose-100'
-                      : 'border-stone-300 bg-white text-stone-600 hover:text-rose-600 hover:border-rose-300'
+                      : 'border-stone-300 bg-white dark:bg-slate-800 text-stone-600 hover:text-rose-600 hover:border-rose-300 dark:border-slate-600'
                   }`}
                   title={isWishlisted(product.id) ? 'Remove from Wishlist' : 'Save to Wishlist'}
                 >
@@ -229,17 +229,17 @@ export function ProductDetail() {
 
             {/* Value Guarantees */}
             <div className="grid grid-cols-3 gap-3 pt-6 border-t border-stone-100 text-center">
-              <div className="p-3 bg-stone-50 rounded-2xl border border-stone-200/70 shadow-2xs">
+              <div className="p-3 bg-stone-50 dark:bg-slate-800/70 rounded-2xl border border-stone-200/70 dark:border-slate-700 shadow-2xs">
                 <Truck className="w-4 h-4 mx-auto text-teal-900 mb-1" />
                 <span className="text-[11px] font-bold text-stone-900 block">Dhaka 24-48h</span>
                 <span className="text-[10px] text-stone-500">Nationwide 3-4 days</span>
               </div>
-              <div className="p-3 bg-stone-50 rounded-2xl border border-stone-200/70 shadow-2xs">
+              <div className="p-3 bg-stone-50 dark:bg-slate-800/70 rounded-2xl border border-stone-200/70 dark:border-slate-700 shadow-2xs">
                 <RotateCcw className="w-4 h-4 mx-auto text-teal-900 mb-1" />
                 <span className="text-[11px] font-bold text-stone-900 block">7 Days Return</span>
                 <span className="text-[10px] text-stone-500">Hassle-free exchange</span>
               </div>
-              <div className="p-3 bg-stone-50 rounded-2xl border border-stone-200/70 shadow-2xs">
+              <div className="p-3 bg-stone-50 dark:bg-slate-800/70 rounded-2xl border border-stone-200/70 dark:border-slate-700 shadow-2xs">
                 <ShieldCheck className="w-4 h-4 mx-auto text-teal-900 mb-1" />
                 <span className="text-[11px] font-bold text-stone-900 block">Cash on Delivery</span>
                 <span className="text-[10px] text-stone-500">Pay on doorstep</span>
@@ -251,28 +251,28 @@ export function ProductDetail() {
 
       {/* Specifications & Artisanal Provenance */}
       {product.attributes && (
-        <div className="bg-white rounded-3xl p-6 sm:p-8 border border-stone-200/90 shadow-sm mb-16">
+        <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 sm:p-8 border border-stone-200/90 dark:border-slate-700 shadow-sm mb-16">
           <div className="flex items-center gap-2 mb-4">
             <Award className="w-4 h-4 text-amber-500" />
             <h3 className="text-lg font-serif font-bold text-stone-900">
               Product Specifications & Heritage Provenance
             </h3>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs sm:text-sm">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-xs sm:text-sm">
             {product.attributes.material && (
-              <div className="p-4 bg-stone-50 rounded-2xl border border-stone-200/80">
+              <div className="p-4 bg-stone-50 dark:bg-slate-800/70 rounded-2xl border border-stone-200/80 dark:border-slate-700">
                 <span className="text-stone-400 block text-xs mb-1 font-semibold uppercase tracking-wider">Primary Material</span>
                 <span className="font-bold text-stone-900">{product.attributes.material}</span>
               </div>
             )}
             {product.attributes.origin && (
-              <div className="p-4 bg-stone-50 rounded-2xl border border-stone-200/80">
+              <div className="p-4 bg-stone-50 dark:bg-slate-800/70 rounded-2xl border border-stone-200/80 dark:border-slate-700">
                 <span className="text-stone-400 block text-xs mb-1 font-semibold uppercase tracking-wider">Artisan Origin</span>
                 <span className="font-bold text-stone-900">{product.attributes.origin}</span>
               </div>
             )}
             {product.attributes.weight && (
-              <div className="p-4 bg-stone-50 rounded-2xl border border-stone-200/80">
+              <div className="p-4 bg-stone-50 dark:bg-slate-800/70 rounded-2xl border border-stone-200/80 dark:border-slate-700">
                 <span className="text-stone-400 block text-xs mb-1 font-semibold uppercase tracking-wider">Net Weight / Dimension</span>
                 <span className="font-bold text-stone-900">{product.attributes.weight}</span>
               </div>
@@ -299,6 +299,29 @@ export function ProductDetail() {
           </div>
         </div>
       )}
+
+      {/* Mobile sticky purchase bar */}
+      <div className="fixed bottom-0 inset-x-0 z-40 lg:hidden bg-white/95 dark:bg-slate-900/95 backdrop-blur border-t border-stone-200 dark:border-slate-700 px-4 py-3 shadow-[0_-4px_20px_rgba(0,0,0,0.08)]">
+        <div className="max-w-7xl mx-auto flex items-center gap-3">
+          <div className="flex flex-col min-w-0 shrink-0">
+            <span className="text-[10px] text-stone-500 dark:text-slate-400">{language === 'BN' ? 'মোট' : 'Price'}</span>
+            <span className="text-lg font-black text-stone-900 dark:text-slate-100 font-mono">৳ {currentPrice.toLocaleString()}</span>
+          </div>
+          <button
+            onClick={handleAddToCart}
+            className="flex-[1.2] min-w-0 inline-flex items-center justify-center gap-2 py-3 px-3 bg-teal-900 dark:bg-teal-600 hover:bg-teal-950 dark:hover:bg-teal-500 text-white rounded-xl font-bold text-xs transition-colors"
+          >
+            <ShoppingBag className="w-4 h-4 text-teal-300" />
+            <span className="truncate">{language === 'BN' ? 'কার্টে যোগ করুন' : 'Add to Cart'}</span>
+          </button>
+          <button
+            onClick={handleBuyNow}
+            className="flex-1 min-w-0 inline-flex items-center justify-center py-3 px-3 bg-stone-950 dark:bg-slate-800 text-white rounded-xl font-bold text-xs transition-colors"
+          >
+            <span className="truncate">{language === 'BN' ? 'অর্ডার করুন' : 'Buy Now'}</span>
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

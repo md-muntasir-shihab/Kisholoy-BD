@@ -23,6 +23,19 @@ import { marketingService } from './server/marketingService';
 import { securityEngine } from './server/securityEngine';
 import { backupEngine } from './server/backupEngine';
 import { supplierEngine } from './server/supplierEngine';
+import {
+  getPrintSettings,
+  savePrintSettings,
+  resetPrintSettings,
+  buildOrderPrintPayload,
+  buildSupplierStatementPayload,
+  buildPurchaseOrderPayload,
+  buildReturnRefundPayload,
+  buildReportPayload,
+  findOrderByNumber,
+  generateBarcode,
+  generateQr,
+} from './server/documentEngine';
 import { supplierSchema, supplierUpdateSchema, purchaseOrderSchema, formatZodError } from './src/lib/validations';
 import { Order, FlashDeal, Role, RateLimitTier, Customer, OrderSourceChannel } from './src/types';
 
@@ -145,14 +158,32 @@ async function startServer() {
         customerPhone: customer.phone
       });
 
-      // Deduct inventory atomically
-      for (const item of calculation.verifiedItems) {
-        const deducted = serverDb.updateProductStock(item.productId, item.quantity);
-        if (!deducted) {
-          return res.status(400).json({
-            error: `Failed to allocate stock for "${item.title}". It may have just sold out.`
+      // Deduct inventory atomically with rollback: if any line fails to
+      // allocate, restore every deduction already made so we never leak stock.
+      const deductedItems: { productId: string; quantity: number }[] = [];
+      const rollbackStock = () => {
+        for (const d of deductedItems) {
+          serverDb.adjustInventory({
+            productId: d.productId,
+            quantityChange: d.quantity,
+            reason: `Order allocation rollback (atomic failure)`,
+            operator: 'ORDER_ENGINE'
           });
         }
+        deductedItems.length = 0;
+      };
+
+      try {
+        for (const item of calculation.verifiedItems) {
+          const deducted = serverDb.updateProductStock(item.productId, item.quantity);
+          if (!deducted) {
+            throw new Error(`Failed to allocate stock for "${item.title}". It may have just sold out.`);
+          }
+          deductedItems.push({ productId: item.productId, quantity: item.quantity });
+        }
+      } catch (deductErr: any) {
+        rollbackStock();
+        return res.status(400).json({ error: deductErr.message });
       }
 
       const orderNumber = `KSH-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
@@ -1162,8 +1193,30 @@ async function startServer() {
     try {
       const order = serverDb.getOrderById(orderId);
       if (!order) return res.status(404).json({ error: 'Order not found' });
-      
+
+      if (order.paymentStatus === 'REFUNDED' || (order as any).refundProcessed) {
+        return res.status(400).json({ error: 'Refund already processed for this order — duplicate prevented.' });
+      }
+
       const result = await paymentService.initiateRefund(orderId, order.total, 'Admin initiated refund via dashboard');
+      if (!result.success) {
+        return res.status(400).json({ error: result.error || 'Refund could not be processed.' });
+      }
+
+      // Restore sold stock once for the returned/cancelled order so we never
+      // leak inventory. Guard against double-restock via the order flag.
+      if (!(order as any).stockRestoredOnRefund && order.items?.length) {
+        for (const it of order.items) {
+          serverDb.adjustInventory({
+            productId: (it as any).productId || it.sku,
+            quantityChange: it.quantity,
+            reason: `Restock after order ${order.orderNumber} refund`,
+            operator: 'FINANCE'
+          });
+        }
+        (order as any).stockRestoredOnRefund = true;
+      }
+
       serverDb.addAuditLog('EXECUTE_REFUND', 'Finance', orderId, 'Processed gateway refund via Admin');
 
       // Multi-Channel Automated Notification Trigger for Refund
@@ -1367,6 +1420,157 @@ async function startServer() {
       res.setHeader('Content-Type', 'text/csv; charset=utf-8');
       res.setHeader('Content-Disposition', `attachment; filename="Kisholoy_${type}_${Date.now()}.csv"`);
       res.send(csvData);
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  // -------------------------------------------------------------
+  // 10b. Unified Document & Print Engine (output-only)
+  // -------------------------------------------------------------
+  app.get('/api/print/settings', (req, res) => {
+    try {
+      res.json({ success: true, settings: getPrintSettings() });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.put('/api/print/settings', (req, res) => {
+    try {
+      const settings = savePrintSettings(req.body || {});
+      res.json({ success: true, settings });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.post('/api/print/settings/reset', (req, res) => {
+    try {
+      const settings = resetPrintSettings();
+      res.json({ success: true, settings });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.get('/api/print/order/:orderNumber', async (req, res) => {
+    try {
+      const order = findOrderByNumber(req.params.orderNumber);
+      if (!order) return res.status(404).json({ error: 'Order not found' });
+      const payload = buildOrderPrintPayload(order);
+      // Generate the actual codes (async) before returning.
+      payload.codes.barcodes = {
+        order: (await generateBarcode(payload.codes.barcodes.order)) || '',
+        tracking: (await generateBarcode(payload.codes.barcodes.tracking)) || '',
+        invoice: (await generateBarcode(payload.codes.barcodes.invoice)) || '',
+        payment: (await generateBarcode(payload.codes.barcodes.payment)) || '',
+      };
+      payload.codes.qrs = {
+        order: (await generateQr(payload.codes.qrs.order)) || '',
+        tracking: (await generateQr(payload.codes.qrs.tracking)) || '',
+        invoice: (await generateQr(payload.codes.qrs.invoice)) || '',
+        payment: (await generateQr(payload.codes.qrs.payment)) || '',
+      };
+      res.json({ success: true, payload });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.post('/api/print/codes', async (req, res) => {
+    try {
+      const { barcodes = {}, qrs = {} } = req.body || {};
+      const barcodeMap: Record<string, string> = {};
+      const qrMap: Record<string, string> = {};
+      for (const key of Object.keys(barcodes)) barcodeMap[key] = (await generateBarcode(String(barcodes[key]))) || '';
+      for (const key of Object.keys(qrs)) qrMap[key] = (await generateQr(String(qrs[key]))) || '';
+      res.json({ success: true, codes: { barcodes: barcodeMap, qrs: qrMap } });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.get('/api/print/supplier-statement/:supplierId', async (req, res) => {
+    try {
+      const { periodStart, periodEnd } = req.query;
+      const result = await buildSupplierStatementPayload(
+        req.params.supplierId,
+        periodStart as string | undefined,
+        periodEnd as string | undefined
+      );
+      if (!result.success) return res.status(404).json({ error: result.error });
+      res.json({ success: true, payload: result.payload });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.get('/api/print/purchase-order/:poId', async (req, res) => {
+    try {
+      const result = await buildPurchaseOrderPayload(req.params.poId);
+      if (!result.success) return res.status(404).json({ error: result.error });
+      res.json({ success: true, payload: result.payload });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.get('/api/suppliers/purchase-orders/all', (req, res) => {
+    try {
+      const pos = supplierEngine.getAllPurchaseOrders();
+      res.json({ success: true, pos });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.get('/api/print/return-refund/:returnId', async (req, res) => {
+    try {
+      const result = await buildReturnRefundPayload(req.params.returnId);
+      if (!result.success) return res.status(404).json({ error: result.error });
+      res.json({ success: true, payload: result.payload });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.get('/api/print/report', async (req, res) => {
+    try {
+      const range = (req.query.range as string) || 'ALL';
+      const from = req.query.from as string | undefined;
+      const to = req.query.to as string | undefined;
+      const result = await buildReportPayload(range, from, to);
+      if (!result.success) return res.status(404).json({ error: result.error });
+      res.json({ success: true, payload: result.payload });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.post('/api/print/bulk', async (req, res) => {
+    try {
+      const { orderNumbers = [] } = req.body || {};
+      const results = [];
+      for (const num of orderNumbers) {
+        const order = findOrderByNumber(num);
+        if (!order) continue;
+        const payload = buildOrderPrintPayload(order);
+        payload.codes.barcodes = {
+          order: (await generateBarcode(payload.codes.barcodes.order)) || '',
+          tracking: (await generateBarcode(payload.codes.barcodes.tracking)) || '',
+          invoice: (await generateBarcode(payload.codes.barcodes.invoice)) || '',
+          payment: (await generateBarcode(payload.codes.barcodes.payment)) || '',
+        };
+        payload.codes.qrs = {
+          order: (await generateQr(payload.codes.qrs.order)) || '',
+          tracking: (await generateQr(payload.codes.qrs.tracking)) || '',
+          invoice: (await generateQr(payload.codes.qrs.invoice)) || '',
+          payment: (await generateQr(payload.codes.qrs.payment)) || '',
+        };
+        results.push(payload);
+      }
+      res.json({ success: true, payloads: results });
     } catch (e: any) {
       res.status(500).json({ error: e.message });
     }
@@ -4131,7 +4335,7 @@ async function startServer() {
   // -------------------------------------------------------------
   if (process.env.NODE_ENV !== 'production') {
     const vite = await createViteServer({
-      server: { middlewareMode: true },
+      server: { middlewareMode: true, allowedHosts: true },
       appType: 'spa'
     });
     app.use(vite.middlewares);

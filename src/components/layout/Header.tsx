@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { ShoppingBag, Search, Menu, X, ShieldCheck, User, Compass, PhoneCall, Heart, LogIn, Sparkles, Sun, Moon } from 'lucide-react';
+import { ShoppingBag, Search, Menu, X, ShieldCheck, User, Heart, LogIn, Sparkles, PhoneCall } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { CustomerAuthModal } from '../auth/CustomerAuthModal';
 import { BrandLogo } from '../brand/BrandLogo';
+import { LanguageButton } from './LanguageButton';
+import { ThemeButton } from './ThemeButton';
 
 export function Header() {
-  const { language, setLanguage, cartCount, siteContent, wishlist, currentCustomerId, isDarkMode, toggleDarkMode } = useApp();
+  const { language, cartCount, siteContent, wishlist, currentCustomerId } = useApp();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -14,6 +16,7 @@ export function Header() {
   const [authModalMode, setAuthModalMode] = useState<'login' | 'register' | 'guest' | 'link_order'>('login');
   const navigate = useNavigate();
   const location = useLocation();
+  const isBn = language === 'BN';
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -24,29 +27,30 @@ export function Header() {
   };
 
   const navLinks = [
-    { name: language === 'BN' ? 'হোম' : 'Home', path: '/' },
-    { name: language === 'BN' ? 'সকল পণ্য' : 'Shop All', path: '/shop' },
-    { name: language === 'BN' ? 'পোশাক ও শাড়ি' : 'Apparel & Sarees', path: '/category/traditional-clothing' },
-    { name: language === 'BN' ? 'হস্তশিল্প ও সাজসজ্জা' : 'Handicrafts & Decor', path: '/category/handicrafts-decor' },
-    { name: language === 'BN' ? 'খাঁটি খাদ্য' : 'Organic Pantry', path: '/category/organic-pantry' },
-    { name: language === 'BN' ? 'অর্ডার ট্র্যাক' : 'Track Order', path: '/track-order' }
+    { name: isBn ? 'হোম' : 'Home', path: '/' },
+    { name: isBn ? 'সকল পণ্য' : 'Shop All', path: '/shop' },
+    { name: isBn ? 'পোশাক ও শাড়ি' : 'Apparel & Sarees', path: '/category/traditional-clothing' },
+    { name: isBn ? 'হস্তশিল্প ও সাজসজ্জা' : 'Handicrafts & Decor', path: '/category/handicrafts-decor' },
+    { name: isBn ? 'খাঁটি খাদ্য' : 'Organic Pantry', path: '/category/organic-pantry' },
+    { name: isBn ? 'অর্ডার ট্র্যাক' : 'Track Order', path: '/track-order' }
   ];
 
+  const iconBtn =
+    'relative inline-flex h-10 w-10 items-center justify-center rounded-full text-stone-600 dark:text-slate-300 hover:text-teal-900 dark:hover:text-teal-300 hover:bg-stone-100 dark:hover:bg-slate-800 transition-colors';
+
   return (
-    <header className="sticky top-0 z-40 w-full border-b border-stone-200/80 bg-white/95 backdrop-blur-md transition-all shadow-xs">
+    <header className="sticky top-0 z-40 w-full border-b border-stone-200/80 dark:border-slate-800 bg-white/95 dark:bg-slate-950/95 backdrop-blur-md transition-all shadow-xs">
       {/* Announcement Bar from CMS */}
       {siteContent.announcementBar.enabled && (
         <div className="bg-stone-950 text-stone-200 text-xs py-2 px-4 text-center font-medium tracking-wide flex items-center justify-center gap-3 border-b border-stone-800">
           <span className="flex items-center gap-1.5">
             <Sparkles className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" />
-            {language === 'BN' 
-              ? siteContent.announcementBar.textBn 
-              : siteContent.announcementBar.text}
+            {isBn ? siteContent.announcementBar.textBn : siteContent.announcementBar.text}
           </span>
           {siteContent.contact?.phone && (
             <>
               <span className="hidden md:inline-block text-stone-600">|</span>
-              <a 
+              <a
                 href={`tel:${siteContent.contact.phone}`}
                 className="hidden md:inline-flex items-center gap-1 text-teal-300 hover:text-teal-200 transition-colors"
               >
@@ -59,41 +63,40 @@ export function Header() {
 
       {/* Main Header Container */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex h-20 items-center justify-between gap-4">
-          
+        <div className="flex h-16 items-center justify-between gap-3 sm:gap-4">
           {/* Mobile menu toggle */}
           <div className="flex items-center lg:hidden">
-            <button 
+            <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="text-stone-700 hover:text-stone-900 p-2.5 rounded-xl hover:bg-stone-100 transition-colors"
+              className={iconBtn}
               aria-label="Toggle menu"
             >
-              {isMobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+              {isMobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </button>
           </div>
 
           {/* Logo & Brand Identity */}
-          <div className="flex items-center">
+          <div className="flex items-center flex-1 lg:flex-none">
             <BrandLogo variant="light" size="md" />
           </div>
 
           {/* Desktop Navigation Links */}
-          <nav className="hidden lg:flex items-center space-x-6 xl:space-x-8">
+          <nav className="hidden lg:flex items-center gap-5 xl:gap-7 mx-4">
             {navLinks.map((link) => {
               const isActive = location.pathname === link.path;
               return (
-                <Link 
-                  key={link.path} 
-                  to={link.path} 
-                  className={`text-sm font-semibold transition-all py-1.5 px-1 relative ${
-                    isActive 
-                      ? 'text-teal-950 font-bold' 
-                      : 'text-stone-600 hover:text-teal-900'
+                <Link
+                  key={link.path}
+                  to={link.path}
+                  className={`relative text-sm font-semibold transition-all py-1.5 px-1 ${
+                    isActive
+                      ? 'text-teal-900 dark:text-teal-300 font-bold'
+                      : 'text-stone-600 dark:text-slate-300 hover:text-teal-900 dark:hover:text-teal-300'
                   }`}
                 >
                   {link.name}
                   {isActive && (
-                    <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-teal-800 rounded-full"></span>
+                    <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-teal-700 dark:bg-teal-400 rounded-full"></span>
                   )}
                 </Link>
               );
@@ -101,143 +104,100 @@ export function Header() {
           </nav>
 
           {/* Actions & Utilities */}
-          <div className="flex items-center space-x-1.5 sm:space-x-2.5">
+          <div className="flex items-center gap-1 sm:gap-1.5">
             {/* Search Button & Overlay */}
             <div className="relative">
-              <button 
+              <button
                 onClick={() => setIsSearchOpen(!isSearchOpen)}
-                className="p-2.5 text-stone-600 hover:text-teal-900 hover:bg-stone-100 rounded-xl transition-colors"
-                title="Search products"
+                className={iconBtn}
+                title={isBn ? 'পণ্য খুঁজুন' : 'Search products'}
               >
                 <Search className="h-5 w-5" />
               </button>
 
               {isSearchOpen && (
-                <div className="absolute right-0 top-14 w-72 sm:w-88 bg-white p-3.5 rounded-2xl border border-stone-200 shadow-2xl z-50 animate-in fade-in zoom-in-95 duration-150">
+                <div className="absolute right-0 top-12 w-72 sm:w-88 bg-white dark:bg-slate-900 p-3.5 rounded-2xl border border-stone-200 dark:border-slate-700 shadow-2xl z-50 animate-in fade-in zoom-in-95 duration-150">
                   <form onSubmit={handleSearch} className="flex gap-2">
                     <input
                       type="text"
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
-                      placeholder={language === 'BN' ? 'জামদানি, খাঁটি মধু, নকশিকাঁথা খুঁজুন...' : 'Search Jamdani, Honey, Tea, Pottery...'}
-                      className="w-full text-xs px-3.5 py-2.5 border border-stone-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-800/30 focus:border-teal-800"
+                      placeholder={isBn ? 'জামদানি, খাঁটি মধু, নকশিকাঁথা খুঁজুন...' : 'Search Jamdani, Honey, Tea, Pottery...'}
+                      className="w-full text-xs px-3.5 py-2.5 border border-stone-300 dark:border-slate-600 bg-stone-50 dark:bg-slate-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-800/30 focus:border-teal-800"
                       autoFocus
                     />
                     <button
                       type="submit"
-                      className="px-4 py-2.5 bg-teal-900 text-white rounded-xl text-xs font-semibold hover:bg-teal-950 shadow-xs"
+                      className="px-4 py-2.5 bg-teal-900 dark:bg-teal-600 text-white rounded-xl text-xs font-semibold hover:bg-teal-950 dark:hover:bg-teal-500 shadow-xs"
                     >
-                      {language === 'BN' ? 'খুঁজুন' : 'Search'}
+                      {isBn ? 'খুঁজুন' : 'Search'}
                     </button>
                   </form>
-                  <div className="mt-2.5 pt-2 border-t border-stone-100 flex items-center gap-1.5 text-[11px] text-stone-400">
-                    <span className="font-semibold">{language === 'BN' ? 'জনপ্রিয়:' : 'Popular:'}</span>
-                    <button type="button" onClick={() => { setSearchQuery('Jamdani'); navigate('/shop?q=Jamdani'); setIsSearchOpen(false); }} className="hover:text-teal-900 underline">Jamdani</button>
+                  <div className="mt-2.5 pt-2 border-t border-stone-100 dark:border-slate-800 flex items-center gap-1.5 text-[11px] text-stone-400 dark:text-slate-500">
+                    <span className="font-semibold">{isBn ? 'জনপ্রিয়:' : 'Popular:'}</span>
+                    <button type="button" onClick={() => { setSearchQuery('Jamdani'); navigate('/shop?q=Jamdani'); setIsSearchOpen(false); }} className="hover:text-teal-900 dark:hover:text-teal-300 underline">Jamdani</button>
                     <span>•</span>
-                    <button type="button" onClick={() => { setSearchQuery('Honey'); navigate('/shop?q=Honey'); setIsSearchOpen(false); }} className="hover:text-teal-900 underline">Honey</button>
+                    <button type="button" onClick={() => { setSearchQuery('Honey'); navigate('/shop?q=Honey'); setIsSearchOpen(false); }} className="hover:text-teal-900 dark:hover:text-teal-300 underline">Honey</button>
                     <span>•</span>
-                    <button type="button" onClick={() => { setSearchQuery('Nakshi'); navigate('/shop?q=Nakshi'); setIsSearchOpen(false); }} className="hover:text-teal-900 underline">Nakshi</button>
+                    <button type="button" onClick={() => { setSearchQuery('Nakshi'); navigate('/shop?q=Nakshi'); setIsSearchOpen(false); }} className="hover:text-teal-900 dark:hover:text-teal-300 underline">Nakshi</button>
                   </div>
                 </div>
               )}
             </div>
 
-            {/* Language Switcher */}
-            <button 
-              onClick={() => setLanguage(language === 'EN' ? 'BN' : 'EN')}
-              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-stone-200 bg-stone-50 hover:bg-stone-100 text-xs font-bold text-stone-800 transition-colors shadow-2xs"
-              title="Toggle Language"
-            >
-              <Compass className="w-3.5 h-3.5 text-teal-800" />
-              <span>{language === 'EN' ? 'বাংলা' : 'English'}</span>
-            </button>
+            {/* Language toggle (separate button) */}
+            <LanguageButton />
 
-            {/* Day / Dark Mode Switcher */}
-            <button
-              onClick={toggleDarkMode}
-              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-stone-200 bg-stone-50 hover:bg-stone-100 dark:bg-stone-800 dark:border-stone-700 text-xs font-bold text-stone-800 dark:text-stone-200 transition-colors shadow-2xs"
-              title={isDarkMode ? 'Light / Day Mode' : 'Dark Mode'}
-            >
-              {isDarkMode ? (
-                <>
-                  <Sun className="w-3.5 h-3.5 text-amber-400" />
-                  <span className="hidden sm:inline">{language === 'BN' ? 'দিন' : 'Day'}</span>
-                </>
-              ) : (
-                <>
-                  <Moon className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
-                  <span className="hidden sm:inline">{language === 'BN' ? 'রাত' : 'Dark'}</span>
-                </>
-              )}
-            </button>
+            {/* Display mode toggle (separate button) */}
+            <ThemeButton />
 
-            {/* Wishlist Link & Badge */}
+            {/* Wishlist */}
             <Link
               to="/account?tab=wishlist"
-              className="relative p-2.5 text-stone-600 hover:text-rose-600 hover:bg-stone-100 rounded-xl transition-colors hidden sm:inline-flex"
-              title={language === 'BN' ? 'উইশলিস্ট' : 'Wishlist'}
+              className={`${iconBtn} hidden sm:inline-flex`}
+              title={isBn ? 'উইশলিস্ট' : 'Wishlist'}
             >
               <Heart className="h-5 w-5" />
               {wishlist.length > 0 && (
-                <span className="absolute top-1 right-1 flex h-4.5 min-w-[18px] px-1 items-center justify-center rounded-full bg-rose-600 text-[10px] font-bold text-white shadow-xs border-2 border-white">
+                <span className="absolute top-0.5 right-0.5 flex h-4 min-w-[16px] px-1 items-center justify-center rounded-full bg-rose-600 text-[9px] font-bold text-white shadow-xs border-2 border-white dark:border-slate-950">
                   {wishlist.length}
                 </span>
               )}
             </Link>
 
-            {/* Customer Account & Sign In */}
-            <div className="hidden sm:flex items-center">
-              <button
-                onClick={() => {
-                  if (currentCustomerId) {
-                    navigate('/account');
-                  } else {
-                    setAuthModalMode('login');
-                    setAuthModalOpen(true);
-                  }
-                }}
-                className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all border ${
-                  currentCustomerId 
-                    ? 'border-stone-200 bg-stone-50 text-stone-800 hover:bg-stone-100' 
-                    : 'border-teal-900/20 bg-teal-50 text-teal-950 hover:bg-teal-100/70'
-                }`}
-              >
-                {currentCustomerId ? (
-                  <>
-                    <User className="h-3.5 w-3.5 text-teal-800" />
-                    <span>{language === 'BN' ? 'অ্যাকাউন্ট' : 'Account'}</span>
-                  </>
-                ) : (
-                  <>
-                    <LogIn className="h-3.5 w-3.5 text-teal-800" />
-                    <span>{language === 'BN' ? 'লগইন' : 'Sign In'}</span>
-                  </>
-                )}
-              </button>
-            </div>
-
-            {/* Cart Icon & Badge */}
-            <Link 
-              to="/cart" 
-              className="relative p-2.5 text-stone-700 hover:text-teal-900 hover:bg-stone-100 rounded-xl transition-colors"
-              title="View Cart"
+            {/* Account / Sign In */}
+            <button
+              onClick={() => {
+                if (currentCustomerId) {
+                  navigate('/account');
+                } else {
+                  setAuthModalMode('login');
+                  setAuthModalOpen(true);
+                }
+              }}
+              className={iconBtn}
+              title={currentCustomerId ? (isBn ? 'আমার অ্যাকাউন্ট' : 'My Account') : (isBn ? 'সাইন ইন' : 'Sign In')}
             >
+              {currentCustomerId ? <User className="h-5 w-5" /> : <LogIn className="h-5 w-5" />}
+            </button>
+
+            {/* Cart */}
+            <Link to="/cart" className={iconBtn} title={isBn ? 'কার্ট' : 'Cart'}>
               <ShoppingBag className="h-5 w-5" />
               {cartCount > 0 && (
-                <span className="absolute top-1 right-1 flex h-4.5 min-w-[18px] px-1 items-center justify-center rounded-full bg-teal-900 text-[10px] font-bold text-white shadow-xs border-2 border-white">
+                <span className="absolute top-0.5 right-0.5 flex h-4 min-w-[16px] px-1 items-center justify-center rounded-full bg-teal-900 dark:bg-teal-600 text-[9px] font-bold text-white shadow-xs border-2 border-white dark:border-slate-950">
                   {cartCount}
                 </span>
               )}
             </Link>
 
-            {/* Admin Control Center Shortcut */}
-            <Link 
-              to="/admin" 
-              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-stone-900 text-white hover:bg-stone-800 text-xs font-semibold shadow-xs transition-colors"
-              title="Enter Admin Operations"
+            {/* Admin (subtle icon) */}
+            <Link
+              to="/admin"
+              className={`${iconBtn} hidden sm:inline-flex`}
+              title="Admin Operations"
             >
-              <ShieldCheck className="w-3.5 h-3.5 text-teal-400" />
-              <span className="hidden md:inline">Admin UI</span>
+              <ShieldCheck className="h-5 w-5" />
             </Link>
           </div>
         </div>
@@ -245,20 +205,20 @@ export function Header() {
 
       {/* Mobile Drawer Menu */}
       {isMobileMenuOpen && (
-        <div className="lg:hidden bg-white border-b border-stone-200 shadow-xl px-4 pt-3 pb-6 space-y-3">
+        <div className="lg:hidden bg-white dark:bg-slate-950 border-b border-stone-200 dark:border-slate-800 shadow-xl px-4 pt-3 pb-6 space-y-3">
           <form onSubmit={handleSearch} className="flex gap-2 mb-4">
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder={language === 'BN' ? 'পণ্য খুঁজুন...' : 'Search products...'}
-              className="w-full text-sm px-3 py-2 border border-stone-300 rounded-lg focus:outline-none focus:border-teal-800"
+              placeholder={isBn ? 'পণ্য খুঁজুন...' : 'Search products...'}
+              className="w-full text-sm px-3 py-2 border border-stone-300 dark:border-slate-600 bg-stone-50 dark:bg-slate-800 rounded-lg focus:outline-none focus:border-teal-800"
             />
             <button
               type="submit"
-              className="px-4 py-2 bg-teal-900 text-white rounded-lg text-sm font-semibold"
+              className="px-4 py-2 bg-teal-900 dark:bg-teal-600 text-white rounded-lg text-sm font-semibold"
             >
-              {language === 'BN' ? 'খুঁজুন' : 'Search'}
+              {isBn ? 'খুঁজুন' : 'Search'}
             </button>
           </form>
 
@@ -267,7 +227,7 @@ export function Header() {
               <Link
                 key={link.path}
                 to={link.path}
-                className="block px-3 py-2 rounded-lg text-sm font-medium text-stone-800 hover:bg-stone-100 hover:text-teal-900"
+                className="block px-3 py-2 rounded-lg text-sm font-medium text-stone-800 dark:text-slate-200 hover:bg-stone-100 dark:hover:bg-slate-800 hover:text-teal-900 dark:hover:text-teal-300"
                 onClick={() => setIsMobileMenuOpen(false)}
               >
                 {link.name}
@@ -275,43 +235,33 @@ export function Header() {
             ))}
           </div>
 
-          <div className="pt-3 border-t border-stone-200 flex flex-col gap-2">
+          <div className="pt-3 border-t border-stone-200 dark:border-slate-800 flex flex-col gap-2">
             <button
               onClick={() => {
                 setIsMobileMenuOpen(false);
                 setAuthModalMode('login');
                 setAuthModalOpen(true);
               }}
-              className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-stone-800 hover:bg-stone-100 rounded-lg text-left"
+              className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-stone-800 dark:text-slate-200 hover:bg-stone-100 dark:hover:bg-slate-800 rounded-lg text-left"
             >
-              <LogIn className="h-4 w-4 text-stone-500" />
-              {language === 'BN' ? 'লগইন / রেজিস্ট্রেশন / গেস্ট অর্ডার লিংক' : 'Sign In / Register / Link Guest Order'}
+              <LogIn className="h-4 w-4 text-stone-500 dark:text-slate-400" />
+              {isBn ? 'লগইন / রেজিস্ট্রেশন / গেস্ট অর্ডার লিংক' : 'Sign In / Register / Link Guest Order'}
             </button>
             <Link
               to="/account"
-              className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-stone-800 hover:bg-stone-100 rounded-lg"
+              className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-stone-800 dark:text-slate-200 hover:bg-stone-100 dark:hover:bg-slate-800 rounded-lg"
               onClick={() => setIsMobileMenuOpen(false)}
             >
-              <User className="h-4 w-4 text-stone-500" />
-              {language === 'BN' ? 'আমার অ্যাকাউন্ট' : 'My Account'}
+              <User className="h-4 w-4 text-stone-500 dark:text-slate-400" />
+              {isBn ? 'আমার অ্যাকাউন্ট' : 'My Account'}
             </Link>
-            <button
-              onClick={toggleDarkMode}
-              className="flex items-center justify-between px-3 py-2 text-sm font-semibold text-stone-800 bg-stone-100 hover:bg-stone-200 rounded-lg w-full"
-            >
-              <div className="flex items-center gap-2">
-                {isDarkMode ? <Sun className="h-4 w-4 text-amber-500" /> : <Moon className="h-4 w-4 text-indigo-600" />}
-                <span>{isDarkMode ? (language === 'BN' ? 'ডে মোড চালু করুন' : 'Switch to Day Light Mode') : (language === 'BN' ? 'ডার্ক মোড চালু করুন' : 'Switch to Dark Mode')}</span>
-              </div>
-              <span className="text-xs px-2 py-0.5 rounded bg-white text-stone-700 font-mono">{isDarkMode ? 'DARK' : 'LIGHT'}</span>
-            </button>
             <Link
               to="/admin"
-              className="flex items-center gap-2 px-3 py-2 text-sm font-semibold text-teal-900 bg-teal-50 border border-teal-200 rounded-lg"
+              className="flex items-center gap-2 px-3 py-2 text-sm font-semibold text-teal-900 dark:text-teal-300 bg-teal-50 dark:bg-teal-500/10 border border-teal-200 dark:border-teal-500/30 rounded-lg"
               onClick={() => setIsMobileMenuOpen(false)}
             >
-              <ShieldCheck className="h-4 w-4 text-teal-700" />
-              {language === 'BN' ? 'অ্যাডমিন কন্ট্রোল সেন্টার' : 'Admin Control Center'}
+              <ShieldCheck className="h-4 w-4 text-teal-700 dark:text-teal-400" />
+              {isBn ? 'অ্যাডমিন কন্ট্রোল সেন্টার' : 'Admin Control Center'}
             </Link>
           </div>
         </div>

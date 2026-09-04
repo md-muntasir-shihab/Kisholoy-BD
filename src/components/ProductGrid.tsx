@@ -31,7 +31,7 @@ export const ProductGrid: React.FC<ProductGridProps> = ({
 
   if (filtered.length === 0) {
     return (
-      <div className="text-center py-12 bg-stone-50 rounded-xl border border-dashed border-stone-300">
+      <div className="text-center py-12 bg-stone-50 dark:bg-slate-800/60 rounded-xl border border-dashed border-stone-300 dark:border-slate-700">
         <p className="text-stone-500 font-medium">
           {language === 'BN' ? 'কোনো পণ্য পাওয়া যায়নি।' : 'No products found matching your criteria.'}
         </p>

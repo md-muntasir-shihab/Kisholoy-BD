@@ -10,7 +10,7 @@ import {
   Building2, Plus, RefreshCw, HelpCircle, CheckCircle2, AlertTriangle, 
   Search, Filter, DollarSign, Calendar, Truck, ArrowUpRight, ArrowDownRight, 
   ShieldCheck, Lock, Eye, FileText, Check, X, ShieldAlert, Key, ExternalLink,
-  Smartphone, Warehouse, UploadCloud
+  Smartphone, Warehouse, UploadCloud, Printer
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { 
@@ -29,13 +29,16 @@ import { SupplierAgreementsView } from '../components/admin/SupplierAgreementsVi
 import { SupplyBatchesView } from '../components/admin/SupplyBatchesView';
 import { SupplierSettlementsView } from '../components/admin/SupplierSettlementsView';
 import { supplierSchema, purchaseOrderSchema, formatZodError } from '../lib/validations';
-import { SupplierStatementModal } from '../components/admin/SupplierStatementModal';
+import { PrintSupplierStatementModal } from '../components/print/PrintSupplierStatementModal';
+import { PurchaseDocumentPrintModal } from '../components/print/PurchaseDocumentPrintModal';
 
 export function SuppliersAdmin() {
   const { currentRole, language, showToast, products } = useApp();
   const [activeTab, setActiveTab] = useState<'suppliers' | 'agreements' | 'batches' | 'pos' | 'payments' | 'settlements' | 'portal'>('suppliers');
   const [previewPortalSupplier, setPreviewPortalSupplier] = useState<Supplier | null>(null);
   const [statementSupplierId, setStatementSupplierId] = useState<string | null>(null);
+  const [printPoId, setPrintPoId] = useState<string | null>(null);
+  const [allPurchaseOrders, setAllPurchaseOrders] = useState<SupplierPurchaseOrder[]>([]);
 
   // Safe currency formatter and toast notifier
   const formatPrice = (amount?: number | null) => {
@@ -123,8 +126,20 @@ export function SuppliersAdmin() {
     }
   };
 
+  // Load all purchase orders for the unified print document list.
+  const loadPurchaseOrders = async () => {
+    try {
+      const res = await fetch('/api/suppliers/purchase-orders/all');
+      const data = await res.json();
+      if (data.success) setAllPurchaseOrders(data.pos || []);
+    } catch (err) {
+      console.error('Failed to load purchase orders', err);
+    }
+  };
+
   useEffect(() => {
     loadSupplierData();
+    loadPurchaseOrders();
   }, []);
 
   // Fetch supplier detailed ledger
@@ -821,12 +836,51 @@ export function SuppliersAdmin() {
             </button>
           </div>
 
-          <div className="border border-stone-200 rounded-lg divide-y divide-stone-100">
-            {suppliers.flatMap(s => (s as any).purchaseOrders || []).length === 0 ? (
+          <div className="border border-stone-200 rounded-lg overflow-hidden">
+            {allPurchaseOrders.length === 0 ? (
               <div className="p-8 text-center text-stone-400 text-xs">
-                Select a supplier above to inspect their purchase orders or click "Issue New PO".
+                No purchase orders found. Click "Issue New PO" to create one.
               </div>
-            ) : null}
+            ) : (
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="bg-stone-50 border-b border-stone-200 text-stone-500">
+                    <th className="text-left px-4 py-2 font-bold">PO Number</th>
+                    <th className="text-left px-4 py-2 font-bold">Supplier</th>
+                    <th className="text-left px-4 py-2 font-bold">Date</th>
+                    <th className="text-right px-4 py-2 font-bold">Total</th>
+                    <th className="text-right px-4 py-2 font-bold">Paid</th>
+                    <th className="text-right px-4 py-2 font-bold">Due</th>
+                    <th className="text-center px-4 py-2 font-bold">Status</th>
+                    <th className="text-right px-4 py-2 font-bold">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-stone-100">
+                  {allPurchaseOrders.map((po) => (
+                    <tr key={po.id} className="hover:bg-stone-50">
+                      <td className="px-4 py-2.5 font-bold text-stone-900">{po.poNumber}</td>
+                      <td className="px-4 py-2.5 text-stone-600">{po.supplierName}</td>
+                      <td className="px-4 py-2.5 text-stone-600">{new Date(po.orderDate).toLocaleDateString('en-GB')}</td>
+                      <td className="px-4 py-2.5 text-right font-semibold">{formatPrice(po.totalAmount)}</td>
+                      <td className="px-4 py-2.5 text-right text-stone-600">{formatPrice(po.paidAmount)}</td>
+                      <td className="px-4 py-2.5 text-right text-amber-700 font-semibold">{formatPrice(po.dueAmount)}</td>
+                      <td className="px-4 py-2.5 text-center">
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-stone-100 text-stone-600 uppercase">{po.paymentStatus}</span>
+                      </td>
+                      <td className="px-4 py-2.5 text-right">
+                        <button
+                          onClick={() => setPrintPoId(po.id)}
+                          className="px-2.5 py-1 bg-teal-900 hover:bg-teal-950 text-white rounded-lg text-[11px] font-bold flex items-center gap-1 ml-auto"
+                          title="Print Purchase Document (one PDF)"
+                        >
+                          <Printer className="w-3 h-3 text-teal-300" /> Print
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
           </div>
         </div>
       )}
@@ -1498,11 +1552,18 @@ export function SuppliersAdmin() {
         />
       )}
 
-      {/* Official Supplier Statement Modal */}
-      <SupplierStatementModal
+      {/* Official Supplier Statement Modal (unified print engine) */}
+      <PrintSupplierStatementModal
         isOpen={Boolean(statementSupplierId)}
         onClose={() => setStatementSupplierId(null)}
         supplierId={statementSupplierId}
+      />
+
+      {/* Unified Purchase Document Print Modal */}
+      <PurchaseDocumentPrintModal
+        isOpen={Boolean(printPoId)}
+        onClose={() => setPrintPoId(null)}
+        poId={printPoId}
       />
     </div>
   );

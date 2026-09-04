@@ -22,6 +22,8 @@ import {
   INITIAL_LOYALTY_WALLETS, INITIAL_CUSTOMER_NOTIFICATIONS
 } from '../data/mockData';
 
+export type ThemePreference = 'light' | 'dark' | 'system';
+
 interface AppContextType {
   language: Language;
   setLanguage: (lang: Language) => void;
@@ -29,6 +31,8 @@ interface AppContextType {
   setCurrentRole: (role: Role) => void;
   isDarkMode: boolean;
   toggleDarkMode: () => void;
+  theme: ThemePreference;
+  setTheme: (t: ThemePreference) => void;
   
   // Products & Categories
   products: Product[];
@@ -169,26 +173,43 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [language, setLanguage] = useState<Language>('EN');
   const [currentRole, setCurrentRole] = useState<Role>('SUPER_ADMIN');
-  const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
+  // ---------------- Theme (Light / Dark / System) ----------------
+  const [theme, setThemeState] = useState<ThemePreference>(() => {
     if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('theme');
-      if (saved) return saved === 'dark';
-      return window.matchMedia('(prefers-color-scheme: dark)').matches;
+      const saved = localStorage.getItem('kisholoy-theme');
+      const valid: ThemePreference[] = ['light', 'dark', 'system'];
+      if (saved && valid.includes(saved as ThemePreference)) return saved as ThemePreference;
+      return 'system';
     }
+    return 'system';
+  });
+  const [systemDark, setSystemDark] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') return window.matchMedia('(prefers-color-scheme: dark)').matches;
     return false;
   });
 
-  useEffect(() => {
-    if (isDarkMode) {
-      document.documentElement.classList.add('dark');
-      localStorage.setItem('theme', 'dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-      localStorage.setItem('theme', 'light');
-    }
-  }, [isDarkMode]);
+  const isDarkMode = theme === 'dark' || (theme === 'system' && systemDark);
 
-  const toggleDarkMode = () => setIsDarkMode(prev => !prev);
+  // Keep the resolved theme applied without a page reload.
+  useEffect(() => {
+    document.documentElement.classList.toggle('dark', isDarkMode);
+    try {
+      localStorage.setItem('kisholoy-theme', theme);
+    } catch {
+      /* storage unavailable */
+    }
+  }, [theme, isDarkMode]);
+
+  // Follow the OS preference when on "system".
+  useEffect(() => {
+    const mq = window.matchMedia('(prefers-color-scheme: dark)');
+    const handler = (e: MediaQueryListEvent) => setSystemDark(e.matches);
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, []);
+
+  const setTheme = (t: ThemePreference) => setThemeState(t);
+  const toggleDarkMode = () => setThemeState(isDarkMode ? 'light' : 'dark');
   
   const [products, setProducts] = useState<Product[]>(INITIAL_PRODUCTS);
   const [categories, setCategories] = useState<Category[]>(INITIAL_CATEGORIES);
@@ -806,7 +827,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       discount: orderData.discount || 0,
       total,
       paymentMethod: orderData.paymentMethod,
-      paymentStatus: orderData.paymentMethod === 'COD' ? 'UNPAID' : 'PAID',
+      // Never mark the order as paid from the client. COD = unpaid until
+      // courier collects; online gateways = pending until verified server-side.
+      paymentStatus: orderData.paymentMethod === 'COD' ? 'UNPAID' : 'PENDING',
       settlementStatus: 'PENDING',
       orderStatus: orderData.orderStatus || 'PENDING',
       courier: {
@@ -1883,6 +1906,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setCurrentRole,
         isDarkMode,
         toggleDarkMode,
+        theme,
+        setTheme,
         products,
         setProducts,
         categories,

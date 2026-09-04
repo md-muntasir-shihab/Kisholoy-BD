@@ -270,11 +270,17 @@ export class PaymentService {
   /**
    * Process refund through gateway
    */
-  async initiateRefund(orderId: string, amount: number, reason: string): Promise<{ success: boolean; refundId: string }> {
+  async initiateRefund(orderId: string, amount: number, reason: string): Promise<{ success: boolean; refundId: string; error?: string }> {
     const order = serverDb.getOrderById(orderId);
     if (!order) {
       throw new Error(`Order ${orderId} not found`);
     }
+
+    // Idempotency guard: never process a second refund for the same order.
+    if (order.paymentStatus === 'REFUNDED' || (order as any).refundProcessed) {
+      return { success: false, refundId: '', error: 'Refund already processed for this order — duplicate prevented.' };
+    }
+    (order as any).refundProcessed = true;
 
     const refundId = `REF-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
 

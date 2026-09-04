@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { Settings, Save, CheckCircle2, DollarSign, Truck, Percent } from 'lucide-react';
 import { useApp } from '../context/AppContext';
+import { PrintSettingsPanel } from '../components/print/PrintSettingsPanel';
 
 export function SettingsAdmin() {
-  const { siteContent, updateSiteContent, showToast } = useApp();
+  const { siteContent, updateSiteContent, showToast, orders } = useApp();
   const [fees, setFees] = useState(siteContent.shippingFees);
 
   const handleSave = (e: React.FormEvent) => {
@@ -85,6 +86,11 @@ export function SettingsAdmin() {
           </button>
         </div>
       </form>
+
+      {/* Unified Document & Print Engine Settings */}
+      <div className="bg-white rounded-xl border border-stone-200 shadow-xs p-6">
+        <PrintSettingsPanel orders={orders} siteContent={siteContent} />
+      </div>
     </div>
   );
 }

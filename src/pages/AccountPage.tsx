@@ -403,7 +403,7 @@ export function AccountPage() {
           </div>
 
           {/* Mode Switcher */}
-          <div className="flex border-b border-stone-200 bg-stone-50/60 text-xs font-semibold">
+          <div className="flex border-b border-stone-200 bg-stone-50/60 dark:bg-slate-800/40 text-xs font-semibold">
             <button
               onClick={() => setAuthMode('login')}
               className={`flex-1 py-3.5 text-center transition-colors border-b-2 ${
@@ -492,7 +492,7 @@ export function AccountPage() {
                         loginCustomer('cust-1');
                         showToast('Logged in as Tanzil Ahmed');
                       }}
-                      className="px-3 py-1.5 rounded-lg bg-teal-50 border border-teal-200 text-teal-900 font-semibold hover:bg-teal-100 transition-colors"
+                      className="px-3 py-1.5 rounded-lg bg-teal-50 border border-teal-200 dark:border-teal-500/30 text-teal-900 font-semibold hover:bg-teal-100 transition-colors"
                     >
                       Sign In as Tanzil Ahmed (cust-1)
                     </button>
@@ -602,7 +602,7 @@ export function AccountPage() {
             {/* LINK GUEST ORDER */}
             {authMode === 'link_order' && (
               <form onSubmit={handleLinkGuestOrderSubmit} className="space-y-4">
-                <div className="p-4 rounded-2xl bg-teal-50 border border-teal-200 text-teal-950 space-y-1">
+                <div className="p-4 rounded-2xl bg-teal-50 border border-teal-200 dark:border-teal-500/30 text-teal-950 space-y-1">
                   <div className="font-bold flex items-center gap-1.5">
                     <Link2 className="w-4 h-4 text-teal-800" />
                     <span>Link a Previous Guest Order</span>
@@ -685,7 +685,7 @@ export function AccountPage() {
               <h1 className="text-base font-bold text-stone-900">
                 {language === 'BN' ? 'গ্রাহক সেলফ-সার্ভিস পোর্টাল' : 'Customer Account & Self-Service Portal'}
               </h1>
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-900 border border-emerald-300">
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-900 border border-emerald-300 dark:border-emerald-500/40">
                 {language === 'BN' ? 'সক্রিয় গ্রাহক' : 'Active Account'}
               </span>
             </div>
@@ -716,7 +716,7 @@ export function AccountPage() {
 
           <button
             onClick={logoutCustomer}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-800 border border-rose-200 rounded-lg text-xs font-semibold transition-colors shadow-2xs"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-800 border border-rose-200 dark:border-rose-500/30 rounded-lg text-xs font-semibold transition-colors shadow-2xs"
             title="Sign out of account"
           >
             <LogOut className="w-3.5 h-3.5" />
@@ -747,7 +747,7 @@ export function AccountPage() {
                   {customerProfile?.email || 'customer@kisholoy.com'}
                 </span>
                 <div className="mt-1.5">
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-teal-50 text-teal-900 border border-teal-200">
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-teal-50 text-teal-900 border border-teal-200 dark:border-teal-500/30">
                     <CheckCircle2 className="w-2.5 h-2.5 text-teal-700" />
                     <span>{language === 'BN' ? 'ভেরিফাইড অ্যাকাউন্ট' : 'Verified Member'}</span>
                   </span>
@@ -920,7 +920,7 @@ export function AccountPage() {
                 </div>
                 <Link
                   to="/track-order"
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-teal-900 bg-teal-50 hover:bg-teal-100 rounded-lg border border-teal-200 transition-colors"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-teal-900 bg-teal-50 hover:bg-teal-100 rounded-lg border border-teal-200 dark:border-teal-500/30 transition-colors"
                 >
                   <Truck className="w-3.5 h-3.5" />
                   <span>{language === 'BN' ? 'কুরিয়ার ট্র্যাকার' : 'Live Courier Radar'}</span>
@@ -938,7 +938,7 @@ export function AccountPage() {
                   </p>
                   <Link
                     to="/shop"
-                    className="inline-flex items-center gap-2 px-5 py-2.5 bg-teal-900 text-white rounded-xl text-xs font-semibold hover:bg-teal-950 transition-all shadow-xs"
+                    className="inline-flex items-center gap-2 px-5 py-2.5 bg-teal-900 dark:bg-teal-600 text-white rounded-xl text-xs font-semibold hover:bg-teal-950 dark:hover:bg-teal-500 transition-all shadow-xs"
                   >
                     <span>Start Shopping</span>
                     <ArrowRight className="w-4 h-4" />
@@ -956,7 +956,7 @@ export function AccountPage() {
                         {/* Order Header */}
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-stone-100 gap-2">
                           <div className="flex flex-wrap items-center gap-2">
-                            <span className="font-mono font-bold text-xs text-teal-950 bg-teal-50 px-2.5 py-1 rounded-md border border-teal-200">
+                            <span className="font-mono font-bold text-xs text-teal-950 bg-teal-50 px-2.5 py-1 rounded-md border border-teal-200 dark:border-teal-500/30">
                               {order.orderNumber || order.id}
                             </span>
                             <span className="text-xs text-stone-500">
@@ -967,14 +967,14 @@ export function AccountPage() {
                           <div className="flex items-center gap-2">
                             <span className={`text-xs font-bold px-3 py-1 rounded-full border ${
                               order.orderStatus === 'DELIVERED' 
-                                ? 'bg-emerald-50 text-emerald-900 border-emerald-300'
+                                ? 'bg-emerald-50 text-emerald-900 border-emerald-300 dark:border-emerald-500/40'
                                 : order.orderStatus === 'SHIPPED'
-                                ? 'bg-blue-50 text-blue-900 border-blue-300'
+                                ? 'bg-blue-50 text-blue-900 border-blue-300 dark:border-blue-500/40'
                                 : order.orderStatus === 'PROCESSING' || order.orderStatus === 'CONFIRMED'
-                                ? 'bg-teal-50 text-teal-900 border-teal-300'
+                                ? 'bg-teal-50 text-teal-900 border-teal-300 dark:border-teal-500/40'
                                 : order.orderStatus === 'CANCELLED'
-                                ? 'bg-rose-50 text-rose-900 border-rose-300'
-                                : 'bg-amber-50 text-amber-900 border-amber-300'
+                                ? 'bg-rose-50 text-rose-900 border-rose-300 dark:border-rose-500/40'
+                                : 'bg-amber-50 text-amber-900 border-amber-300 dark:border-amber-500/40'
                             }`}>
                               {order.orderStatus}
                             </span>
@@ -1094,7 +1094,7 @@ export function AccountPage() {
                             />
                             <button
                               onClick={() => toggleWishlist(item.productId)}
-                              className="absolute top-2.5 right-2.5 p-2 rounded-full bg-white/90 text-rose-600 hover:bg-white shadow-xs transition-colors"
+                              className="absolute top-2.5 right-2.5 p-2 rounded-full bg-white/90 dark:bg-slate-800/90 text-rose-600 hover:bg-white dark:hover:bg-slate-700 shadow-xs transition-colors"
                               title="Remove from wishlist"
                             >
                               <Trash2 className="w-4 h-4" />
@@ -1159,7 +1159,7 @@ export function AccountPage() {
                 </div>
                 <button
                   onClick={() => openAddressModal()}
-                  className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-teal-900 text-white rounded-xl text-xs font-semibold hover:bg-teal-950 transition-all shadow-xs"
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-teal-900 dark:bg-teal-600 text-white rounded-xl text-xs font-semibold hover:bg-teal-950 dark:hover:bg-teal-500 transition-all shadow-xs"
                 >
                   <Plus className="w-4 h-4" />
                   <span>{language === 'BN' ? 'নতুন ঠিকানা' : 'Add New Address'}</span>
@@ -1276,7 +1276,7 @@ export function AccountPage() {
                     >
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-stone-100 gap-2">
                         <div>
-                          <span className="font-mono font-bold text-xs text-teal-950 bg-teal-50 px-2.5 py-0.5 rounded border border-teal-200">
+                          <span className="font-mono font-bold text-xs text-teal-950 bg-teal-50 px-2.5 py-0.5 rounded border border-teal-200 dark:border-teal-500/30">
                             {req.requestNumber}
                           </span>
                           <span className="text-xs text-stone-500 ml-2">
@@ -1286,12 +1286,12 @@ export function AccountPage() {
 
                         <span className={`text-xs font-bold px-3 py-1 rounded-full border ${
                           req.status === 'APPROVED' 
-                            ? 'bg-emerald-50 text-emerald-900 border-emerald-300'
+                            ? 'bg-emerald-50 text-emerald-900 border-emerald-300 dark:border-emerald-500/40'
                             : req.status === 'RESOLVED'
-                            ? 'bg-teal-50 text-teal-900 border-teal-300'
+                            ? 'bg-teal-50 text-teal-900 border-teal-300 dark:border-teal-500/40'
                             : req.status === 'REJECTED'
-                            ? 'bg-rose-50 text-rose-900 border-rose-300'
-                            : 'bg-amber-50 text-amber-900 border-amber-300'
+                            ? 'bg-rose-50 text-rose-900 border-rose-300 dark:border-rose-500/40'
+                            : 'bg-amber-50 text-amber-900 border-amber-300 dark:border-amber-500/40'
                         }`}>
                           {req.status.replace(/_/g, ' ')}
                         </span>
@@ -1398,7 +1398,7 @@ export function AccountPage() {
                         className={`p-4 rounded-xl border transition-all ${
                           notif.isRead
                             ? 'bg-white border-stone-200/80 text-stone-700'
-                            : 'bg-teal-50/40 border-teal-200 text-stone-900 shadow-2xs'
+                            : 'bg-teal-50/40 border-teal-200 dark:border-teal-500/30 text-stone-900 shadow-2xs'
                         }`}
                       >
                         <div className="flex items-start justify-between gap-3">

@@ -2189,3 +2189,81 @@ export interface SupplierStatement {
   }>;
   settlements: SupplierSettlement[];
 }
+
+// ============================================================================
+// UNIFIED PRINT / DOCUMENT ENGINE TYPES
+// ============================================================================
+
+/** Supported printable document categories */
+export type PrintDocumentType =
+  | 'INVOICE'
+  | 'PAYMENT_RECEIPT'
+  | 'PACKING_SLIP'
+  | 'COURIER_LABEL'
+  | 'SUPPLIER_SETTLEMENT'
+  | 'PURCHASE_DOCUMENT'
+  | 'RETURN_REFUND'
+  | 'REPORT';
+
+/** How a particular field can be configured */
+export type PrintFieldCategory = 'REQUIRED' | 'OPTIONAL' | 'SYSTEM_CONTROLLED';
+
+/** Document display language */
+export type DocLanguage = 'EN' | 'BN' | 'BILINGUAL';
+
+/** Physical print format */
+export type DocPageFormat = 'A4' | 'A5' | 'LETTER' | 'THERMAL_80MM' | 'LABEL_4x6';
+
+/** A configurable field definition for a document type */
+export interface PrintFieldDef {
+  key: string;
+  label: string;
+  labelBn: string;
+  category: PrintFieldCategory;
+}
+
+/** Per-document admin configuration */
+export interface PrintDocumentConfig {
+  enabled: boolean;
+  language: DocLanguage;
+  pageFormat: DocPageFormat;
+  showBarcode: boolean;
+  showQR: boolean;
+  footer: string;
+  notes: string;
+  fields: Record<string, boolean>;
+}
+
+/** All print settings */
+export interface PrintSettings {
+  documents: Record<PrintDocumentType, PrintDocumentConfig>;
+  businessName?: string;
+  businessNameBn?: string;
+  businessAddress?: string;
+  businessPhone?: string;
+  businessEmail?: string;
+  updatedAt?: string;
+}
+
+/** A resolved, renderable document instance */
+export interface PrintDocumentInstance {
+  type: PrintDocumentType;
+  label: string;
+  labelBn: string;
+  pageFormat: DocPageFormat;
+  enabledByDefault: boolean;
+  active: boolean;
+  reason: string;
+}
+
+/** Payload returned by the server for a single printable record */
+export interface PrintOrderPayload {
+  order: Order;
+  documents: PrintDocumentInstance[];
+  settings: PrintSettings;
+  codes: {
+    barcodes: Record<string, string>;
+    qrs: Record<string, string>;
+  };
+  siteContent: SiteContent;
+}
