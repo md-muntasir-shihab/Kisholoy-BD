@@ -168,20 +168,20 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({
           <div className="flex items-center gap-1.5">
             <span 
               className={`font-serif font-black tracking-tight leading-none ${sizeConfig.text} ${
-                variant === 'dark' ? 'text-white' : 'text-stone-900'
+                variant === 'dark' ? 'text-white' : 'text-stone-900 dark:text-white'
               }`}
             >
               {brandName}
             </span>
             <span className={`w-1.5 h-1.5 rounded-full ${
-              variant === 'dark' ? 'bg-amber-400' : 'bg-teal-700'
+              variant === 'dark' ? 'bg-amber-400' : 'bg-teal-700 dark:bg-teal-400'
             }`}></span>
           </div>
 
           {showTagline && motto && (
             <span 
               className={`uppercase font-semibold tracking-widest leading-tight mt-0.5 ${sizeConfig.motto} ${
-                variant === 'dark' ? 'text-stone-400' : 'text-stone-500'
+                variant === 'dark' ? 'text-stone-400' : 'text-stone-500 dark:text-stone-400'
               }`}
             >
               {motto}

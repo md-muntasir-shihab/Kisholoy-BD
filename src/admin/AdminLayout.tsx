@@ -127,12 +127,12 @@ export function AdminLayout() {
   return (
     <div id="admin-root-layout" className="h-screen overflow-hidden flex flex-col bg-stone-100/90 dark:bg-slate-950 text-stone-900 dark:text-slate-100 font-sans selection:bg-teal-900 selection:text-white transition-colors duration-200">
       {/* Top Operational Header */}
-      <header id="admin-top-header" className="sticky top-0 z-30 bg-stone-950/95 backdrop-blur-md text-white border-b border-stone-800/80 h-16 flex items-center justify-between px-4 sm:px-6 shadow-xs">
+      <header id="admin-top-header" className="sticky top-0 z-30 bg-white/95 text-stone-900 border-b border-stone-200/90 dark:bg-stone-950/95 dark:text-white dark:border-stone-800/80 h-16 flex items-center justify-between px-4 sm:px-6 shadow-xs backdrop-blur-md transition-colors">
         <div className="flex items-center gap-3">
           <button
             id="admin-sidebar-toggle-btn"
             onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="lg:hidden p-2 text-stone-400 hover:text-white rounded-xl hover:bg-stone-800/80 transition-colors"
+            className="lg:hidden p-2 text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-white rounded-xl hover:bg-stone-100 dark:hover:bg-stone-800/80 transition-colors"
             aria-label="Toggle navigation menu"
           >
             {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
@@ -142,10 +142,10 @@ export function AdminLayout() {
             <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-teal-700 to-teal-950 flex items-center justify-center font-serif font-black text-white text-base shadow-xs border border-teal-600/40">
               K
             </div>
-            <span className="font-serif font-black text-lg sm:text-xl tracking-tight text-white">
+            <span className="font-serif font-black text-lg sm:text-xl tracking-tight text-stone-900 dark:text-white">
               {siteContent.brandName}
             </span>
-            <span className="text-teal-300 font-mono text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-teal-950 border border-teal-800/80 uppercase tracking-wider hidden sm:inline-block">
+            <span className="text-teal-800 dark:text-teal-300 font-mono text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-teal-50 dark:bg-teal-950 border border-teal-200 dark:border-teal-800/80 uppercase tracking-wider hidden sm:inline-block">
               {isBn ? 'অপারেশনস কন্ট্রোল' : 'OPS CENTER'}
             </span>
           </Link>
@@ -157,17 +157,17 @@ export function AdminLayout() {
           {/* Who Am I? Identity Inspector Trigger */}
           <button
             onClick={() => setInspectorOpen(true)}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-stone-900 hover:bg-stone-850 text-stone-200 hover:text-white border border-stone-800 text-xs font-semibold shadow-2xs transition-all"
+            className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-stone-100 hover:bg-stone-200 dark:bg-stone-900 dark:hover:bg-stone-850 text-stone-800 dark:text-stone-200 hover:text-stone-900 dark:hover:text-white border border-stone-200 dark:border-stone-800 text-xs font-semibold shadow-2xs transition-all"
             title="Inspect your operational access and role permissions"
           >
-            <ShieldCheck className="w-3.5 h-3.5 text-teal-400" />
-            <span className="font-mono text-teal-300 font-bold">{currentRole}</span>
-            <span className="hidden xl:inline text-stone-400 font-normal">| {isBn ? 'অ্যাক্সেস রুলস' : 'Permissions'}</span>
+            <ShieldCheck className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
+            <span className="font-mono text-teal-800 dark:text-teal-300 font-bold">{currentRole}</span>
+            <span className="hidden xl:inline text-stone-500 dark:text-stone-400 font-normal">| {isBn ? 'অ্যাক্সেস রুলস' : 'Permissions'}</span>
           </button>
 
           {/* Quick Role Persona Switcher */}
-          <div className="hidden sm:flex items-center gap-2 bg-stone-900 px-3 py-1.5 rounded-xl border border-stone-800">
-            <UserCheck className="w-3.5 h-3.5 text-stone-400" />
+          <div className="hidden sm:flex items-center gap-2 bg-stone-100 dark:bg-stone-900 px-3 py-1.5 rounded-xl border border-stone-200 dark:border-stone-800">
+            <UserCheck className="w-3.5 h-3.5 text-stone-500 dark:text-stone-400" />
             <select
               id="admin-role-selector"
               value={currentRole}
@@ -176,10 +176,10 @@ export function AdminLayout() {
                 setCurrentRole(newR);
                 showToast(`Switched active role to ${newR}`);
               }}
-              className="bg-transparent text-xs font-bold text-stone-200 focus:outline-none cursor-pointer"
+              className="bg-transparent text-xs font-bold text-stone-800 dark:text-stone-200 focus:outline-none cursor-pointer"
             >
               {roles.map((r) => (
-                <option key={r} value={r} className="bg-stone-900 text-white">
+                <option key={r} value={r} className="bg-white dark:bg-stone-900 text-stone-900 dark:text-white">
                   {r.replace('_', ' ')}
                 </option>
               ))}
@@ -204,13 +204,14 @@ export function AdminLayout() {
           <button
             id="admin-open-work-guide-btn"
             onClick={() => handleOpenGuide('all')}
-            className="hidden md:inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-stone-900 hover:bg-stone-850 text-stone-200 border border-stone-800 text-xs font-semibold shadow-2xs hover:text-white transition-all"
+            className="hidden md:inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-stone-100 hover:bg-stone-200 dark:bg-stone-900 dark:hover:bg-stone-850 text-stone-800 dark:text-stone-200 border border-stone-200 dark:border-stone-800 text-xs font-semibold shadow-2xs hover:text-stone-900 dark:hover:text-white transition-all"
             title={isBn ? 'সকল সেকশন ও কাজের বিবরণী দেখুন' : 'View all sections and work details'}
           >
-            <BookOpen className="w-3.5 h-3.5 text-teal-400" />
+            <BookOpen className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
             <span>{isBn ? 'কাজের গাইড' : 'Work Guide'}</span>
           </button>
 
+arena/01a06a72-kisholoy-bd
           {/* Quick Language Toggle (icon-only) */}
           <LanguageButton />
 
@@ -218,6 +219,38 @@ export function AdminLayout() {
           <span id="admin-theme-toggle-btn">
             <ThemeButton />
           </span>
+
+          {/* Quick Language Toggle */}
+          <button
+            id="admin-language-toggle-btn"
+            onClick={() => setLanguage(language === 'EN' ? 'BN' : 'EN')}
+            className="p-2 text-stone-700 dark:text-stone-300 hover:text-stone-900 dark:hover:text-white rounded-xl hover:bg-stone-100 dark:hover:bg-stone-850 text-xs font-bold flex items-center gap-1 transition-colors border border-transparent hover:border-stone-200 dark:hover:border-stone-800"
+            title="Toggle Language (English / বাংলা)"
+          >
+            <Compass className="w-4 h-4 text-teal-600 dark:text-teal-400" />
+            <span>{language}</span>
+          </button>
+
+          {/* Theme Mode Toggle (Day / Dark Mode) */}
+          <button
+            id="admin-theme-toggle-btn"
+            onClick={toggleDarkMode}
+            className="px-2.5 py-1.5 text-stone-800 dark:text-stone-300 hover:text-stone-900 dark:hover:text-white rounded-xl bg-stone-100 hover:bg-stone-200 dark:bg-stone-900 dark:hover:bg-stone-850 border border-stone-200 dark:border-stone-800 text-xs font-bold flex items-center gap-1.5 transition-all shadow-2xs"
+            title={isDarkMode ? (isBn ? 'ডে / লাইট মোডে পরিবর্তন করুন' : 'Switch to Day Light Mode') : (isBn ? 'ডার্ক মোডে পরিবর্তন করুন' : 'Switch to Dark Mode')}
+          >
+            {isDarkMode ? (
+              <>
+                <Sun className="w-4 h-4 text-amber-400" />
+                <span className="hidden xl:inline text-amber-300 font-semibold">{isBn ? 'ডে মুড' : 'Day'}</span>
+              </>
+            ) : (
+              <>
+                <Moon className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                <span className="hidden xl:inline text-stone-700 font-semibold">{isBn ? 'ডার্ক মুড' : 'Dark'}</span>
+              </>
+            )}
+          </button>
+ main
 
           {/* Live Storefront Link */}
           <Link
@@ -239,11 +272,16 @@ export function AdminLayout() {
         {/* Sidebar Navigation */}
         <aside
           id="admin-sidebar"
+ arena/01a06a72-kisholoy-bd
           className={`fixed inset-y-0 left-0 z-20 w-72 bg-white text-stone-700 border-r border-stone-200 transform transition-transform duration-200 ease-in-out lg:translate-x-0 lg:static lg:inset-0 pt-16 lg:pt-0 min-h-0 flex flex-col ${
+
+          className={`fixed inset-y-0 left-0 z-20 w-72 bg-white dark:bg-stone-950 text-stone-800 dark:text-stone-300 border-r border-stone-200/90 dark:border-stone-800/80 transform transition-transform duration-200 ease-in-out lg:translate-x-0 lg:static lg:inset-0 pt-16 lg:pt-0 flex flex-col ${
+main
             sidebarOpen ? 'translate-x-0' : '-translate-x-full'
           }`}
         >
           {/* Identity & Scope Indicator */}
+arena/01a06a72-kisholoy-bd
           <div className="p-3 border-b border-stone-200">
             <button
               onClick={() => setInspectorOpen(true)}
@@ -261,6 +299,25 @@ export function AdminLayout() {
                 </span>
               </div>
               <KeyRound className="w-3.5 h-3.5 text-stone-400 group-hover:text-teal-600 transition-colors" />
+
+          <div className="p-3 bg-stone-50/80 dark:bg-stone-950 border-b border-stone-200 dark:border-stone-850 flex items-center justify-between">
+            <button
+              onClick={() => setInspectorOpen(true)}
+              className="flex items-center gap-2.5 text-left w-full p-2.5 rounded-2xl bg-white dark:bg-stone-900/90 hover:bg-stone-100 dark:hover:bg-stone-850 border border-stone-200 dark:border-stone-800/90 text-stone-800 dark:text-stone-300 hover:text-stone-900 dark:hover:text-white transition-all group shadow-2xs"
+            >
+              <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-teal-800 to-teal-950 text-teal-100 flex items-center justify-center font-bold text-xs shadow-xs border border-teal-700/40">
+                {currentRole.slice(0, 2)}
+              </div>
+              <div className="min-w-0 flex-1">
+                <span className="text-xs font-bold text-stone-900 dark:text-white block truncate">
+                  {currentRole.replace('_', ' ')}
+                </span>
+                <span className="text-[10px] text-teal-700 dark:text-teal-400 font-mono block truncate">
+                  RBAC Active • Click to view rules
+                </span>
+              </div>
+              <KeyRound className="w-3.5 h-3.5 text-stone-400 dark:text-stone-500 group-hover:text-teal-600 dark:group-hover:text-teal-400 transition-colors" />
+main
             </button>
           </div>
 
@@ -274,6 +331,7 @@ export function AdminLayout() {
               const SectionIcon = SECTION_ICONS[section.id] || Layers;
 
               return (
+ arena/01a06a72-kisholoy-bd
                 <div key={section.id} id={`section-${section.id}`} className="mb-1.5">
                   {/* Group Header (accordion) */}
                   <button
@@ -327,6 +385,63 @@ export function AdminLayout() {
                               <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-teal-700 dark:text-teal-300' : 'text-stone-400 dark:text-stone-500 group-hover:text-stone-600 dark:group-hover:text-stone-300'}`} />
                               <span className="truncate">{isBn ? item.labelBn : item.label}</span>
                             </div>
+
+                <div
+                  key={section.id}
+                  id={`section-${section.id}`}
+                  className={sectionIdx > 0 ? 'pt-4 border-t border-stone-200 dark:border-stone-850/80' : ''}
+                >
+                  {/* Section Header with Title */}
+                  <div
+                    id={`header-${section.id}`}
+                    className="px-2 pb-2 flex items-center justify-between text-[11px] font-bold uppercase tracking-wider text-stone-500 dark:text-stone-400 select-none"
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-teal-600 dark:bg-teal-400"></span>
+                      <span className="text-stone-700 dark:text-stone-300 font-semibold">
+                        {isBn ? section.titleBn : section.title}
+                      </span>
+                      <span className="text-[10px] text-stone-400 dark:text-stone-500 font-mono">
+                        ({allowedItems.length})
+                      </span>
+                    </div>
+
+                    <button
+                      onClick={() => handleOpenGuide(section.id)}
+                      className="p-1 text-stone-400 dark:text-stone-500 hover:text-teal-700 dark:hover:text-teal-300 hover:bg-stone-100 dark:hover:bg-stone-850 rounded-lg transition-colors"
+                      title={isBn ? `${section.titleBn} এর কাজের বিবরণ দেখুন` : `View details of ${section.title}`}
+                    >
+                      <HelpCircle className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+
+                  <div className="space-y-1 mt-1">
+                    {allowedItems.map((item) => {
+                      const Icon = item.icon;
+                      const isActive = location.pathname === item.path;
+                      const badge = getSectionBadgeCount(item.badgeKey, counts);
+
+                      return (
+                        <Link
+                          key={item.path}
+                          id={item.id}
+                          to={item.path}
+                          onClick={() => setSidebarOpen(false)}
+                          className={`flex items-center justify-between px-3.5 py-2 rounded-xl text-xs font-medium transition-all group ${
+                            isActive
+                              ? 'bg-teal-900/90 text-white font-semibold shadow-xs border border-teal-600/40 dark:bg-teal-900/90 dark:text-white'
+                              : 'text-stone-600 hover:bg-stone-100 hover:text-stone-900 dark:text-stone-400 dark:hover:bg-stone-900/80 dark:hover:text-stone-100'
+                          }`}
+                        >
+                          <div className="flex items-center gap-2.5 truncate">
+                            <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-teal-300' : 'text-stone-400 dark:text-stone-500 group-hover:text-stone-700 dark:group-hover:text-stone-300'}`} />
+                            <span className="truncate font-medium">
+                              {isBn ? item.labelBn : item.label}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center gap-1.5 shrink-0 ml-2">
+ main
                             {badge && (
                               <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ml-2 ${badge.color}`}>
                                 {isBn ? badge.labelBn : badge.label}
@@ -343,6 +458,7 @@ export function AdminLayout() {
           </nav>
 
           {/* Sidebar Footer */}
+arena/01a06a72-kisholoy-bd
           <div className="p-3.5 border-t border-stone-200 text-[11px] text-stone-500 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
@@ -351,6 +467,16 @@ export function AdminLayout() {
             <button
               onClick={() => setInspectorOpen(true)}
               className="text-[11px] text-teal-700 hover:text-teal-900 dark:text-teal-300 dark:hover:text-teal-200 font-semibold underline underline-offset-2"
+
+          <div className="p-3.5 border-t border-stone-200 dark:border-stone-800 bg-stone-50 dark:bg-stone-950/40 text-[11px] text-stone-500 dark:text-stone-400 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+              <span className="font-semibold text-stone-700 dark:text-stone-300">RBAC Active</span>
+            </div>
+            <button
+              onClick={() => setInspectorOpen(true)}
+              className="text-[11px] text-teal-700 dark:text-teal-400 hover:text-teal-900 dark:hover:text-teal-300 font-semibold underline underline-offset-2"
+main
             >
               {isBn ? 'অ্যাক্সেস পরীক্ষা' : 'Inspect Access'}
             </button>
