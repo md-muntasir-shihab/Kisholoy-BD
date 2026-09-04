@@ -75,7 +75,7 @@ async function startServer() {
       tier = 'CHECKOUT';
     } else if (req.path.startsWith('/api/auth') || req.path.startsWith('/api/security/auth')) {
       tier = 'AUTH';
-    } else if (req.path.startsWith('/api/admin') || req.path.startsWith('/api/security')) {
+    } else if (req.path.startsWith('/api/admin') || req.path.startsWith('/api/security') || req.path.startsWith('/api/marketing/command')) {
       tier = 'ADMIN';
     } else if (req.path.startsWith('/api/webhooks')) {
       tier = 'WEBHOOK';

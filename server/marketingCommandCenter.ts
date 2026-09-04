@@ -168,6 +168,13 @@ function withinRange(day: string, from?: string, to?: string): boolean {
   return true;
 }
 
+/** Only http(s) profile URLs may be stored — blocks javascript:/data: href abuse in the registry UI. */
+function safePageUrl(raw?: string): string | undefined {
+  const t = (raw || '').trim();
+  if (!t) return undefined;
+  return /^https?:\/\//i.test(t) ? t.slice(0, 500) : undefined;
+}
+
 class MarketingCommandCenterEngine {
   private channels: MarketingChannelRegistry[] = JSON.parse(JSON.stringify(SEED_CHANNELS));
   private spends: MarketingSpendEntry[] = JSON.parse(JSON.stringify(SEED_SPENDS));
@@ -203,7 +210,7 @@ class MarketingCommandCenterEngine {
       type: input.type,
       name: input.name,
       handle: input.handle,
-      pageUrl: input.pageUrl || undefined,
+      pageUrl: safePageUrl(input.pageUrl),
       status: input.status || 'ACTIVE',
       utmSourcePatterns: (input.utmSourcePatterns || []).map((p) => p.toLowerCase().trim()).filter(Boolean),
       notes: input.notes || undefined,
@@ -241,7 +248,7 @@ class MarketingCommandCenterEngine {
       changes.push(`handle: "${ch.handle}" → "${patch.handle}"`);
       ch.handle = patch.handle;
     }
-    if (patch.pageUrl !== undefined) ch.pageUrl = patch.pageUrl || undefined;
+    if (patch.pageUrl !== undefined) ch.pageUrl = safePageUrl(patch.pageUrl);
     if (patch.notes !== undefined) ch.notes = patch.notes || undefined;
     if (patch.utmSourcePatterns) {
       const next = patch.utmSourcePatterns.map((p) => p.toLowerCase().trim()).filter(Boolean);
@@ -483,6 +490,10 @@ class MarketingCommandCenterEngine {
       if (!on) continue;
       const exists = serverDb.orders.some((o) => o.orderNumber.toUpperCase() === on);
       if (!exists) return { error: `Order ${on} was not found — attribution can only reference real order numbers` };
+      const alreadyClaimed = this.attributions.find((a) => a.orderNumbers.some((n) => n.toUpperCase() === on));
+      if (alreadyClaimed) {
+        return { error: `Order ${on} is already attributed in entry ${alreadyClaimed.id} (${alreadyClaimed.date}) — a second claim would double-count it` };
+      }
       cleanOrderNumbers.push(on);
     }
     const now = new Date().toISOString();
@@ -893,7 +904,11 @@ class MarketingCommandCenterEngine {
 
   buildCsv(dataset: 'SPENDS' | 'ATTRIBUTIONS' | 'ROI_CHANNELS' | 'ROI_CAMPAIGNS' | 'MONTHLY' | 'CHANNELS', from?: string, to?: string): string {
     const esc = (v: unknown): string => {
-      const s = v === null || v === undefined ? '' : String(v);
+      let s = v === null || v === undefined ? '' : String(v);
+      // Neutralize CSV formula injection: string cells (e.g. UTM params are
+      // attacker-influenceable via shared links) starting with =,+,-,@ get a
+      // leading apostrophe so spreadsheet apps treat them as literal text.
+      if (typeof v === 'string' && /^[=+\-@\t\r]/.test(v)) s = `'${s}`;
       return `"${s.replace(/"/g, '""')}"`;
     };
     const lines: string[] = [];
