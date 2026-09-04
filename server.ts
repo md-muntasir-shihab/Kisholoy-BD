@@ -32,7 +32,7 @@ import {
 } from './src/lib/validations';
 import { securityEngine } from './server/securityEngine';
 import { normalizeBdMobilePhone, phoneDigits } from './src/lib/phone';
-import { attachAuthContext, enforceStaffSurface, requireCustomerSelf } from './server/authGuard';
+import { attachAuthContext, enforceStaffSurface, requireCustomerSelf, requireSupplierSelf, requireAddressOwner, requireNotificationOwner } from './server/authGuard';
 import { backupEngine } from './server/backupEngine';
 import { supplierEngine } from './server/supplierEngine';
 import {
@@ -1251,7 +1251,7 @@ async function startServer() {
     res.json({ success: true, notifications });
   });
 
-  app.post('/api/customer/notifications/:id/read', (req, res) => {
+  app.post('/api/customer/notifications/:id/read', requireNotificationOwner('id'), (req, res) => {
     const { id } = req.params;
     const success = serverDb.markNotificationAsRead(id);
     res.json({ success });
@@ -2648,9 +2648,11 @@ async function startServer() {
     }
   });
 
-  app.put('/api/customer/addresses/:addressId', (req, res) => {
+  app.put('/api/customer/addresses/:addressId', requireAddressOwner('addressId'), (req, res) => {
     try {
-      const updated = serverDb.updateCustomerAddress(req.params.addressId, req.body);
+      // Never let the body move an address to another customer.
+      const { customerId: _ignored, ...safeUpdates } = req.body || {};
+      const updated = serverDb.updateCustomerAddress(req.params.addressId, safeUpdates);
       if (!updated) {
         return res.status(404).json({ error: 'Address not found' });
       }
@@ -2660,7 +2662,7 @@ async function startServer() {
     }
   });
 
-  app.delete('/api/customer/addresses/:addressId', (req, res) => {
+  app.delete('/api/customer/addresses/:addressId', requireAddressOwner('addressId'), (req, res) => {
     try {
       const { customerId } = req.query;
       if (!customerId) {
@@ -3896,7 +3898,7 @@ async function startServer() {
     }
   });
 
-  app.get('/api/suppliers/portal/dashboard', (req, res) => {
+  app.get('/api/suppliers/portal/dashboard', requireSupplierSelf('supplierId'), (req, res) => {
     try {
       const supplierId = (req.query.supplierId as string) || (req.headers['x-supplier-id'] as string);
       if (!supplierId) {
@@ -3914,7 +3916,7 @@ async function startServer() {
     }
   });
 
-  app.post('/api/suppliers/portal/update-profile', (req, res) => {
+  app.post('/api/suppliers/portal/update-profile', requireSupplierSelf('supplierId'), (req, res) => {
     try {
       const { supplierId, updates, operator } = req.body;
       if (!supplierId) return res.status(400).json({ error: 'Supplier ID is required' });
@@ -3928,7 +3930,7 @@ async function startServer() {
     }
   });
 
-  app.post('/api/suppliers/portal/change-password', (req, res) => {
+  app.post('/api/suppliers/portal/change-password', requireSupplierSelf('supplierId'), (req, res) => {
     try {
       const { supplierId, newPassword, operator } = req.body;
       if (!supplierId || !newPassword) return res.status(400).json({ error: 'Supplier ID and new password required' });
@@ -4327,7 +4329,7 @@ async function startServer() {
     res.json({ success: true, message: 'Logged out successfully' });
   });
 
-  app.post('/api/customer/auth/link-guest-order', (req, res) => {
+  app.post('/api/customer/auth/link-guest-order', requireCustomerSelf('customerId'), (req, res) => {
     try {
       const { customerId, orderNumber, phone } = req.body;
       if (!customerId || !orderNumber || !phone) {
@@ -4381,7 +4383,7 @@ async function startServer() {
     }
   });
 
-  app.post('/api/customer/auth/change-password', (req, res) => {
+  app.post('/api/customer/auth/change-password', requireCustomerSelf('customerId'), (req, res) => {
     try {
       const { customerId, currentPassword, newPassword } = req.body;
       if (!customerId || !newPassword) {

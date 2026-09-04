@@ -78,3 +78,22 @@ not yet attached per-route — the current protection is a blanket staff gate, s
 a MODERATOR can still call SUPER_ADMIN operations. Wiring per-route permissions
 is the remainder of S1-1 and is the first item of batch 3, along with S2-3/F-204
 (RMA persistence), S2-5 (residual hydration) and S2-2 (promotions ownership).
+
+### Batch 2a — self-review corrections
+
+Re-reading the batch 2 diff and probing it live turned up three real defects in
+the batch 2 work itself. All three are fixed and verified.
+
+| # | Defect introduced/missed by batch 2 | Fix | Evidence |
+|---|---|---|---|
+| B2-A | **The guard broke the admin UI.** 203 of 210 admin call sites use raw `fetch('/api/...')` and send no token, so every admin write returned 401 the moment the gate went in — only 7 sites used `apiFetch`. | `installApiAuthInterceptor()` in `src/lib/apiClient.ts`, called from `src/main.tsx` before mount. It patches `window.fetch` once and attaches the surface-appropriate token to same-origin `/api/**` calls, respecting any `Authorization` already set. | Harness: `/api/products`→staff, `/api/customer/*`→customer, `/api/suppliers/portal/*`→supplier, preset header untouched, cross-origin untouched, no token → no header |
+| B2-B | **Unauthenticated account takeover.** `POST /api/customer/auth/change-password` and `POST /api/suppliers/portal/change-password` sat on the public allow-list and trusted a body-supplied id — anyone could reset any customer's or supplier's password. Both returned 200 to an anonymous curl. | `requireCustomerSelf` / `requireSupplierSelf` applied; `requireSupplierSelf` extended to read query and `x-supplier-id`, and to 400 when no id is supplied. | anon → 403, cross-tenant → 403, own account → 200 |
+| B2-C | **Ownership gaps on record-keyed routes.** `PUT`/`DELETE /api/customer/addresses/:addressId`, `POST /api/customer/notifications/:id/read`, `link-guest-order` and `GET /api/suppliers/portal/dashboard` had no owner check — the owner is on the stored record, not in the URL, so `requireCustomerSelf` could not cover them. | New `requireAddressOwner` / `requireNotificationOwner` in `server/authGuard.ts` resolve the owner from the record server-side and answer 404 (not 403) for unknown ids so existence is not leaked. Address updates also strip `customerId` from the body so a record cannot be re-parented. | anon → 403, `cust-2` on `cust-1`'s address → 403, owner → 200, unknown id → 404, staff → 200 |
+
+Re-verified after the fixes: `GET /api/products` 200 anonymous, `POST
+/api/orders/create` still 400-on-empty-body (not 401), staff write 200,
+`tsc --noEmit` clean, build green (`dist/server.cjs` 837.7 kB), smoke 98/9.
+
+Note for future batches: the tsx dev watcher served stale routes during this
+review and briefly showed every guard as failing. Restart the server before
+concluding a guard does not work.

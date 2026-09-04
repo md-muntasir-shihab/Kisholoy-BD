@@ -13,6 +13,8 @@
 
 export const STAFF_TOKEN_KEY = 'kisholoy_staff_token';
 export const CUSTOMER_TOKEN_KEY = 'kisholoy_customer_token';
+/** Written by the supplier portal login page (pre-existing key name). */
+export const SUPPLIER_TOKEN_KEY = 'ksh_supplier_token';
 export const AUTH_EXPIRED_EVENT = 'kisholoy-auth-expired';
 
 const safeGet = (key: string): string | null => {
@@ -36,6 +38,8 @@ export const getStaffToken = () => safeGet(STAFF_TOKEN_KEY);
 export const setStaffToken = (token: string | null) => safeSet(STAFF_TOKEN_KEY, token);
 export const getCustomerToken = () => safeGet(CUSTOMER_TOKEN_KEY);
 export const setCustomerToken = (token: string | null) => safeSet(CUSTOMER_TOKEN_KEY, token);
+export const getSupplierToken = () => safeGet(SUPPLIER_TOKEN_KEY);
+export const setSupplierToken = (token: string | null) => safeSet(SUPPLIER_TOKEN_KEY, token);
 
 /** Paths that belong to the customer/portal surfaces — never staff-guarded. */
 const NON_STAFF_PATH_PATTERNS = [
@@ -43,6 +47,7 @@ const NON_STAFF_PATH_PATTERNS = [
   /^\/api\/cust\//,
   /^\/api\/portal\//,
   /^\/api\/supplier\/portal\//,
+  /^\/api\/suppliers\/portal\//,
   /^\/api\/orders\/track/,
   /^\/api\/auth\/customer/,
 ];
@@ -113,4 +118,66 @@ export async function apiFetchJson<T = any>(url: string, options: ApiFetchOption
   } catch {
     return null;
   }
+}
+
+/**
+ * Global `fetch` interceptor.
+ *
+ * The admin screens contain ~200 hand-written `fetch('/api/...')` call sites
+ * that predate this module. Now that the server enforces a staff session on
+ * every mutation, each of those would fail with 401 unless it carries a token.
+ * Rewriting every call site is high-risk churn, so we patch `window.fetch`
+ * once at boot: any same-origin `/api/**` request that does not already set an
+ * Authorization header gets the same token `apiFetch` would have attached.
+ *
+ * Calls that already use `apiFetch` are unaffected (their header is set), and
+ * cross-origin requests are passed through untouched.
+ */
+export function installApiAuthInterceptor() {
+  if (typeof window === 'undefined') return;
+  const w = window as unknown as { __kshFetchPatched?: boolean };
+  if (w.__kshFetchPatched) return;
+  w.__kshFetchPatched = true;
+
+  const nativeFetch = window.fetch.bind(window);
+
+  window.fetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+    let path = '';
+    try {
+      const raw =
+        typeof input === 'string'
+          ? input
+          : input instanceof URL
+            ? input.href
+            : input.url;
+      const parsed = new URL(raw, window.location.origin);
+      if (parsed.origin === window.location.origin) path = parsed.pathname;
+    } catch {
+      /* opaque input — fall through untouched */
+    }
+
+    if (!path.startsWith('/api/')) return nativeFetch(input as RequestInfo, init);
+
+    // Respect an Authorization header the caller already set.
+    const existing = new Headers(
+      init?.headers || (input instanceof Request ? input.headers : undefined)
+    );
+    if (existing.has('Authorization')) return nativeFetch(input as RequestInfo, init);
+
+    // Pick the token that matches the surface being called.
+    const isSupplierPortal = /^\/api\/suppliers?\/portal\//.test(path);
+    const token = isSupplierPortal
+      ? getSupplierToken() || getStaffToken()
+      : isStaffGuardedPath(path)
+        ? getStaffToken() || getCustomerToken()
+        : getCustomerToken() || getStaffToken();
+    if (!token) return nativeFetch(input as RequestInfo, init);
+
+    existing.set('Authorization', `Bearer ${token}`);
+
+    if (input instanceof Request && !init) {
+      return nativeFetch(new Request(input, { headers: existing }));
+    }
+    return nativeFetch(input as RequestInfo, { ...(init || {}), headers: existing });
+  };
 }

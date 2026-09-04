@@ -21,6 +21,7 @@
 
 import type { Request, Response, NextFunction } from 'express';
 import { securityEngine } from './securityEngine';
+import { serverDb } from './db';
 import type { Role } from '../src/types';
 
 export interface AuthContext {
@@ -233,14 +234,85 @@ export function requireCustomerSelf(paramName = 'customerId') {
   };
 }
 
+/**
+ * Ownership guard for resources whose owner is not in the URL but stored on the
+ * record itself (addresses, notifications). Looking the owner up server-side is
+ * the only safe option: a caller-supplied `customerId` proves nothing.
+ */
+function requireRecordOwner(
+  resolveOwner: (id: string) => string | undefined,
+  paramName: string,
+  notFoundMessage: string,
+  notFoundMessageBn: string
+) {
+  return (req: Request, res: Response, next: NextFunction) => {
+    const auth = req.auth;
+    if (auth?.kind === 'STAFF') return next();
+
+    const recordId = (req.params as any)[paramName];
+    const owner = recordId ? resolveOwner(recordId) : undefined;
+
+    // Unknown record: answer 404 rather than leaking existence via 403.
+    if (!owner) {
+      return res.status(404).json({
+        success: false,
+        error: notFoundMessage,
+        errorBn: notFoundMessageBn,
+        code: 'NOT_FOUND',
+      });
+    }
+
+    if (auth?.kind === 'CUSTOMER' && auth.customerId === owner) return next();
+
+    return deny(
+      res, 403, 'NOT_RESOURCE_OWNER',
+      'You can only access your own account data.',
+      'আপনি শুধুমাত্র নিজের অ্যাকাউন্টের তথ্য দেখতে পারবেন।'
+    );
+  };
+}
+
+/** Ownership guard for a saved delivery address, keyed by the stored record. */
+export function requireAddressOwner(paramName = 'addressId') {
+  return requireRecordOwner(
+    (id) => serverDb.customerAddresses.find((a) => a.id === id)?.customerId,
+    paramName,
+    'Address not found.',
+    'ঠিকানা পাওয়া যায়নি।'
+  );
+}
+
+/** Ownership guard for a customer notification, keyed by the stored record. */
+export function requireNotificationOwner(paramName = 'id') {
+  return requireRecordOwner(
+    (id) => serverDb.customerNotifications.find((n) => n.id === id)?.customerId,
+    paramName,
+    'Notification not found.',
+    'নোটিফিকেশন পাওয়া যায়নি।'
+  );
+}
+
 /** Ownership guard for supplier-portal resources. */
 export function requireSupplierSelf(paramName = 'supplierId') {
   return (req: Request, res: Response, next: NextFunction) => {
     const auth = req.auth;
     if (auth?.kind === 'STAFF') return next();
 
-    const target = (req.params as any)[paramName] || (req.body && req.body.supplierId);
-    if (auth?.kind === 'SUPPLIER' && target && auth.supplierId === target) return next();
+    const target =
+      (req.params as any)[paramName] ||
+      (req.body && (req.body.supplierId as string)) ||
+      (req.query.supplierId as string) ||
+      (req.headers['x-supplier-id'] as string);
+
+    if (!target) {
+      return deny(
+        res, 400, 'SUPPLIER_ID_REQUIRED',
+        'A supplier id is required for this request.',
+        'এই অনুরোধের জন্য সাপ্লায়ার আইডি প্রয়োজন।'
+      );
+    }
+
+    if (auth?.kind === 'SUPPLIER' && auth.supplierId === target) return next();
 
     return deny(
       res, 403, 'NOT_RESOURCE_OWNER',
