@@ -307,7 +307,7 @@ class MarketingCommandCenterEngine {
   private validateSpendRefs(input: { channelId: string; campaignId?: string; dateFrom: string; dateTo: string }): string | null {
     const ch = this.getChannel(input.channelId);
     if (!ch) return 'Unknown marketing channel — register the channel first.';
-    if (ch.status === 'ARCHIVED') return `Channel "${ch.name}" is archived; reactivate or archive-pending channels only accept historical edits.`;
+    if (ch.status === 'ARCHIVED') return `Channel "${ch.name}" is archived — new spend entries are not accepted. Reactivate the channel to resume logging (history is retained).`;
     if (input.dateTo < input.dateFrom) return 'Period end date cannot be before the period start date.';
     if (input.campaignId) {
       const camp = this.getCampaignById(input.campaignId);
