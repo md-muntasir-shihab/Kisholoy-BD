@@ -37,3 +37,44 @@ These need product decisions or a larger surface, and are queued next:
 
 ### Probe disclosure
 Verification created several orders, customers, loyalty wallets, ledger rows, a blacklist entry and two backup snapshots. All state is **in-memory only** and cleared on restart; no repository data was modified.
+
+---
+
+## Batch 2 — Authentication, RBAC and IDOR
+
+Batch 2 closes the largest finding of PHASE 1: **160 of 164 mutating routes
+accepted anonymous requests**, and every `/api/customer/*` route trusted a
+caller-supplied id. All three fixes share one dependency — a real server-side
+session identity — so they shipped together.
+
+| # | Finding | Fix | Evidence |
+|---|---------|-----|----------|
+| S2-1 | Admin panel had no sign-in; role was a local dropdown | New `src/admin/StaffLoginScreen.tsx` posts to `/api/security/auth/login`, stores `kisholoy_staff_token`; `AdminLayout` gates all admin routes and revalidates via `/api/security/auth/verify` on mount | login 200 + token; bad password 401; verify 200 |
+| S1-1 | Mutating routes unauthenticated | New `server/authGuard.ts`: `attachAuthContext` + `enforceStaffSurface` mounted after `express.json()`. Every non-GET `/api/**` requires a staff session unless allow-listed; sensitive GET families are gated too | anon `PUT /api/products/prod-1` → 401 `STAFF_AUTH_REQUIRED`; same call with bearer → 200; anon `GET /api/customers` → 401, authed → 200 |
+| S1-2 | IDOR on `/api/customer/*` | `requireCustomerSelf('customerId')` applied to 10 routes (6 path-param, 4 body-param); staff bypass retained | `cust-2` token reading `cust-1` → 403 `NOT_RESOURCE_OWNER`; `cust-1` reading itself → 200; staff → 200 |
+
+### Public surface preserved
+
+Checkout and storefront traffic must never require a login. Explicit allow-list
+(`PUBLIC_MUTATION_PATTERNS`): order creation, checkout, promotion validation,
+customer auth, supplier portal auth, payment IPN/SSLCommerz/bKash callbacks,
+courier webhooks and the marketing attribution beacon. Verified: anonymous
+`POST /api/orders/create` still reaches validation (400 on an empty body, not
+401) and `GET /api/products` is 200.
+
+### Gates
+
+- `tsc --noEmit` — 0 errors.
+- `npm run build` — green, `dist/server.cjs` 834.5 kB.
+- Smoke suite — **98 × 2xx / 9 non-2xx, identical to baseline.** The script now
+  signs in as staff first (`scripts/audit/smoke-endpoints.sh`, override with
+  `TOKEN=`), because unauthenticated protected reads now *correctly* answer 401
+  and would otherwise read as regressions.
+
+### Still open
+
+`requirePermission(...)` exists in `server/authGuard.ts` and is enforced, but is
+not yet attached per-route — the current protection is a blanket staff gate, so
+a MODERATOR can still call SUPER_ADMIN operations. Wiring per-route permissions
+is the remainder of S1-1 and is the first item of batch 3, along with S2-3/F-204
+(RMA persistence), S2-5 (residual hydration) and S2-2 (promotions ownership).

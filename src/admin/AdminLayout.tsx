@@ -18,7 +18,8 @@ import { AdminUrgentAlertBanner } from '../components/admin/AdminUrgentAlertBann
 import { ScannerModal } from '../components/scan/ScannerModal';
 import { LanguageButton } from '../components/layout/LanguageButton';
 import { ThemeButton } from '../components/layout/ThemeButton';
-import { AUTH_EXPIRED_EVENT, setStaffToken } from '../lib/apiClient';
+import { AUTH_EXPIRED_EVENT, setStaffToken, getStaffToken, apiFetchJson } from '../lib/apiClient';
+import { StaffLoginScreen } from './StaffLoginScreen';
 
 // Route Access Control Matrix
 const ROUTE_PERMISSIONS: Record<string, { requiredPermission: string; allowedRoles: Role[] }> = {
@@ -49,6 +50,40 @@ const ROUTE_PERMISSIONS: Record<string, { requiredPermission: string; allowedRol
 
 export function AdminLayout() {
   const { currentRole, setCurrentRole, orders, products, language, setLanguage, siteContent, showToast } = useApp();
+
+  // Staff session gate. The server now enforces RBAC on every admin mutation,
+  // so the panel must hold a real staff token rather than trusting a local
+  // role dropdown. `checking` avoids flashing the login screen while we
+  // revalidate an existing token on mount.
+  const [staffAuthed, setStaffAuthed] = useState<boolean>(() => !!getStaffToken());
+  const [checkingSession, setCheckingSession] = useState<boolean>(() => !!getStaffToken());
+
+  useEffect(() => {
+    let cancelled = false;
+    const token = getStaffToken();
+    if (!token) {
+      setStaffAuthed(false);
+      setCheckingSession(false);
+      return;
+    }
+    apiFetchJson('/api/security/auth/verify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token }),
+    }).then((data) => {
+      if (cancelled) return;
+      if (data?.valid) {
+        setStaffAuthed(true);
+        if (data.role) setCurrentRole(data.role);
+      } else {
+        setStaffToken(null);
+        setStaffAuthed(false);
+      }
+      setCheckingSession(false);
+    });
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [guideModalOpen, setGuideModalOpen] = useState(false);
   const [guideInitialSection, setGuideInitialSection] = useState<string>('all');
@@ -80,8 +115,7 @@ export function AdminLayout() {
       if (detail.scope && detail.scope !== 'STAFF') return;
       setStaffToken(null);
       showToast('Staff session expired. Please sign in again.');
-      setCurrentRole('CUSTOMER');
-      navigate('/');
+      setStaffAuthed(false);
     };
     window.addEventListener(AUTH_EXPIRED_EVENT, onAuthExpired as EventListener);
     return () => window.removeEventListener(AUTH_EXPIRED_EVENT, onAuthExpired as EventListener);
@@ -142,6 +176,33 @@ export function AdminLayout() {
     if (!rule) return true;
     return rule.allowedRoles.includes(currentRole);
   };
+
+  if (checkingSession) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-stone-100 dark:bg-slate-950">
+        <div className="flex items-center gap-2 text-sm text-stone-500 dark:text-slate-400">
+          <span className="w-4 h-4 rounded-full border-2 border-teal-800 border-t-transparent animate-spin" />
+          {language === 'BN' ? 'সেশন যাচাই করা হচ্ছে…' : 'Verifying session…'}
+        </div>
+      </div>
+    );
+  }
+
+  if (!staffAuthed) {
+    return (
+      <StaffLoginScreen
+        onAuthenticated={(session) => {
+          setCurrentRole(session.role);
+          setStaffAuthed(true);
+          showToast(
+            language === 'BN'
+              ? `স্বাগতম, ${session.name}`
+              : `Welcome back, ${session.name}`
+          );
+        }}
+      />
+    );
+  }
 
   return (
     <div id="admin-root-layout" className="h-screen overflow-hidden flex flex-col bg-stone-100/90 dark:bg-slate-950 text-stone-900 dark:text-slate-100 font-sans selection:bg-teal-900 selection:text-white transition-colors duration-200">

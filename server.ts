@@ -32,6 +32,7 @@ import {
 } from './src/lib/validations';
 import { securityEngine } from './server/securityEngine';
 import { normalizeBdMobilePhone, phoneDigits } from './src/lib/phone';
+import { attachAuthContext, enforceStaffSurface, requireCustomerSelf } from './server/authGuard';
 import { backupEngine } from './server/backupEngine';
 import { supplierEngine } from './server/supplierEngine';
 import {
@@ -102,6 +103,14 @@ async function startServer() {
   });
 
   app.use(express.json());
+
+  // Phase 21: Server-side authentication & authorization.
+  // `attachAuthContext` resolves the caller (staff / customer / supplier) into
+  // `req.auth`; `enforceStaffSurface` then requires a staff session for every
+  // /api write plus the sensitive reads. Client-side ROUTE_PERMISSIONS is now
+  // only a UX affordance — the server is the authority.
+  app.use(attachAuthContext);
+  app.use(enforceStaffSurface);
 
   // -------------------------------------------------------------
   // 1. Health Check
@@ -1236,7 +1245,7 @@ async function startServer() {
   });
 
   // Customer In-App Notifications
-  app.get('/api/customer/notifications/:customerId', (req, res) => {
+  app.get('/api/customer/notifications/:customerId', requireCustomerSelf('customerId'), (req, res) => {
     const { customerId } = req.params;
     const notifications = serverDb.getCustomerNotifications(customerId);
     res.json({ success: true, notifications });
@@ -1248,7 +1257,7 @@ async function startServer() {
     res.json({ success });
   });
 
-  app.post('/api/customer/notifications/read-all', (req, res) => {
+  app.post('/api/customer/notifications/read-all', requireCustomerSelf('customerId'), (req, res) => {
     const { customerId } = req.body;
     const success = serverDb.markAllNotificationsAsRead(customerId);
     res.json({ success });
@@ -2579,7 +2588,7 @@ async function startServer() {
   // =============================================================
 
   // Customer Profile Endpoints
-  app.get('/api/customer/profile/:customerId', (req, res) => {
+  app.get('/api/customer/profile/:customerId', requireCustomerSelf('customerId'), (req, res) => {
     try {
       const profile = serverDb.getCustomerProfile(req.params.customerId);
       if (!profile) {
@@ -2591,7 +2600,7 @@ async function startServer() {
     }
   });
 
-  app.put('/api/customer/profile/:customerId', (req, res) => {
+  app.put('/api/customer/profile/:customerId', requireCustomerSelf('customerId'), (req, res) => {
     try {
       const updated = serverDb.updateCustomerProfile(req.params.customerId, req.body);
       if (!updated) {
@@ -2604,7 +2613,7 @@ async function startServer() {
   });
 
   // Customer Saved Addresses Endpoints
-  app.get('/api/customer/addresses/:customerId', (req, res) => {
+  app.get('/api/customer/addresses/:customerId', requireCustomerSelf('customerId'), (req, res) => {
     try {
       const addresses = serverDb.getCustomerAddresses(req.params.customerId);
       res.json({ success: true, addresses });
@@ -2613,7 +2622,7 @@ async function startServer() {
     }
   });
 
-  app.post('/api/customer/addresses', (req, res) => {
+  app.post('/api/customer/addresses', requireCustomerSelf('customerId'), (req, res) => {
     try {
       const { customerId, label, labelBn, recipientName, phone, altPhone, division, district, upazilaOrArea, addressLine, postalCode, isDefault } = req.body;
       if (!customerId || !recipientName || !phone || !division || !district || !addressLine) {
@@ -2668,7 +2677,7 @@ async function startServer() {
   });
 
   // Wishlist Endpoints
-  app.get('/api/customer/wishlist/:customerId', (req, res) => {
+  app.get('/api/customer/wishlist/:customerId', requireCustomerSelf('customerId'), (req, res) => {
     try {
       const wishlist = serverDb.getWishlist(req.params.customerId);
       res.json({ success: true, wishlist });
@@ -2677,7 +2686,7 @@ async function startServer() {
     }
   });
 
-  app.post('/api/customer/wishlist/toggle', (req, res) => {
+  app.post('/api/customer/wishlist/toggle', requireCustomerSelf('customerId'), (req, res) => {
     try {
       const { customerId, productId } = req.body;
       if (!customerId || !productId) {
@@ -2692,7 +2701,7 @@ async function startServer() {
   });
 
   // Customer Return Requests (RMA) Endpoints
-  app.get('/api/customer/returns/:customerId', (req, res) => {
+  app.get('/api/customer/returns/:customerId', requireCustomerSelf('customerId'), (req, res) => {
     try {
       const returns = serverDb.getCustomerReturnRequests(req.params.customerId);
       res.json({ success: true, returns });
@@ -2701,7 +2710,7 @@ async function startServer() {
     }
   });
 
-  app.post('/api/customer/returns', (req, res) => {
+  app.post('/api/customer/returns', requireCustomerSelf('customerId'), (req, res) => {
     try {
       const { customerId, customerPhone, orderId, orderNumber, productId, productTitle, quantity, reason, reasonDetails, preferredResolution, images } = req.body;
       if (!customerId || !orderId || !productId || !reason || !reasonDetails) {
