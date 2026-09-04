@@ -1687,19 +1687,26 @@ export interface BackupSnapshotManifest {
   appVersion: string;
   environment: string;
   totalRecords: number;
+  /**
+   * Record count per backed-up collection. Open-ended on purpose: the backup
+   * engine snapshots every `serverDb` collection, so this must not be pinned
+   * to a fixed subset (doing so previously hid 24 uncovered collections).
+   * The core keys below are always present.
+   */
   collectionCounts: {
-    products: number;
-    categories: number;
-    orders: number;
-    customers: number;
-    auditLogs: number;
-    expenses: number;
-    settlements: number;
-    inventoryTransactions: number;
-    coupons: number;
-    siteContent: number;
-    warehouses: number;
-    users: number;
+    products?: number;
+    categories?: number;
+    orders?: number;
+    customers?: number;
+    auditLogs?: number;
+    expenses?: number;
+    settlements?: number;
+    inventoryTransactions?: number;
+    coupons?: number;
+    siteContent?: number;
+    warehouses?: number;
+    users?: number;
+    [collection: string]: number | undefined;
   };
   sizeBytes: number;
   checksumSha256: string;

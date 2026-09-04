@@ -28,7 +28,7 @@ Three real orders were pushed through the API:
 | ② | Atomic stock deduction + rollback | **OK** | stock 12 → 10 on 2 units; `deductedItems[]` + `rollbackStock()` present (`server.ts:174-197`). |
 | ③ | Fraud evaluation persisted | **OK** | `fraudRisk.recommendation = REQUIRE_PHONE_VERIFICATION` stored on the order. |
 | ④ | Coupon / loyalty counters | **OK** | P3 wallet created with `WELCOME_BONUS 50` + `EARN_PURCHASE 48`, both linked to `orderId`/`orderNumber`. |
-| ⑤ | **Inventory ledger row** | **🔴 BROKEN** | Ledger stayed at **6 rows** after the sale. See **F-201** below. |
+| ⑤ | **Inventory ledger row** | **🔴 BROKEN → ✅ FIXED** | Ledger stayed at **6 rows** after the sale (**F-201**). Fixed in PHASE 4 batch 1: sales now write `type=SALE` rows. |
 | ⑥ | Audit log | **OK** | chained ledger grew (14 entries). |
 | ⑦ | Customer notification | **OK** | notification log grew; recipient `phase2@probe.test` recorded. |
 | ⑧ | UTM attribution capture | **OK** | P2 stored `{utmSource, utmMedium, utmCampaign, capturedAt}`. *(A rev-1 suspicion of loss was my own test using `source` instead of `utmSource` — chain is correct: `utmCapture.ts:51` → `Checkout.tsx:161` → `sanitizeOrderUtm` at `marketingCommandCenter.ts:540`.)* |
@@ -139,6 +139,27 @@ is deliberately manual, so add a guard or a visible "awaiting consignment" state
 auto-booking.
 
 ---
+
+## Status after PHASE 4 batch 1
+
+Six of the findings raised here were fixed and verified immediately — see
+[`PHASE4-fixlog.md`](./PHASE4-fixlog.md):
+
+| ID | Was | Now |
+|---|---|---|
+| F-201 ledger asymmetry | S1 BROKEN | ✅ fixed — sale writes `type=SALE qty=-n`; cancel/return still symmetric |
+| F-202 phone canonicalisation | S2 | ✅ fixed — `+8801744556677` stored from `+880 1744-556677` |
+| F-203 guest customer linkage | S2 | ✅ fixed — orders link real CRM ids; re-order in another format reuses the same customer |
+| F-205 competing normalisers | S3 | ✅ fixed — blacklist blocks all four phone formats |
+| F-206 SHIPPED w/o consignment | S3 | ✅ fixed — audit row + bilingual `warnings[]` |
+| S1-3 backup coverage | S1 | ✅ fixed — 36 collections snapshotted, 35 restored (was 11/10) |
+| S2-4 / S2-5 stale context | S2 | ✅ fixed — inventory ledger + customers now hydrate from the server |
+
+Still open and queued: **S1-1** (server-side RBAC) + **S2-1** (staff login) must ship together;
+**S1-2** (IDOR) depends on the same session identity; **S2-2** (PromotionsAdmin) needs an owner
+decision; **S2-3/F-204** (RMA to server) is a UI rework.
+
+Module verdicts below reflect the state **at audit time**, before those fixes.
 
 ## Score
 

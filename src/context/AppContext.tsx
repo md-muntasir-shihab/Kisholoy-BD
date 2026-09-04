@@ -294,6 +294,24 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
     });
 
+    // Sync the authoritative inventory ledger. Without this the admin
+    // Inventory screen rendered the mock seed forever, so real stock movements
+    // (sales, restocks, adjustments) were invisible to operators.
+    safeFetchJson('/api/inventory/transactions').then(data => {
+      if (data?.success && Array.isArray(data.transactions)) {
+        setInventoryTransactions(data.transactions);
+      }
+    });
+
+    // Sync the CRM customer directory so every consumer of `customers`
+    // (dashboards, Customer 360 links, fraud/marketing cross-references)
+    // sees server truth rather than the seeded list.
+    safeFetchJson('/api/customers').then(data => {
+      if (data?.success && Array.isArray(data.customers)) {
+        setCustomers(data.customers);
+      }
+    });
+
     // Sync STOs
     safeFetchJson('/api/fulfillment/transfers').then(data => {
       if (data?.success && Array.isArray(data.transfers)) {
@@ -771,6 +789,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           unitCost: options?.unitCost
         })
       });
+      // Re-read the authoritative ledger so the Inventory screen reflects the
+      // server's row (id, before/after quantities, flags) rather than only the
+      // optimistic local entry.
+      const ledger = await apiFetchJson('/api/inventory/transactions');
+      if (ledger?.success && Array.isArray(ledger.transactions)) {
+        setInventoryTransactions(ledger.transactions);
+      }
     } catch (e) {
       console.error('Failed to sync inventory adjustment with server:', e);
     }

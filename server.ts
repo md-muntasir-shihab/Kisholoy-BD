@@ -184,9 +184,17 @@ async function startServer() {
         deductedItems.length = 0;
       };
 
+      // Allocate the order identity BEFORE touching stock so every ledger row
+      // written during allocation can reference the order it belongs to.
+      const orderNumber = `KSH-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
+      const orderId = `ord-${Date.now()}`;
+
       try {
         for (const item of calculation.verifiedItems) {
-          const deducted = serverDb.updateProductStock(item.productId, item.quantity);
+          const deducted = serverDb.updateProductStock(item.productId, item.quantity, {
+            orderNumber,
+            operator: 'ORDER_ENGINE'
+          });
           if (!deducted) {
             throw new Error(`Failed to allocate stock for "${item.title}". It may have just sold out.`);
           }
@@ -196,14 +204,29 @@ async function startServer() {
         rollbackStock();
         return res.status(400).json({ error: deductErr.message });
       }
-
-      const orderNumber = `KSH-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
-      const orderId = `ord-${Date.now()}`;
       const clientIp = (req.headers['x-forwarded-for'] as string) || req.socket.remoteAddress || '127.0.0.1';
+
+      // Canonicalise the buyer's phone once, up front. Every downstream join
+      // (CRM dedupe, loyalty wallet, fraud velocity, blacklist, marketing RFM)
+      // is phone-keyed, so storing raw user input made the same human look like
+      // several different people depending on how they typed their number.
+      const canonicalPhone = normalizeBdMobilePhone(customer.phone) || customer.phone.trim();
+
+      // Resolve (or create) the CRM customer record so guest checkouts are no
+      // longer invisible to Customer 360, RFM segmentation and CLV metrics.
+      const crmCustomer = serverDb.upsertCustomerFromOrder({
+        name: customer.name,
+        phone: canonicalPhone,
+        email: customer.email,
+        address: shippingAddress.address,
+        district: shippingAddress.district,
+        thana: shippingAddress.thana,
+        source: req.body.orderSource || 'WEB'
+      });
 
       // Perform Authoritative Real-Time Fraud & Risk Assessment
       const fraudRisk = fraudEngine.evaluateOrderRisk({
-        phone: customer.phone.trim(),
+        phone: canonicalPhone,
         email: customer.email?.trim(),
         address: shippingAddress.address,
         district: shippingAddress.district,
@@ -236,15 +259,15 @@ async function startServer() {
         advancePaymentAmount,
         balanceDueCod,
         customer: {
-          id: `cust-${Date.now()}`,
+          id: crmCustomer.id,
           name: customer.name.trim(),
-          phone: customer.phone.trim(),
-          email: customer.email?.trim()
+          phone: canonicalPhone,
+          email: customer.email?.trim() || crmCustomer.email
         },
         shippingAddress: {
           firstName: shippingAddress.firstName || customer.name,
           lastName: shippingAddress.lastName || '',
-          phone: shippingAddress.phone || customer.phone,
+          phone: normalizeBdMobilePhone(shippingAddress.phone) || shippingAddress.phone || canonicalPhone,
           email: shippingAddress.email || customer.email,
           address: shippingAddress.address,
           division: shippingAddress.division || 'Dhaka',
@@ -336,6 +359,10 @@ async function startServer() {
       }
 
       serverDb.addOrder(newOrder);
+
+      // Roll the order into the buyer's lifetime CRM aggregates so repeat-rate,
+      // CLV and RFM segmentation reflect guest checkouts too.
+      serverDb.recordCustomerOrderStats(crmCustomer.id, newOrder.total || 0);
 
       // Enqueue asynchronous order confirmation SMS only for non-blocked orders
       if (!isAutoBlocked) {
@@ -585,6 +612,31 @@ async function startServer() {
         return res.status(404).json({ error: 'Order not found' });
       }
 
+      // Courier booking is a deliberate manual step, so an order can reach
+      // SHIPPED with no consignment. Surface that as an explicit warning
+      // instead of letting it pass silently untracked.
+      // A `courier` object is pre-seeded on orders (provider + CREATED status)
+      // long before a parcel is actually booked, so it is NOT evidence of a
+      // booking. Only a real consignment/tracking number is.
+      const courierInfo = (updatedOrder as any).courier || {};
+      const shippedWithoutConsignment =
+        status === 'SHIPPED' &&
+        !(updatedOrder as any).consignmentId &&
+        !(updatedOrder as any).trackingId &&
+        !courierInfo.consignmentId &&
+        !courierInfo.trackingCode &&
+        !courierInfo.trackingId;
+
+      if (shippedWithoutConsignment) {
+        serverDb.addAuditLog(
+          'SHIPPED_WITHOUT_CONSIGNMENT',
+          'Order',
+          updatedOrder.orderNumber,
+          `Order marked SHIPPED with no courier consignment. Customer cannot track this parcel until it is booked.`,
+          operator || 'ADMIN'
+        );
+      }
+
       // When an order is cancelled, restore the sold stock exactly once so we
       // never leak inventory. Guarded against double-restoration per order.
       if (status === 'CANCELLED' && !(updatedOrder as any).stockRestoredOnCancel && updatedOrder.items?.length) {
@@ -645,7 +697,16 @@ async function startServer() {
         success: true,
         order: updatedOrder,
         notificationsDispatched: dispatchedLogs.length,
-        dispatchedLogs
+        dispatchedLogs,
+        ...(shippedWithoutConsignment
+          ? {
+              warnings: [{
+                code: 'SHIPPED_WITHOUT_CONSIGNMENT',
+                message: 'Order is marked SHIPPED but has no courier consignment yet. Book a courier so the customer can track it.',
+                messageBn: 'অর্ডারটি SHIPPED করা হয়েছে কিন্তু কোনো কুরিয়ার কনসাইনমেন্ট নেই। গ্রাহক ট্র্যাক করতে পারবেন না — কুরিয়ার বুক করুন।'
+              }]
+            }
+          : {})
       });
     } catch (err: any) {
       return res.status(500).json({ success: false, error: err.message });
