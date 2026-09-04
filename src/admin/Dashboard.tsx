@@ -245,20 +245,20 @@ export function Dashboard() {
 
       {/* SECTION DIRECTORY & WORK BREAKDOWN */}
       <section id="work-directory-section" className="space-y-6">
-        <div className="bg-stone-950 text-white p-6 sm:p-8 rounded-3xl border border-stone-850 shadow-md flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div className="bg-white dark:bg-stone-950 text-stone-900 dark:text-white p-6 sm:p-8 rounded-3xl border border-stone-200/90 dark:border-stone-850 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-6 transition-colors">
           <div className="space-y-1.5">
             <div className="flex items-center gap-2">
-              <span className="px-3 py-0.5 rounded-full text-[10px] font-bold tracking-wider uppercase bg-teal-500/20 text-teal-300 border border-teal-500/30">
+              <span className="px-3 py-0.5 rounded-full text-[10px] font-bold tracking-wider uppercase bg-teal-50 dark:bg-teal-500/20 text-teal-950 dark:text-teal-300 border border-teal-200 dark:border-teal-500/30">
                 {isBn ? 'অপারেশনাল ডিরেক্টরি' : 'OPERATIONAL WORK DESKS'}
               </span>
-              <span className="text-xs text-stone-400 font-mono">23 Connected Desks</span>
+              <span className="text-xs text-stone-500 dark:text-stone-400 font-mono">23 Connected Desks</span>
             </div>
-            <h2 className="text-2xl sm:text-3xl font-serif font-black text-white tracking-tight">
+            <h2 className="text-2xl sm:text-3xl font-serif font-black text-stone-900 dark:text-white tracking-tight">
               {isBn 
                 ? 'এডমিন সেকশন ও কাজের পূর্ণ বিবরণী' 
                 : 'Admin Workspaces & Operational Matrix'}
             </h2>
-            <p className="text-xs sm:text-sm text-stone-300 max-w-2xl leading-relaxed">
+            <p className="text-xs sm:text-sm text-stone-600 dark:text-stone-300 max-w-2xl leading-relaxed">
               {isBn
                 ? 'প্রতিটি বিভাগের সুনির্দিষ্ট কাজের পরিধি, দায়িত্ব এবং সরাসরি কাজ শুরু করার জন্য পাশে দেয়া বাটন ব্যবহার করুন।'
                 : 'Full architectural breakdown of operational responsibilities and direct 1-click workspace entry buttons.'}
@@ -272,8 +272,8 @@ export function Dashboard() {
               onClick={() => setActiveSectionFilter('all')}
               className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all shadow-2xs ${
                 activeSectionFilter === 'all'
-                  ? 'bg-teal-400 text-stone-950 font-black shadow-xs'
-                  : 'bg-stone-900 text-stone-300 hover:bg-stone-850 hover:text-white border border-stone-800'
+                  ? 'bg-teal-900 text-white dark:bg-teal-400 dark:text-stone-950 font-black shadow-xs'
+                  : 'bg-stone-100 dark:bg-stone-900 text-stone-700 dark:text-stone-300 hover:bg-stone-200 dark:hover:bg-stone-850 hover:text-stone-900 dark:hover:text-white border border-stone-200 dark:border-stone-800'
               }`}
             >
               {isBn ? 'সকল সেকশন (২৩)' : 'All Desks (23)'}
@@ -285,8 +285,8 @@ export function Dashboard() {
                 onClick={() => setActiveSectionFilter(sec.id)}
                 className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all shadow-2xs ${
                   activeSectionFilter === sec.id
-                    ? 'bg-teal-400 text-stone-950 font-black shadow-xs'
-                    : 'bg-stone-900 text-stone-300 hover:bg-stone-850 hover:text-white border border-stone-800'
+                    ? 'bg-teal-900 text-white dark:bg-teal-400 dark:text-stone-950 font-black shadow-xs'
+                    : 'bg-stone-100 dark:bg-stone-900 text-stone-700 dark:text-stone-300 hover:bg-stone-200 dark:hover:bg-stone-850 hover:text-stone-900 dark:hover:text-white border border-stone-200 dark:border-stone-800'
                 }`}
               >
                 {isBn ? sec.titleBn : sec.title} ({sec.items.length})

@@ -26,7 +26,7 @@ export function AdminUrgentAlertBanner() {
   return (
     <div
       id="admin-urgent-operational-banner"
-      className="bg-stone-900 border-b border-rose-900/50 px-4 sm:px-6 py-2.5 text-xs text-stone-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 shadow-sm animate-in fade-in duration-200"
+      className="bg-rose-50/90 dark:bg-stone-900 border-b border-rose-200/90 dark:border-rose-900/50 px-4 sm:px-6 py-2.5 text-xs text-stone-900 dark:text-stone-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 shadow-2xs transition-colors animate-in fade-in duration-200"
     >
       <div className="flex items-center gap-2.5 flex-wrap">
         <span className="flex h-2 w-2 relative">
@@ -34,12 +34,12 @@ export function AdminUrgentAlertBanner() {
           <span className="relative inline-flex rounded-full h-2 w-2 bg-rose-500"></span>
         </span>
         
-        <span className="font-bold text-rose-300 flex items-center gap-1.5 uppercase font-mono tracking-wider text-[11px]">
-          <AlertTriangle className="w-3.5 h-3.5 text-rose-400" />
+        <span className="font-bold text-rose-800 dark:text-rose-300 flex items-center gap-1.5 uppercase font-mono tracking-wider text-[11px]">
+          <AlertTriangle className="w-3.5 h-3.5 text-rose-600 dark:text-rose-400" />
           {isBn ? 'জরুরি অপারেশনস সতর্কতা:' : 'Urgent Operations Alert:'}
         </span>
 
-        <span className="text-stone-300">
+        <span className="text-stone-700 dark:text-stone-300">
           {hasFraud && (
             <span className="mr-2">
               🚨 <strong>{highRiskOrders.length}</strong> {isBn ? 'উচ্চ ঝুঁকিপূর্ণ অর্ডার চিহ্নিত' : 'High Fraud Risk order(s) require review'}
@@ -57,9 +57,9 @@ export function AdminUrgentAlertBanner() {
         {hasFraud && (
           <Link
             to="/admin/fraud"
-            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-rose-950/80 hover:bg-rose-900 text-rose-200 border border-rose-700/60 font-semibold text-[11px] transition-colors"
+            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-rose-100 hover:bg-rose-200 text-rose-900 border border-rose-300 dark:bg-rose-950/80 dark:hover:bg-rose-900 dark:text-rose-200 dark:border-rose-700/60 font-semibold text-[11px] transition-colors"
           >
-            <ShieldAlert className="w-3 h-3 text-rose-400" />
+            <ShieldAlert className="w-3 h-3 text-rose-600 dark:text-rose-400" />
             <span>{isBn ? 'ফ্রড ড্যাশবোর্ড' : 'Review Fraud'}</span>
             <ChevronRight className="w-3 h-3" />
           </Link>
@@ -68,9 +68,9 @@ export function AdminUrgentAlertBanner() {
         {hasSettlement && (
           <Link
             to="/admin/finance"
-            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-950/80 hover:bg-amber-900 text-amber-200 border border-amber-700/60 font-semibold text-[11px] transition-colors"
+            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300 dark:bg-amber-950/80 dark:hover:bg-amber-900 dark:text-amber-200 dark:border-amber-700/60 font-semibold text-[11px] transition-colors"
           >
-            <Landmark className="w-3 h-3 text-amber-400" />
+            <Landmark className="w-3 h-3 text-amber-600 dark:text-amber-400" />
             <span>{isBn ? 'সেটেলমেন্ট লেজার' : 'Authorize Payouts'}</span>
             <ChevronRight className="w-3 h-3" />
           </Link>
@@ -78,7 +78,7 @@ export function AdminUrgentAlertBanner() {
 
         <button
           onClick={() => setDismissed(true)}
-          className="p-1 text-stone-400 hover:text-white rounded-lg hover:bg-stone-800 transition-colors ml-1"
+          className="p-1 text-stone-500 dark:text-stone-400 hover:text-stone-900 dark:hover:text-white rounded-lg hover:bg-stone-200 dark:hover:bg-stone-800 transition-colors ml-1"
           title="Dismiss banner"
           aria-label="Dismiss banner"
         >

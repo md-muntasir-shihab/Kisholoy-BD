@@ -257,9 +257,9 @@ export function AdminNotificationAlerts() {
         className={`relative p-2 rounded-xl transition-all border ${
           activeAlerts.length > 0
             ? criticalCount > 0
-              ? 'bg-rose-950/80 text-rose-200 border-rose-700/80 hover:bg-rose-900 shadow-xs ring-1 ring-rose-500/30'
-              : 'bg-amber-950/80 text-amber-200 border-amber-700/80 hover:bg-amber-900'
-            : 'bg-stone-900 hover:bg-stone-850 text-stone-300 hover:text-white border-stone-800'
+              ? 'bg-rose-100 text-rose-900 border-rose-300 hover:bg-rose-200 dark:bg-rose-950/80 dark:text-rose-200 dark:border-rose-700/80 dark:hover:bg-rose-900 shadow-xs ring-1 ring-rose-500/30'
+              : 'bg-amber-100 text-amber-900 border-amber-300 hover:bg-amber-200 dark:bg-amber-950/80 dark:text-amber-200 dark:border-amber-700/80 dark:hover:bg-amber-900'
+            : 'bg-stone-100 hover:bg-stone-200 dark:bg-stone-900 dark:hover:bg-stone-850 text-stone-700 dark:text-stone-300 hover:text-stone-900 dark:hover:text-white border-stone-200 dark:border-stone-800'
         }`}
         title={
           activeAlerts.length > 0
@@ -291,17 +291,17 @@ export function AdminNotificationAlerts() {
       {isOpen && (
         <div
           id="admin-alerts-popover"
-          className="absolute right-0 mt-3 w-96 sm:w-[420px] max-w-[95vw] bg-stone-900 border border-stone-750 rounded-2xl shadow-2xl z-50 text-stone-100 overflow-hidden text-xs animate-in fade-in slide-in-from-top-2 duration-150"
+          className="absolute right-0 mt-3 w-96 sm:w-[420px] max-w-[95vw] bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-750 rounded-2xl shadow-2xl z-50 text-stone-900 dark:text-stone-100 overflow-hidden text-xs animate-in fade-in slide-in-from-top-2 duration-150"
         >
           {/* Popover Header */}
-          <div className="p-4 bg-stone-950 border-b border-stone-800 flex items-center justify-between">
+          <div className="p-4 bg-stone-50 dark:bg-stone-950 border-b border-stone-200 dark:border-stone-800 flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <div className={`p-1.5 rounded-lg ${criticalCount > 0 ? 'bg-rose-900/60 text-rose-300' : 'bg-teal-900/60 text-teal-300'}`}>
+              <div className={`p-1.5 rounded-lg ${criticalCount > 0 ? 'bg-rose-100 dark:bg-rose-900/60 text-rose-800 dark:text-rose-300' : 'bg-teal-100 dark:bg-teal-900/60 text-teal-800 dark:text-teal-300'}`}>
                 <ShieldAlert className="w-4 h-4" />
               </div>
               <div>
                 <div className="flex items-center gap-2">
-                  <h3 className="font-serif font-bold text-sm text-white">
+                  <h3 className="font-serif font-bold text-sm text-stone-900 dark:text-white">
                     {isBn ? 'অপারেশনস রাডার ও অ্যালার্ট' : 'Operations Radar & Alerts'}
                   </h3>
                   <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[9px] font-mono font-bold bg-emerald-950 text-emerald-400 border border-emerald-800/80">
