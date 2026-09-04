@@ -1,0 +1,272 @@
+method,path,handler_line,engines_used,mutates,called_from,auth_in_handler,rbac_permission,status
+GET,/api/health,server.ts:109,,,NONE,n,-,ORPHAN(no client caller)
+POST,/api/checkout/calculate,server.ts:121,,,NONE,n,-,ORPHAN(no client caller)
+POST,/api/orders/create,server.ts:147,serverDb fraudEngine marketingCommandCenter fulfillmentEngine promotionEngine queueService notificationService,adjustInventory updateProductStock recordCouponUsage getOrCreateLoyaltyWallet adjustLoyaltyPoints addOrder addAuditLog,src/components/admin/ManualOrderModal.tsx | src/pages/Checkout.tsx,n,-,WIRED
+GET,/api/products,server.ts:381,serverDb,,src/context/AppContext.tsx,n,-,WIRED
+POST,/api/products,server.ts:389,serverDb,addProduct,src/context/AppContext.tsx,n,-,WIRED
+PUT,/api/products/:id,server.ts:403,serverDb,updateProduct,src/context/AppContext.tsx,n,-,WIRED
+DELETE,/api/products/:id,server.ts:416,serverDb,deleteProduct,src/context/AppContext.tsx,n,-,WIRED
+GET,/api/categories,server.ts:429,serverDb,,src/context/AppContext.tsx,n,-,WIRED
+POST,/api/categories,server.ts:437,serverDb,addCategory,src/context/AppContext.tsx,n,-,WIRED
+PUT,/api/categories/:id,server.ts:451,serverDb,updateCategory,src/context/AppContext.tsx,n,-,WIRED
+DELETE,/api/categories/:id,server.ts:464,serverDb,deleteCategory,src/context/AppContext.tsx,n,-,WIRED
+GET,/api/orders,server.ts:480,serverDb fraudEngine,orders customers,src/admin/FraudRiskDashboard.tsx | src/context/AppContext.tsx,y,-,WIRED
+GET,/api/orders/track,server.ts:529,serverDb,orders,src/pages/TrackOrder.tsx,n,-,WIRED
+POST,/api/orders/:id/status,server.ts:574,serverDb supplierEngine notificationService,updateOrderStatus adjustInventory,src/context/AppContext.tsx,n,-,WIRED
+GET,/api/payments/transactions,server.ts:658,serverDb,getPaymentTransactions,src/admin/PaymentsAdmin.tsx,n,-,WIRED
+POST,/api/payments/sslcommerz/init,server.ts:665,serverDb paymentService,getOrderById,NONE,n,-,ORPHAN(no client caller)
+POST,/api/payments/sslcommerz/validate,server.ts:690,paymentService,,src/pages/Checkout.tsx,n,-,WIRED
+POST,/api/payments/bkash/create,server.ts:706,paymentService,,NONE,n,-,ORPHAN(no client caller)
+POST,/api/payments/bkash/execute,server.ts:716,paymentService,,src/pages/Checkout.tsx,n,-,WIRED
+POST,/api/payments/refund,server.ts:727,paymentService,,src/admin/PaymentsAdmin.tsx,n,-,WIRED
+POST,/api/orders/fraud-check,server.ts:738,fraudEngine,,src/admin/PaymentsAdmin.tsx,n,-,WIRED
+POST,/api/payments/ipn,server.ts:754,paymentService serverDb,addAuditLog getOrderByNumber addPaymentTransaction,NONE,n,-,ORPHAN(no client caller)
+POST,/api/payments/test-ipn,server.ts:800,serverDb,getOrderByNumber addPaymentTransaction addAuditLog,src/admin/PaymentsAdmin.tsx,n,-,WIRED
+GET,/api/courier/config,server.ts:862,courierService,,src/components/admin/OrderCourierDispatchModal.tsx,n,-,WIRED
+POST,/api/courier/book,server.ts:871,serverDb courierService,getOrderById,src/admin/ShipmentsAdmin.tsx | src/components/admin/OrderCourierDispatchModal.tsx,n,-,WIRED
+GET,/api/courier/track/:id,server.ts:923,courierService,,src/components/admin/OrderLiveTrackingTimeline.tsx,n,-,WIRED
+POST,/api/courier/webhook,server.ts:935,courierService,,src/admin/ShipmentsAdmin.tsx,n,-,WIRED
+GET,/api/operations/jobs,server.ts:945,queueService,,src/admin/OperationsAdmin.tsx,n,-,WIRED
+GET,/api/operations/stats,server.ts:949,queueService,,src/admin/OperationsAdmin.tsx,n,-,WIRED
+POST,/api/operations/jobs/enqueue,server.ts:953,queueService,,NONE,n,-,ORPHAN(no client caller)
+POST,/api/operations/jobs/retry,server.ts:962,queueService,,NONE,n,-,ORPHAN(no client caller)
+POST,/api/operations/worker/tick,server.ts:971,queueService,,NONE,n,-,ORPHAN(no client caller)
+POST,/api/operations/worker/toggle,server.ts:981,queueService serverDb,gatewayConfig,NONE,n,-,ORPHAN(no client caller)
+POST,/api/operations/dlq/replay-all,server.ts:989,queueService,,NONE,n,-,ORPHAN(no client caller)
+POST,/api/operations/dlq/purge,server.ts:998,queueService,,NONE,n,-,ORPHAN(no client caller)
+GET,/api/webhooks/endpoints,server.ts:1008,serverDb,webhookEndpoints,src/admin/OperationsAdmin.tsx,n,-,WIRED
+POST,/api/webhooks/endpoints,server.ts:1012,serverDb,addWebhookEndpoint,src/admin/OperationsAdmin.tsx,n,-,WIRED
+PUT,/api/webhooks/endpoints/:id,server.ts:1027,serverDb,updateWebhookEndpoint,src/admin/OperationsAdmin.tsx,n,-,WIRED
+DELETE,/api/webhooks/endpoints/:id,server.ts:1036,serverDb,deleteWebhookEndpoint,src/admin/OperationsAdmin.tsx,n,-,WIRED
+GET,/api/webhooks/logs,server.ts:1045,serverDb,webhookLogs,src/admin/OperationsAdmin.tsx,n,-,WIRED
+POST,/api/webhooks/test-ping,server.ts:1049,webhookService,,NONE,n,-,ORPHAN(no client caller)
+GET,/api/notifications/templates,server.ts:1063,serverDb,notificationTemplates,src/admin/OperationsAdmin.tsx,n,-,WIRED
+PUT,/api/notifications/templates/:id,server.ts:1067,serverDb,updateNotificationTemplate,src/admin/OperationsAdmin.tsx,n,-,WIRED
+GET,/api/notifications/logs,server.ts:1076,serverDb,notificationLogs,src/admin/OperationsAdmin.tsx,n,-,WIRED
+GET,/api/notifications/config,server.ts:1080,serverDb,gatewayConfig,src/admin/OperationsAdmin.tsx,n,-,WIRED
+PUT,/api/notifications/config,server.ts:1084,serverDb,gatewayConfig addAuditLog,src/admin/OperationsAdmin.tsx,n,-,WIRED
+POST,/api/notifications/calculate-sms,server.ts:1090,notificationService,,src/admin/OperationsAdmin.tsx,n,-,WIRED
+POST,/api/notifications/dispatch,server.ts:1096,notificationService queueService serverDb,gatewayConfig,src/admin/OperationsAdmin.tsx,n,-,WIRED
+POST,/api/notifications/dispatch-event,server.ts:1126,notificationService,,src/context/AppContext.tsx,n,-,WIRED
+POST,/api/notifications/logs/:id/retry,server.ts:1140,serverDb,retryNotificationLog,src/admin/OperationsAdmin.tsx,n,-,WIRED
+POST,/api/notifications/test-connection,server.ts:1150,notificationService,,src/admin/OperationsAdmin.tsx,n,-,WIRED
+POST,/api/notifications/topup,server.ts:1161,serverDb,gatewayConfig addAuditLog,src/admin/OperationsAdmin.tsx,n,-,WIRED
+POST,/api/notifications/whatsapp-link,server.ts:1170,notificationService,,NONE,n,-,ORPHAN(no client caller)
+GET,/api/customer/notifications/:customerId,server.ts:1178,serverDb,getCustomerNotifications,src/context/AppContext.tsx,n,-,WIRED
+POST,/api/customer/notifications/:id/read,server.ts:1184,serverDb,markNotificationAsRead,src/context/AppContext.tsx,n,-,WIRED
+POST,/api/customer/notifications/read-all,server.ts:1190,serverDb,markAllNotificationsAsRead,src/context/AppContext.tsx,n,-,WIRED
+POST,/api/notifications/sms/send,server.ts:1197,smsService queueService,,NONE,n,-,ORPHAN(no client caller)
+GET,/api/inventory/stats,server.ts:1211,serverDb,getInventoryStats,NONE,n,-,ORPHAN(no client caller)
+GET,/api/inventory/transactions,server.ts:1220,serverDb,getInventoryTransactions,NONE,n,-,ORPHAN(no client caller)
+POST,/api/inventory/adjust,server.ts:1230,serverDb,adjustInventory getInventoryStats,src/context/AppContext.tsx,n,-,WIRED
+POST,/api/inventory/batch-restock,server.ts:1270,serverDb,batchRestock getInventoryStats,src/context/AppContext.tsx,n,-,WIRED
+GET,/api/inventory/export,server.ts:1303,serverDb,getInventoryStats,NONE,n,-,ORPHAN(no client caller)
+GET,/api/admin/returns,server.ts:1335,serverDb,,NONE,n,-,ORPHAN(no client caller)
+POST,/api/admin/returns/approve,server.ts:1340,serverDb supplierEngine notificationService,getOrderById adjustInventory updateOrderStatus addAuditLog,NONE,n,-,ORPHAN(no client caller)
+GET,/api/admin/refunds,server.ts:1386,serverDb,,NONE,n,-,ORPHAN(no client caller)
+POST,/api/admin/refunds/process,server.ts:1394,serverDb paymentService notificationService,getOrderById adjustInventory addAuditLog,NONE,n,-,ORPHAN(no client caller)
+GET,/api/finance/summary,server.ts:1449,,,src/admin/FinanceAdmin.tsx,n,-,WIRED
+GET,/api/finance/expenses,server.ts:1458,serverDb,expenses,src/admin/FinanceAdmin.tsx,n,-,WIRED
+POST,/api/finance/expenses,server.ts:1462,serverDb,addExpense,src/admin/FinanceAdmin.tsx,n,-,WIRED
+DELETE,/api/finance/expenses/:id,server.ts:1479,serverDb,deleteExpense,src/admin/FinanceAdmin.tsx,n,-,WIRED
+GET,/api/finance/settlements,server.ts:1488,serverDb,settlements,src/admin/FinanceAdmin.tsx,n,-,WIRED
+POST,/api/finance/settlements,server.ts:1492,serverDb,addSettlement,src/admin/FinanceAdmin.tsx,n,-,WIRED
+POST,/api/finance/settlements/:id/status,server.ts:1514,serverDb,updateSettlementStatus,src/admin/FinanceAdmin.tsx,n,-,WIRED
+GET,/api/finance/reconciliation,server.ts:1527,,,src/admin/FinanceAdmin.tsx,n,-,WIRED
+GET,/api/reports/analytics,server.ts:1539,reportService,,src/admin/Dashboard.tsx | src/admin/ReportsAdmin.tsx,n,-,WIRED
+GET,/api/reports/districts,server.ts:1551,reportService,,NONE,n,-,ORPHAN(no client caller)
+GET,/api/reports/financial-pnl,server.ts:1565,reportService,,NONE,n,-,ORPHAN(no client caller)
+GET,/api/reports/inventory-health,server.ts:1575,reportService,,NONE,n,-,ORPHAN(no client caller)
+GET,/api/reports/customer-cohorts,server.ts:1584,reportService,,NONE,n,-,ORPHAN(no client caller)
+GET,/api/reports/documents/invoice/:orderNumber,server.ts:1593,reportService,,NONE,n,-,ORPHAN(no client caller)
+GET,/api/reports/documents/manifest,server.ts:1606,reportService,,NONE,n,-,ORPHAN(no client caller)
+GET,/api/reports/export/:type,server.ts:1616,reportService,,src/admin/ReportsAdmin.tsx,n,-,WIRED
+GET,/api/print/settings,server.ts:1634,,,src/components/print/BulkPrintModal.tsx | src/components/print/PrintSettingsPanel.tsx | src/components/print/ReturnRefundPrintModal.tsx,n,-,WIRED
+PUT,/api/print/settings,server.ts:1642,,,src/components/print/BulkPrintModal.tsx | src/components/print/PrintSettingsPanel.tsx | src/components/print/ReturnRefundPrintModal.tsx,n,-,WIRED
+POST,/api/print/settings/reset,server.ts:1651,,,src/components/print/PrintSettingsPanel.tsx,n,-,WIRED
+GET,/api/print/order/:orderNumber,server.ts:1660,,,src/lib/documentEngine.tsx,n,-,WIRED
+POST,/api/print/codes,server.ts:1684,,,src/components/print/PrintSettingsPanel.tsx | src/components/print/ReturnRefundPrintModal.tsx,n,-,WIRED
+GET,/api/print/supplier-statement/:supplierId,server.ts:1697,,,src/components/print/PrintSupplierStatementModal.tsx | src/lib/documentEngine.tsx,n,-,WIRED
+GET,/api/print/purchase-order/:poId,server.ts:1712,,,src/components/print/PurchaseDocumentPrintModal.tsx | src/lib/documentEngine.tsx,n,-,WIRED
+GET,/api/suppliers/purchase-orders/all,server.ts:1722,supplierEngine,,src/admin/SuppliersAdmin.tsx,n,-,WIRED
+GET,/api/print/return-refund/:returnId,server.ts:1731,,,src/lib/documentEngine.tsx,n,-,WIRED
+GET,/api/print/report,server.ts:1741,,,src/lib/documentEngine.tsx,n,-,WIRED
+POST,/api/print/bulk,server.ts:1754,,,NONE,n,-,ORPHAN(no client caller)
+GET,/api/content,server.ts:1785,serverDb,getContent,src/context/AppContext.tsx,n,-,WIRED
+PUT,/api/content,server.ts:1794,serverDb,updateContent,src/context/AppContext.tsx,n,-,WIRED
+POST,/api/content/publish,server.ts:1811,serverDb,updateContent,src/context/AppContext.tsx,n,-,WIRED
+GET,/api/content/revisions,server.ts:1828,serverDb,getContentRevisions,src/context/AppContext.tsx,n,-,WIRED
+POST,/api/content/restore/:revisionId,server.ts:1837,serverDb,restoreContentRevision,src/context/AppContext.tsx,n,-,WIRED
+POST,/api/content/upload-image,server.ts:1851,serverDb,addAuditLog,NONE,n,-,ORPHAN(no client caller)
+GET,/api/admin/audit-logs,server.ts:1887,serverDb,auditLogs,NONE,n,-,ORPHAN(no client caller)
+GET,/api/admin/backup/export,server.ts:1891,serverDb,siteContent auditLogs blacklists fraudSettings,NONE,n,-,ORPHAN(no client caller)
+GET,/api/fraud/stats,server.ts:1911,fraudEngine,,src/admin/FraudRiskDashboard.tsx,n,-,WIRED
+GET,/api/fraud/blacklists,server.ts:1920,serverDb,blacklists,src/admin/FraudRiskDashboard.tsx,n,-,WIRED
+POST,/api/fraud/blacklists,server.ts:1928,serverDb,addBlacklistEntry,src/admin/FraudRiskDashboard.tsx,n,-,WIRED
+DELETE,/api/fraud/blacklists/:id,server.ts:1947,serverDb,deleteBlacklistEntry,src/admin/FraudRiskDashboard.tsx,n,-,WIRED
+POST,/api/fraud/blacklists/:id/toggle,server.ts:1961,serverDb,toggleBlacklistStatus,src/admin/FraudRiskDashboard.tsx,n,-,WIRED
+GET,/api/fraud/settings,server.ts:1975,serverDb,fraudSettings,src/admin/FraudRiskDashboard.tsx,n,-,WIRED
+POST,/api/fraud/settings,server.ts:1983,serverDb,updateFraudSettings,src/admin/FraudRiskDashboard.tsx,n,-,WIRED
+POST,/api/fraud/evaluate,server.ts:1996,fraudEngine,,src/admin/FraudRiskDashboard.tsx,n,-,WIRED
+POST,/api/fraud/verify-order,server.ts:2020,fraudEngine,,src/admin/FraudRiskDashboard.tsx,n,-,WIRED
+GET,/api/warehouses,server.ts:2050,fulfillmentEngine,,src/context/AppContext.tsx,n,-,WIRED
+POST,/api/warehouses,server.ts:2059,fulfillmentEngine,,src/context/AppContext.tsx,n,-,WIRED
+POST,/api/warehouses/:id/toggle,server.ts:2073,fulfillmentEngine,,src/context/AppContext.tsx,n,-,WIRED
+GET,/api/warehouses/stock-matrix,server.ts:2088,fulfillmentEngine,,src/context/AppContext.tsx,n,-,WIRED
+POST,/api/warehouses/stock-matrix/bin,server.ts:2099,fulfillmentEngine,,src/context/AppContext.tsx,n,-,WIRED
+GET,/api/fulfillment/transfers,server.ts:2124,fulfillmentEngine,,src/context/AppContext.tsx,n,-,WIRED
+POST,/api/fulfillment/transfers,server.ts:2133,fulfillmentEngine,,src/context/AppContext.tsx,n,-,WIRED
+POST,/api/fulfillment/transfers/:id/approve,server.ts:2157,fulfillmentEngine,,src/context/AppContext.tsx,n,-,WIRED
+POST,/api/fulfillment/transfers/:id/dispatch,server.ts:2172,fulfillmentEngine,,src/context/AppContext.tsx,n,-,WIRED
+POST,/api/fulfillment/transfers/:id/receive,server.ts:2192,fulfillmentEngine,,src/context/AppContext.tsx,n,-,WIRED
+POST,/api/fulfillment/route-order,server.ts:2211,serverDb fulfillmentEngine,getOrderById,src/context/AppContext.tsx,n,-,WIRED
+GET,/api/fulfillment/pick-lists,server.ts:2229,fulfillmentEngine,,src/context/AppContext.tsx,n,-,WIRED
+POST,/api/fulfillment/pick-lists,server.ts:2238,fulfillmentEngine,,src/context/AppContext.tsx,n,-,WIRED
+POST,/api/fulfillment/pick-lists/:id/toggle-item,server.ts:2256,fulfillmentEngine,,src/context/AppContext.tsx,n,-,WIRED
+GET,/api/fulfillment/manifests,server.ts:2274,fulfillmentEngine,,src/context/AppContext.tsx,n,-,WIRED
+POST,/api/fulfillment/manifests,server.ts:2283,fulfillmentEngine,,src/context/AppContext.tsx,n,-,WIRED
+POST,/api/fulfillment/manifests/:id/handover,server.ts:2305,fulfillmentEngine,,src/context/AppContext.tsx,n,-,WIRED
+POST,/api/promotions/validate,server.ts:2324,promotionEngine,,src/admin/PromotionsAdmin.tsx | src/pages/Checkout.tsx,n,-,WIRED
+GET,/api/promotions/coupons,server.ts:2347,serverDb promotionEngine,coupons,src/admin/PromotionsAdmin.tsx,n,-,WIRED
+POST,/api/promotions/coupons,server.ts:2360,serverDb,getCouponByCode addCoupon,src/admin/PromotionsAdmin.tsx,n,-,WIRED
+PUT,/api/promotions/coupons/:id,server.ts:2405,serverDb,updateCoupon,src/admin/PromotionsAdmin.tsx,n,-,WIRED
+DELETE,/api/promotions/coupons/:id,server.ts:2420,serverDb,deleteCoupon,src/admin/PromotionsAdmin.tsx,n,-,WIRED
+GET,/api/promotions/flash-deals,server.ts:2435,serverDb,flashDeals,src/admin/PromotionsAdmin.tsx,n,-,WIRED
+POST,/api/promotions/flash-deals,server.ts:2443,serverDb,flashDeals addAuditLog,src/admin/PromotionsAdmin.tsx,n,-,WIRED
+POST,/api/promotions/loyalty/adjust,server.ts:2482,serverDb,adjustLoyaltyPoints,src/admin/PromotionsAdmin.tsx,n,-,WIRED
+GET,/api/promotions/stats,server.ts:2508,promotionEngine,,NONE,n,-,ORPHAN(no client caller)
+GET,/api/customer/profile/:customerId,server.ts:2521,serverDb,getCustomerProfile,src/context/AppContext.tsx,n,-,WIRED
+PUT,/api/customer/profile/:customerId,server.ts:2533,serverDb,updateCustomerProfile,src/context/AppContext.tsx,n,-,WIRED
+GET,/api/customer/addresses/:customerId,server.ts:2546,serverDb,getCustomerAddresses,src/context/AppContext.tsx,n,-,WIRED
+POST,/api/customer/addresses,server.ts:2555,serverDb,addCustomerAddress,src/context/AppContext.tsx,n,-,WIRED
+PUT,/api/customer/addresses/:addressId,server.ts:2581,serverDb,updateCustomerAddress,src/context/AppContext.tsx,n,-,WIRED
+DELETE,/api/customer/addresses/:addressId,server.ts:2593,serverDb,deleteCustomerAddress,src/context/AppContext.tsx,n,-,WIRED
+GET,/api/customer/wishlist/:customerId,server.ts:2610,serverDb,getWishlist,src/context/AppContext.tsx,n,-,WIRED
+POST,/api/customer/wishlist/toggle,server.ts:2619,serverDb,toggleWishlist getWishlist,src/context/AppContext.tsx,n,-,WIRED
+GET,/api/customer/returns/:customerId,server.ts:2634,serverDb,getCustomerReturnRequests,src/context/AppContext.tsx,n,-,WIRED
+POST,/api/customer/returns,server.ts:2643,serverDb,createReturnRequest,src/context/AppContext.tsx,n,-,WIRED
+GET,/api/marketing/rfm-segments,server.ts:2673,marketingService,,src/admin/MarketingAdmin.tsx,n,-,WIRED
+GET,/api/marketing/customers-crm,server.ts:2683,marketingService,,NONE,n,-,ORPHAN(no client caller)
+GET,/api/marketing/customers-crm/:id,server.ts:2707,marketingService,,src/admin/MarketingAdmin.tsx,n,-,WIRED
+POST,/api/marketing/customers-crm/:id/notes,server.ts:2719,marketingService,,src/admin/MarketingAdmin.tsx,n,-,WIRED
+POST,/api/marketing/customers-crm/:id/tags,server.ts:2732,marketingService,,src/admin/MarketingAdmin.tsx,n,-,WIRED
+GET,/api/customers,server.ts:2746,marketingService serverDb,blacklists customers orders,src/admin/CustomersAdmin.tsx | src/context/AppContext.tsx,n,-,WIRED
+GET,/api/customers/:id,server.ts:2837,marketingService serverDb,customerAddresses orders,src/components/admin/Customer360Modal.tsx,n,-,WIRED
+PATCH,/api/customers/:id/status,server.ts:2862,serverDb,customers addAuditLog,src/components/admin/Customer360Modal.tsx | src/context/AppContext.tsx,n,-,WIRED
+POST,/api/customers,server.ts:2887,serverDb,customers addAuditLog,src/admin/CustomersAdmin.tsx | src/context/AppContext.tsx,n,-,WIRED
+POST,/api/customers/:id/notes,server.ts:2918,marketingService,,src/components/admin/CreateCustomerModal.tsx | src/components/admin/Customer360Modal.tsx,n,-,WIRED
+POST,/api/customers/:id/tags,server.ts:2931,marketingService,,src/components/admin/Customer360Modal.tsx,n,-,WIRED
+POST,/api/customers/:id/quick-communication,server.ts:2944,serverDb,customers addAuditLog,src/components/admin/CustomerQuickMessageModal.tsx,n,-,WIRED
+GET,/api/marketing/abandoned-carts,server.ts:2964,marketingService,,src/admin/MarketingAdmin.tsx,n,-,WIRED
+POST,/api/marketing/abandoned-carts/:id/recover,server.ts:2989,marketingService,,src/admin/MarketingAdmin.tsx,n,-,WIRED
+POST,/api/marketing/abandoned-carts/simulate,server.ts:3007,marketingService,,NONE,n,-,ORPHAN(no client caller)
+GET,/api/marketing/campaigns,server.ts:3030,marketingService,,src/admin/MarketingAdmin.tsx | src/admin/MarketingCommandCenter.tsx,n,-,WIRED
+POST,/api/marketing/campaigns,server.ts:3053,marketingService,,src/admin/MarketingAdmin.tsx | src/admin/MarketingCommandCenter.tsx,n,-,WIRED
+POST,/api/marketing/campaigns/:id/dispatch,server.ts:3079,marketingService,,src/admin/MarketingAdmin.tsx,n,-,WIRED
+GET,/api/marketing/referrals,server.ts:3092,marketingService,,src/admin/MarketingAdmin.tsx,n,-,WIRED
+GET,/api/marketing/referrals/config,server.ts:3142,marketingService,,src/admin/MarketingAdmin.tsx,n,-,WIRED
+PUT,/api/marketing/referrals/config,server.ts:3150,marketingService,,src/admin/MarketingAdmin.tsx,n,-,WIRED
+POST,/api/marketing/referrals/disburse/:id,server.ts:3159,marketingService,,src/admin/MarketingAdmin.tsx,n,-,WIRED
+GET,/api/marketing/command/channels,server.ts:3185,marketingCommandCenter,,src/admin/MarketingCommandCenter.tsx,n,-,WIRED
+POST,/api/marketing/command/channels,server.ts:3194,marketingCommandCenter,,src/admin/MarketingCommandCenter.tsx,n,-,WIRED
+PUT,/api/marketing/command/channels/:id,server.ts:3205,marketingCommandCenter,,src/admin/MarketingCommandCenter.tsx,n,-,WIRED
+POST,/api/marketing/command/channels/:id/status,server.ts:3218,marketingCommandCenter,,src/admin/MarketingCommandCenter.tsx,n,-,WIRED
+GET,/api/marketing/command/spends,server.ts:3231,marketingCommandCenter,,src/admin/MarketingCommandCenter.tsx,n,-,WIRED
+POST,/api/marketing/command/spends,server.ts:3247,marketingCommandCenter,,src/admin/MarketingCommandCenter.tsx,n,-,WIRED
+PUT,/api/marketing/command/spends/:id,server.ts:3259,marketingCommandCenter,,src/admin/MarketingCommandCenter.tsx,n,-,WIRED
+POST,/api/marketing/command/spends/:id/void,server.ts:3272,marketingCommandCenter,,src/admin/MarketingCommandCenter.tsx,n,-,WIRED
+GET,/api/marketing/command/attributions,server.ts:3285,marketingCommandCenter,,src/admin/MarketingCommandCenter.tsx,n,-,WIRED
+POST,/api/marketing/command/attributions,server.ts:3300,marketingCommandCenter,,src/admin/MarketingCommandCenter.tsx,n,-,WIRED
+GET,/api/marketing/command/auto-orders,server.ts:3313,marketingCommandCenter,,src/admin/MarketingCommandCenter.tsx,n,-,WIRED
+GET,/api/marketing/command/roi,server.ts:3323,marketingCommandCenter,,src/admin/MarketingCommandCenter.tsx,n,-,WIRED
+GET,/api/marketing/command/finance-reconciliation,server.ts:3333,marketingCommandCenter,,src/admin/MarketingCommandCenter.tsx,n,-,WIRED
+GET,/api/marketing/command/sync-status,server.ts:3343,marketingCommandCenter,,src/admin/MarketingCommandCenter.tsx,n,-,WIRED
+GET,/api/marketing/command/export,server.ts:3352,marketingCommandCenter,,src/admin/MarketingCommandCenter.tsx,n,-,WIRED
+GET,/api/security/diagnostics,server.ts:3370,securityEngine,,src/admin/AuditAdmin.tsx,n,-,WIRED
+GET,/api/security/audit-chain/verify,server.ts:3379,securityEngine,,src/admin/AuditAdmin.tsx,n,-,WIRED
+GET,/api/security/audit-chain/ledger,server.ts:3388,securityEngine,,src/admin/AuditAdmin.tsx,n,-,WIRED
+POST,/api/security/audit-chain/log,server.ts:3398,securityEngine,,NONE,n,-,ORPHAN(no client caller)
+GET,/api/security/users,server.ts:3420,securityEngine,,src/admin/UsersAdmin.tsx,n,-,WIRED
+POST,/api/security/users/create,server.ts:3429,securityEngine,,src/admin/UsersAdmin.tsx,n,-,WIRED
+POST,/api/security/users/update-role,server.ts:3442,securityEngine,,src/admin/UsersAdmin.tsx,n,-,WIRED
+POST,/api/security/users/update-status,server.ts:3462,securityEngine,,src/admin/UsersAdmin.tsx,n,-,WIRED
+POST,/api/security/auth/login,server.ts:3476,securityEngine,,NONE,n,-,ORPHAN(no client caller)
+POST,/api/security/auth/logout,server.ts:3503,securityEngine,,NONE,y,-,ORPHAN(no client caller)
+POST,/api/security/auth/verify,server.ts:3515,securityEngine,,NONE,y,-,ORPHAN(no client caller)
+POST,/api/security/auth/change-password,server.ts:3541,securityEngine,,NONE,n,-,ORPHAN(no client caller)
+POST,/api/security/auth/reset-password-request,server.ts:3566,securityEngine,,NONE,n,-,ORPHAN(no client caller)
+POST,/api/security/auth/reset-password-confirm,server.ts:3582,securityEngine,,NONE,n,-,ORPHAN(no client caller)
+POST,/api/security/auth/mfa-verify,server.ts:3602,securityEngine,,NONE,n,-,ORPHAN(no client caller)
+POST,/api/security/users/toggle-mfa,server.ts:3620,securityEngine,,NONE,n,-,ORPHAN(no client caller)
+POST,/api/security/rbac/update-permissions,server.ts:3635,securityEngine,,src/admin/UsersAdmin.tsx,n,-,WIRED
+GET,/api/suppliers,server.ts:3658,supplierEngine,,src/admin/Dashboard.tsx | src/admin/ProductsAdmin.tsx | src/admin/SuppliersAdmin.tsx,n,-,WIRED
+GET,/api/suppliers/:id,server.ts:3668,supplierEngine,,src/admin/SuppliersAdmin.tsx,n,-,WIRED
+POST,/api/suppliers/bulk-import,server.ts:3678,supplierEngine,,src/admin/BulkSupplierImportModal.tsx,n,-,WIRED
+POST,/api/suppliers,server.ts:3695,supplierEngine,,src/admin/Dashboard.tsx | src/admin/ProductsAdmin.tsx | src/admin/SuppliersAdmin.tsx,n,-,WIRED
+PUT,/api/suppliers/:id,server.ts:3710,supplierEngine,,src/admin/SuppliersAdmin.tsx,n,-,WIRED
+POST,/api/suppliers/:id/purchase-orders,server.ts:3726,supplierEngine,,src/admin/SuppliersAdmin.tsx,n,-,WIRED
+POST,/api/suppliers/:id/payments,server.ts:3755,securityEngine supplierEngine,,src/admin/SuppliersAdmin.tsx,y,-,WIRED
+POST,/api/suppliers/:id/pos/:poId/delivery,server.ts:3786,supplierEngine,,src/admin/SuppliersAdmin.tsx,n,-,WIRED
+POST,/api/suppliers/:id/toggle-portal,server.ts:3798,supplierEngine,,src/admin/SuppliersAdmin.tsx,n,-,WIRED
+POST,/api/suppliers/portal/login,server.ts:3810,supplierEngine,,src/pages/supplier/SupplierLoginPage.tsx,n,-,WIRED
+GET,/api/suppliers/portal/dashboard,server.ts:3829,supplierEngine,,src/pages/supplier/SupplierPortalPage.tsx,n,-,WIRED
+POST,/api/suppliers/portal/update-profile,server.ts:3847,supplierEngine,,src/pages/supplier/SupplierPortalPage.tsx,n,-,WIRED
+POST,/api/suppliers/portal/change-password,server.ts:3861,supplierEngine,,src/pages/supplier/SupplierPortalPage.tsx,n,-,WIRED
+POST,/api/suppliers/:id/set-portal-password,server.ts:3875,supplierEngine,,NONE,n,-,ORPHAN(no client caller)
+GET,/api/suppliers/agreements/all,server.ts:3891,supplierEngine,,src/components/admin/SupplierAgreementsView.tsx,n,-,WIRED
+GET,/api/suppliers/:id/agreements,server.ts:3900,supplierEngine,,src/components/admin/SupplierAgreementsView.tsx,n,-,WIRED
+POST,/api/suppliers/:id/agreements,server.ts:3909,supplierEngine,,src/components/admin/SupplierAgreementsView.tsx,n,-,WIRED
+PUT,/api/suppliers/agreements/:id,server.ts:3920,supplierEngine,,src/components/admin/SupplierAgreementsView.tsx,n,-,WIRED
+DELETE,/api/suppliers/agreements/:id,server.ts:3931,supplierEngine,,src/components/admin/SupplierAgreementsView.tsx,n,-,WIRED
+GET,/api/suppliers/batches/all,server.ts:3943,supplierEngine,,src/components/admin/SupplyBatchesView.tsx,n,-,WIRED
+GET,/api/suppliers/:id/batches,server.ts:3952,supplierEngine,,src/components/admin/SupplyBatchesView.tsx,n,-,WIRED
+POST,/api/suppliers/:id/batches,server.ts:3961,supplierEngine,,src/components/admin/SupplyBatchesView.tsx,n,-,WIRED
+PUT,/api/suppliers/batches/:id,server.ts:3972,supplierEngine,,NONE,n,-,ORPHAN(no client caller)
+GET,/api/suppliers/eligible-sales/all,server.ts:3984,supplierEngine,,src/components/admin/SupplierSettlementsView.tsx,n,-,WIRED
+GET,/api/suppliers/:id/eligible-sales,server.ts:3993,supplierEngine,,NONE,n,-,ORPHAN(no client caller)
+POST,/api/suppliers/eligible-sales/process-order,server.ts:4002,supplierEngine,,NONE,n,-,ORPHAN(no client caller)
+POST,/api/suppliers/eligible-sales/adjust-return,server.ts:4014,supplierEngine,,src/components/admin/SupplierSettlementsView.tsx,n,-,WIRED
+POST,/api/suppliers/eligible-sales/sync-delivered,server.ts:4026,serverDb supplierEngine,,src/components/admin/SupplierSettlementsView.tsx,n,-,WIRED
+GET,/api/suppliers/settlements/all,server.ts:4043,supplierEngine,,src/components/admin/SupplierSettlementsView.tsx,n,-,WIRED
+GET,/api/suppliers/:id/settlements,server.ts:4052,supplierEngine,,src/components/admin/SupplierSettlementsView.tsx,n,-,WIRED
+GET,/api/suppliers/settlements/:id,server.ts:4061,supplierEngine,,NONE,n,-,ORPHAN(no client caller)
+POST,/api/suppliers/:id/settlements,server.ts:4071,supplierEngine,,src/components/admin/SupplierSettlementsView.tsx,n,-,WIRED
+PUT,/api/suppliers/settlements/:id/status,server.ts:4087,supplierEngine,,src/components/admin/SupplierSettlementsView.tsx,n,-,WIRED
+POST,/api/suppliers/settlements/:id/pay,server.ts:4099,securityEngine supplierEngine,,src/components/admin/SupplierSettlementsView.tsx,y,-,WIRED
+GET,/api/suppliers/:id/statement,server.ts:4126,supplierEngine,,src/pages/supplier/SupplierPortalPage.tsx,n,-,WIRED
+GET,/api/suppliers/supply-chain/metrics,server.ts:4141,supplierEngine,,NONE,n,-,ORPHAN(no client caller)
+POST,/api/customer/auth/login,server.ts:4154,serverDb,customers,src/components/auth/CustomerAuthModal.tsx | src/pages/AccountPage.tsx,n,-,WIRED
+POST,/api/customer/auth/register,server.ts:4193,serverDb,customers customerAddresses,src/components/auth/CustomerAuthModal.tsx | src/pages/AccountPage.tsx,n,-,WIRED
+POST,/api/customer/auth/logout,server.ts:4256,,,NONE,n,-,ORPHAN(no client caller)
+POST,/api/customer/auth/link-guest-order,server.ts:4260,serverDb securityEngine,,src/components/auth/CustomerAuthModal.tsx | src/pages/AccountPage.tsx,n,-,WIRED
+POST,/api/customer/auth/change-password,server.ts:4314,serverDb securityEngine,customers,src/pages/AccountPage.tsx,n,-,WIRED
+GET,/api/security/sessions,server.ts:4346,securityEngine,,src/admin/UsersAdmin.tsx,n,-,WIRED
+POST,/api/security/sessions/revoke,server.ts:4355,securityEngine,,src/admin/UsersAdmin.tsx,n,-,WIRED
+POST,/api/security/sessions/revoke-all-others,server.ts:4366,securityEngine,,NONE,n,-,ORPHAN(no client caller)
+GET,/api/security/rbac/roles,server.ts:4377,securityEngine,,src/admin/UsersAdmin.tsx,n,-,WIRED
+GET,/api/security/rate-limit/status,server.ts:4386,securityEngine,,src/admin/UsersAdmin.tsx,n,-,WIRED
+GET,/api/security/rate-limit/banned-ips,server.ts:4395,securityEngine,,src/admin/UsersAdmin.tsx,n,-,WIRED
+POST,/api/security/rate-limit/unban,server.ts:4404,securityEngine,,src/admin/UsersAdmin.tsx,n,-,WIRED
+POST,/api/security/rate-limit/ban,server.ts:4415,securityEngine,,src/admin/UsersAdmin.tsx,n,-,WIRED
+GET,/api/system/health,server.ts:4436,backupEngine,,src/admin/BackupAdmin.tsx,n,-,WIRED
+GET,/api/system/backups,server.ts:4446,backupEngine,,src/admin/BackupAdmin.tsx,n,-,WIRED
+POST,/api/system/backups/create,server.ts:4456,backupEngine,,src/admin/BackupAdmin.tsx,n,-,WIRED
+POST,/api/system/backups/:id/verify,server.ts:4472,backupEngine,,src/admin/BackupAdmin.tsx,n,-,WIRED
+GET,/api/system/backups/:id/download,server.ts:4482,backupEngine,,src/admin/BackupAdmin.tsx,n,-,WIRED
+POST,/api/system/backups/pre-restore,server.ts:4497,backupEngine,,src/admin/BackupAdmin.tsx,n,-,WIRED
+POST,/api/system/backups/restore,server.ts:4509,backupEngine,,src/admin/BackupAdmin.tsx,n,-,WIRED
+GET,/api/system/backups/schedule,server.ts:4525,backupEngine,,src/admin/BackupAdmin.tsx,n,-,WIRED
+PUT,/api/system/backups/schedule,server.ts:4534,backupEngine,,src/admin/BackupAdmin.tsx,n,-,WIRED
+GET,/api/system/dr-metrics,server.ts:4545,backupEngine,,src/admin/BackupAdmin.tsx,n,-,WIRED
+POST,/api/system/dr-drill,server.ts:4554,backupEngine,,src/admin/BackupAdmin.tsx,n,-,WIRED
+POST,/api/system/export,server.ts:4578,backupEngine,,src/admin/BackupAdmin.tsx,n,-,WIRED
+GET,/api/system/export,server.ts:4579,backupEngine,,src/admin/BackupAdmin.tsx,n,-,WIRED
+POST,/api/system/import,server.ts:4582,backupEngine,,src/admin/BackupAdmin.tsx,n,-,WIRED
+GET,/api/system/drive/config,server.ts:4596,backupEngine,,src/admin/BackupAdmin.tsx,n,-,WIRED
+POST,/api/system/drive/connect,server.ts:4605,backupEngine,,src/admin/BackupAdmin.tsx,n,-,WIRED
+POST,/api/system/drive/disconnect,server.ts:4615,backupEngine,,src/admin/BackupAdmin.tsx,n,-,WIRED
+PUT,/api/system/drive/config,server.ts:4625,backupEngine,,src/admin/BackupAdmin.tsx,n,-,WIRED
+POST,/api/system/drive/sync-now,server.ts:4635,backupEngine,,src/admin/BackupAdmin.tsx,n,-,WIRED
+GET,/api/system/drive/files,server.ts:4645,backupEngine,,src/admin/BackupAdmin.tsx,n,-,WIRED
+POST,/api/system/drive/restore,server.ts:4654,backupEngine,,src/admin/BackupAdmin.tsx,n,-,WIRED
+GET,/api/system/go-live-audit,server.ts:4668,backupEngine securityEngine,,NONE,n,-,ORPHAN(no client caller)

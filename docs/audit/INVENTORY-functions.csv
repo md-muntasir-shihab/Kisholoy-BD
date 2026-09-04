@@ -1,0 +1,256 @@
+section,module,route,file,function_name,ui_trigger,purpose_1line,calls_api,reads_context,writes_context,writes_localStorage,emits_audit_log,emits_notification,guarded_by_permission
+sales-operations,AdminLayout,/admin,src/admin/AdminLayout.tsx:63,useEffect@63,effect(mount/dep),data load / sync on mount or dependency change,NONE,-,-,-,n,n,none
+sales-operations,AdminLayout,/admin,src/admin/AdminLayout.tsx:77,useEffect@77,effect(mount/dep),data load / sync on mount or dependency change,NONE,showToast,setCurrentRole,-,n,y,none
+sales-operations,AdminLayout,/admin,src/admin/AdminLayout.tsx:78,onAuthExpired,UNWIRED?,onAuthExpired action,NONE,showToast,setCurrentRole,-,n,y,none
+sales-operations,AdminLayout,/admin,src/admin/AdminLayout.tsx:90,toggleSection,button click,toggleSection action,NONE,-,-,-,n,n,none
+sales-operations,AdminLayout,/admin,src/admin/AdminLayout.tsx:130,handleOpenGuide,button click,handleOpenGuide action,NONE,-,-,-,n,n,none
+system-administration,AnalyticsAdmin,/admin/analytics,src/admin/AnalyticsAdmin.tsx:101,useEffect@101,effect(mount/dep),data load / sync on mount or dependency change,NONE,-,-,-,n,n,REPORT_VIEW
+system-administration,AnalyticsAdmin,/admin/analytics,src/admin/AnalyticsAdmin.tsx:102,handleStorageChange,UNWIRED?,handleStorageChange action,NONE,-,-,-,n,n,REPORT_VIEW
+system-administration,AnalyticsAdmin,/admin/analytics,src/admin/AnalyticsAdmin.tsx:117,useEffect@117,effect(mount/dep),data load / sync on mount or dependency change,NONE,products customers,-,-,n,n,REPORT_VIEW
+system-administration,AnalyticsAdmin,/admin/analytics,src/admin/AnalyticsAdmin.tsx:326,handleExportCSV,button click,handleExportCSV action,NONE,orders,-,-,n,n,REPORT_VIEW
+system-administration,AuditAdmin,/admin/audit,src/admin/AuditAdmin.tsx:67,fetchLedger,button click,fetchLedger action,GET /api/security/audit-chain/ledger,-,-,-,y,n,SECURITY_MANAGE
+system-administration,AuditAdmin,/admin/audit,src/admin/AuditAdmin.tsx:86,useEffect@86,effect(mount/dep),data load / sync on mount or dependency change,NONE,-,-,-,n,n,SECURITY_MANAGE
+system-administration,AuditAdmin,/admin/audit,src/admin/AuditAdmin.tsx:91,handleVerifyLedger,button click,handleVerifyLedger action,GET /api/security/audit-chain/verify,showToast,-,-,y,y,SECURITY_MANAGE
+system-administration,AuditAdmin,/admin/audit,src/admin/AuditAdmin.tsx:116,handleRunDiagnostics,button click,handleRunDiagnostics action,GET /api/security/diagnostics,showToast,-,-,n,y,SECURITY_MANAGE
+system-administration,AuditAdmin,/admin/audit,src/admin/AuditAdmin.tsx:135,handleExportJson,button click,handleExportJson action,NONE,showToast,-,-,y,y,SECURITY_MANAGE
+system-administration,AuditAdmin,/admin/audit,src/admin/AuditAdmin.tsx:201,handleExportExcel,button click,handleExportExcel action,NONE,showToast,-,-,y,y,SECURITY_MANAGE
+system-administration,AuditAdmin,/admin/audit,src/admin/AuditAdmin.tsx:218,handleExportCsv,prop:onExportCsv (child component),handleExportCsv action,NONE,showToast,-,-,y,y,SECURITY_MANAGE
+system-administration,BackupAdmin,/admin/backup,src/admin/BackupAdmin.tsx:98,useEffect@98,effect(mount/dep),data load / sync on mount or dependency change,NONE,-,-,-,n,n,BACKUP_CREATE
+system-administration,BackupAdmin,/admin/backup,src/admin/BackupAdmin.tsx:107,fetchDriveConfig,called internally,fetchDriveConfig action,GET /api/system/drive/config,-,-,-,n,n,BACKUP_CREATE
+system-administration,BackupAdmin,/admin/backup,src/admin/BackupAdmin.tsx:126,fetchDriveFiles,button click,fetchDriveFiles action,GET /api/system/drive/files,-,-,-,n,n,BACKUP_CREATE
+system-administration,BackupAdmin,/admin/backup,src/admin/BackupAdmin.tsx:143,handleConnectDrive,button click,handleConnectDrive action,POST /api/system/drive/connect,currentRole language showToast,-,-,n,y,BACKUP_CREATE
+system-administration,BackupAdmin,/admin/backup,src/admin/BackupAdmin.tsx:170,handleDisconnectDrive,button click,handleDisconnectDrive action,POST /api/system/drive/disconnect,currentRole language showToast,-,-,n,y,BACKUP_CREATE
+system-administration,BackupAdmin,/admin/backup,src/admin/BackupAdmin.tsx:187,handleSyncDriveNow,button click,handleSyncDriveNow action,POST /api/system/drive/sync-now,currentRole language showToast,-,-,y,y,BACKUP_CREATE
+system-administration,BackupAdmin,/admin/backup,src/admin/BackupAdmin.tsx:212,handleRestoreFromDriveFile,button click,handleRestoreFromDriveFile action,POST /api/system/drive/restore,currentRole language showToast,-,-,n,y,BACKUP_CREATE
+system-administration,BackupAdmin,/admin/backup,src/admin/BackupAdmin.tsx:242,fetchSnapshots,button click,fetchSnapshots action,GET /api/system/backups,-,-,-,n,n,BACKUP_CREATE
+system-administration,BackupAdmin,/admin/backup,src/admin/BackupAdmin.tsx:259,fetchSchedule,called internally,fetchSchedule action,GET /api/system/backups/schedule,-,-,-,n,n,BACKUP_CREATE
+system-administration,BackupAdmin,/admin/backup,src/admin/BackupAdmin.tsx:273,fetchDrMetrics,called internally,fetchDrMetrics action,GET /api/system/dr-metrics,-,-,-,n,n,BACKUP_CREATE
+system-administration,BackupAdmin,/admin/backup,src/admin/BackupAdmin.tsx:287,fetchHealth,button click,fetchHealth action,GET /api/system/health,-,-,-,n,n,BACKUP_CREATE
+system-administration,BackupAdmin,/admin/backup,src/admin/BackupAdmin.tsx:305,handleCreateSnapshot,button click,handleCreateSnapshot action,POST /api/system/backups/create,currentRole language showToast,-,-,y,y,BACKUP_CREATE
+system-administration,BackupAdmin,/admin/backup,src/admin/BackupAdmin.tsx:336,handleVerifyChecksum,button click,handleVerifyChecksum action,POST /api/system/backups/:x/verify,language showToast,-,-,n,y,BACKUP_CREATE
+system-administration,BackupAdmin,/admin/backup,src/admin/BackupAdmin.tsx:362,handleOpenRestoreModal,button click,handleOpenRestoreModal action,POST /api/system/backups/pre-restore,-,-,-,n,n,BACKUP_CREATE
+system-administration,BackupAdmin,/admin/backup,src/admin/BackupAdmin.tsx:387,handleExecuteRestore,button click,handleExecuteRestore action,POST /api/system/backups/restore,currentRole language showToast,-,-,y,y,BACKUP_CREATE
+system-administration,BackupAdmin,/admin/backup,src/admin/BackupAdmin.tsx:423,handleRunDrill,button click,handleRunDrill action,POST /api/system/dr-drill,currentRole language showToast,-,-,y,y,BACKUP_CREATE
+system-administration,BackupAdmin,/admin/backup,src/admin/BackupAdmin.tsx:449,handleTriggerExport,button click,handleTriggerExport action,POST /api/system/export,language showToast,-,-,y,y,BACKUP_CREATE
+system-administration,BackupAdmin,/admin/backup,src/admin/BackupAdmin.tsx:478,handleValidateImport,button click,handleValidateImport action,POST /api/system/import,orders products customers currentRole language showToast,-,-,y,y,BACKUP_CREATE
+shared-component,BulkSupplierImportModal,(none),src/admin/BulkSupplierImportModal.tsx:288,handleDragOver,prop:onDragOver (child component),handleDragOver action,NONE,-,-,-,n,n,none
+shared-component,BulkSupplierImportModal,(none),src/admin/BulkSupplierImportModal.tsx:294,handleDragLeave,prop:onDragLeave (child component),handleDragLeave action,NONE,-,-,-,n,n,none
+shared-component,BulkSupplierImportModal,(none),src/admin/BulkSupplierImportModal.tsx:300,handleDrop,prop:onDrop (child component),handleDrop action,NONE,-,-,-,n,n,none
+shared-component,BulkSupplierImportModal,(none),src/admin/BulkSupplierImportModal.tsx:316,handleFileInputChange,input change,handleFileInputChange action,NONE,-,-,-,n,n,none
+shared-component,BulkSupplierImportModal,(none),src/admin/BulkSupplierImportModal.tsx:328,handleParseRawText,button click,handleParseRawText action,POST /api/suppliers/bulk-import,language,-,-,n,n,none
+shared-component,BulkSupplierImportModal,(none),src/admin/BulkSupplierImportModal.tsx:337,handleRemoveRow,button click,handleRemoveRow action,NONE,-,-,-,n,n,none
+shared-component,BulkSupplierImportModal,(none),src/admin/BulkSupplierImportModal.tsx:341,handleDownloadCsvTemplate,button click,handleDownloadCsvTemplate action,NONE,language,-,-,n,n,none
+shared-component,BulkSupplierImportModal,(none),src/admin/BulkSupplierImportModal.tsx:360,handleDownloadJsonTemplate,button click,handleDownloadJsonTemplate action,NONE,language,-,-,n,n,none
+shared-component,BulkSupplierImportModal,(none),src/admin/BulkSupplierImportModal.tsx:423,handleCommitImport,button click,handleCommitImport action,POST /api/suppliers/bulk-import,language,-,-,n,n,none
+catalog-inventory,CategoriesAdmin,/admin/categories,src/admin/CategoriesAdmin.tsx:13,handleAddCategory,form submit,handleAddCategory action,NONE,categories showToast,setCategories,-,y,y,PRODUCT_VIEW
+catalog-inventory,CategoriesAdmin,/admin/categories,src/admin/CategoriesAdmin.tsx:37,handleDelete,button click,handleDelete action,NONE,categories showToast,setCategories,-,y,y,PRODUCT_VIEW
+system-administration,ContentAdmin,/admin/content,src/admin/ContentAdmin.tsx:84,handleResetToPublished,button click,handleResetToPublished action,NONE,siteContent showToast,-,-,n,y,CONTENT_VIEW
+system-administration,ContentAdmin,/admin/content,src/admin/ContentAdmin.tsx:91,handleOpenPublishModal,form submit,handleOpenPublishModal action,NONE,-,-,-,n,n,CONTENT_VIEW
+system-administration,ContentAdmin,/admin/content,src/admin/ContentAdmin.tsx:97,handleConfirmPublish,button click,handleConfirmPublish action,NONE,-,-,-,n,n,CONTENT_VIEW
+system-administration,ContentAdmin,/admin/content,src/admin/ContentAdmin.tsx:106,handleRestoreRevision,button click,handleRestoreRevision action,NONE,siteContent,-,-,n,n,CONTENT_VIEW
+system-administration,ContentAdmin,/admin/content,src/admin/ContentAdmin.tsx:115,handleSelectPresetImage,button click,handleSelectPresetImage action,NONE,showToast,-,-,n,y,CONTENT_VIEW
+customer-management,CustomersAdmin,/admin/customers,src/admin/CustomersAdmin.tsx:78,useEffect@78,effect(mount/dep),data load / sync on mount or dependency change,NONE,-,-,-,n,n,CUSTOMER_VIEW
+customer-management,CustomersAdmin,/admin/customers,src/admin/CustomersAdmin.tsx:92,fetchCustomers,button click,fetchCustomers action,GET /api/customers,customers,-,-,n,n,CUSTOMER_VIEW
+customer-management,CustomersAdmin,/admin/customers,src/admin/CustomersAdmin.tsx:173,useEffect@173,effect(mount/dep),data load / sync on mount or dependency change,NONE,-,-,-,n,n,CUSTOMER_VIEW
+customer-management,CustomersAdmin,/admin/customers,src/admin/CustomersAdmin.tsx:230,handleExportCsv,button click,handleExportCsv action,NONE,showToast,-,-,n,y,CUSTOMER_VIEW
+sales-operations,Dashboard,/admin,src/admin/Dashboard.tsx:229,useEffect@229,effect(mount/dep),data load / sync on mount or dependency change,NONE,-,-,-,n,n,none
+sales-operations,Dashboard,/admin,src/admin/Dashboard.tsx:231,load,called internally,load action,NONE,-,-,-,n,n,none
+sales-operations,Dashboard,/admin,src/admin/Dashboard.tsx:264,useEffect@264,effect(mount/dep),data load / sync on mount or dependency change,GET /api/suppliers,-,-,-,n,n,none
+sales-operations,FinanceAdmin,/admin/finance,src/admin/FinanceAdmin.tsx:94,fetchSummary,button click,fetchSummary action,GET /api/finance/summary,-,-,-,n,n,EXPENSE_VIEW
+sales-operations,FinanceAdmin,/admin/finance,src/admin/FinanceAdmin.tsx:110,handleRunReconciliation,button click,handleRunReconciliation action,GET /api/finance/reconciliation,showToast,-,-,y,y,EXPENSE_VIEW
+sales-operations,FinanceAdmin,/admin/finance,src/admin/FinanceAdmin.tsx:127,useEffect@127,effect(mount/dep),data load / sync on mount or dependency change,NONE,-,-,-,n,n,EXPENSE_VIEW
+sales-operations,FinanceAdmin,/admin/finance,src/admin/FinanceAdmin.tsx:182,handleCreateExpense,form submit,handleCreateExpense action,POST /api/finance/expenses,expenses showToast,-,-,n,y,EXPENSE_VIEW
+sales-operations,FinanceAdmin,/admin/finance,src/admin/FinanceAdmin.tsx:228,handleDeleteExpense,button click,handleDeleteExpense action,DELETE /api/finance/expenses/:x,expenses showToast,-,-,n,y,EXPENSE_VIEW
+sales-operations,FinanceAdmin,/admin/finance,src/admin/FinanceAdmin.tsx:240,handleCreateSettlement,form submit,handleCreateSettlement action,POST /api/finance/settlements,showToast,settlements,-,n,y,EXPENSE_VIEW
+sales-operations,FinanceAdmin,/admin/finance,src/admin/FinanceAdmin.tsx:294,handleConfirmPayout,button click,handleConfirmPayout action,POST /api/finance/settlements/:x/status,showToast,settlements,-,n,y,EXPENSE_VIEW
+sales-operations,FinanceAdmin,/admin/finance,src/admin/FinanceAdmin.tsx:319,handleExportPnLCsv,button click,handleExportPnLCsv action,NONE,showToast,-,-,n,y,EXPENSE_VIEW
+sales-operations,FinanceAdmin,/admin/finance,src/admin/FinanceAdmin.tsx:343,handleExportExpensesCsv,button click,handleExportExpensesCsv action,NONE,expenses showToast,-,-,n,y,EXPENSE_VIEW
+sales-operations,FraudRiskDashboard,/admin/fraud,src/admin/FraudRiskDashboard.tsx:48,useEffect@48,effect(mount/dep),data load / sync on mount or dependency change,NONE,-,-,-,n,n,ORDER_VIEW
+sales-operations,FraudRiskDashboard,/admin/fraud,src/admin/FraudRiskDashboard.tsx:84,fetchData,button click,fetchData action,GET /api/fraud/stats | GET /api/orders,orders,setOrders,-,n,n,ORDER_VIEW
+sales-operations,FraudRiskDashboard,/admin/fraud,src/admin/FraudRiskDashboard.tsx:110,useEffect@110,effect(mount/dep),data load / sync on mount or dependency change,NONE,-,-,-,n,n,ORDER_VIEW
+sales-operations,FraudRiskDashboard,/admin/fraud,src/admin/FraudRiskDashboard.tsx:114,useEffect@114,effect(mount/dep),data load / sync on mount or dependency change,NONE,-,setOrders,-,n,n,ORDER_VIEW
+sales-operations,FraudRiskDashboard,/admin/fraud,src/admin/FraudRiskDashboard.tsx:126,handleAddBlacklist,form submit,handleAddBlacklist action,POST /api/fraud/blacklists,-,-,-,n,y,ORDER_VIEW
+sales-operations,FraudRiskDashboard,/admin/fraud,src/admin/FraudRiskDashboard.tsx:161,handleToggleBlacklist,button click,handleToggleBlacklist action,POST /api/fraud/blacklists/:x/toggle,-,-,-,n,y,ORDER_VIEW
+sales-operations,FraudRiskDashboard,/admin/fraud,src/admin/FraudRiskDashboard.tsx:175,handleDeleteBlacklist,button click,handleDeleteBlacklist action,DELETE /api/fraud/blacklists/:x,-,-,-,n,y,ORDER_VIEW
+sales-operations,FraudRiskDashboard,/admin/fraud,src/admin/FraudRiskDashboard.tsx:190,handleSaveSettings,button click,handleSaveSettings action,POST /api/fraud/settings,-,-,-,n,y,ORDER_VIEW
+sales-operations,FraudRiskDashboard,/admin/fraud,src/admin/FraudRiskDashboard.tsx:212,handleExecuteAction,button click,handleExecuteAction action,POST /api/fraud/verify-order,showToast,-,-,y,y,ORDER_VIEW
+sales-operations,FraudRiskDashboard,/admin/fraud,src/admin/FraudRiskDashboard.tsx:253,handleQuickVerifyPhone,button click,handleQuickVerifyPhone action,POST /api/fraud/verify-order,showToast,-,-,n,y,ORDER_VIEW
+sales-operations,FraudRiskDashboard,/admin/fraud,src/admin/FraudRiskDashboard.tsx:281,handleRunSandbox,form submit,handleRunSandbox action,POST /api/fraud/evaluate,-,-,-,n,y,ORDER_VIEW
+sales-operations,FraudRiskDashboard,/admin/fraud,src/admin/FraudRiskDashboard.tsx:308,handleRunSandboxPreset,button click,handleRunSandboxPreset action,NONE,-,-,-,n,n,ORDER_VIEW
+sales-operations,FulfillmentAdmin,/admin/fulfillment,src/admin/FulfillmentAdmin.tsx:92,handleOpenHubModal,button click,handleOpenHubModal action,NONE,warehouses,-,-,n,n,ORDER_VIEW
+sales-operations,FulfillmentAdmin,/admin/fulfillment,src/admin/FulfillmentAdmin.tsx:117,handleSaveHub,form submit,handleSaveHub action,NONE,showToast,-,-,n,y,ORDER_VIEW
+sales-operations,FulfillmentAdmin,/admin/fulfillment,src/admin/FulfillmentAdmin.tsx:127,handleOpenBinModal,button click,handleOpenBinModal action,NONE,-,-,-,n,n,ORDER_VIEW
+sales-operations,FulfillmentAdmin,/admin/fulfillment,src/admin/FulfillmentAdmin.tsx:138,handleSaveBin,button click,handleSaveBin action,NONE,-,-,-,n,n,ORDER_VIEW
+sales-operations,FulfillmentAdmin,/admin/fulfillment,src/admin/FulfillmentAdmin.tsx:147,handleCreateSto,button click,handleCreateSto action,NONE,warehouses showToast,-,-,n,y,ORDER_VIEW
+sales-operations,FulfillmentAdmin,/admin/fulfillment,src/admin/FulfillmentAdmin.tsx:180,handleRunSimulation,button click,handleRunSimulation action,NONE,orders,-,-,n,n,ORDER_VIEW
+sales-operations,FulfillmentAdmin,/admin/fulfillment,src/admin/FulfillmentAdmin.tsx:190,handleCreatePickList,button click,handleCreatePickList action,NONE,showToast,-,-,n,y,ORDER_VIEW
+sales-operations,FulfillmentAdmin,/admin/fulfillment,src/admin/FulfillmentAdmin.tsx:207,handleCreateManifest,button click,handleCreateManifest action,NONE,orders showToast,-,-,n,y,ORDER_VIEW
+catalog-inventory,InventoryAdmin,/admin/inventory,src/admin/InventoryAdmin.tsx:140,handleOpenAdjustModal,button click,handleOpenAdjustModal action,NONE,-,-,-,n,n,INVENTORY_VIEW
+catalog-inventory,InventoryAdmin,/admin/inventory,src/admin/InventoryAdmin.tsx:152,handleSubmitAdjust,form submit,handleSubmitAdjust action,NONE,-,-,-,n,n,INVENTORY_VIEW
+catalog-inventory,InventoryAdmin,/admin/inventory,src/admin/InventoryAdmin.tsx:176,handleAddPoItem,button click,handleAddPoItem action,NONE,products,-,-,n,n,INVENTORY_VIEW
+catalog-inventory,InventoryAdmin,/admin/inventory,src/admin/InventoryAdmin.tsx:192,handleUpdatePoItem,input change,handleUpdatePoItem action,NONE,products,-,-,n,n,INVENTORY_VIEW
+catalog-inventory,InventoryAdmin,/admin/inventory,src/admin/InventoryAdmin.tsx:210,handleRemovePoItem,button click,handleRemovePoItem action,NONE,-,-,-,n,n,INVENTORY_VIEW
+catalog-inventory,InventoryAdmin,/admin/inventory,src/admin/InventoryAdmin.tsx:215,handleSubmitPO,form submit,handleSubmitPO action,NONE,-,-,-,n,n,INVENTORY_VIEW
+catalog-inventory,InventoryAdmin,/admin/inventory,src/admin/InventoryAdmin.tsx:242,handleExportCSV,button click,handleExportCSV action,NONE,products,-,-,n,n,INVENTORY_VIEW
+customer-management,MarketingAdmin,/admin/marketing,src/admin/MarketingAdmin.tsx:113,fetchData,button click,fetchData action,GET /api/marketing/rfm-segments | GET /api/marketing/abandoned-carts | GET /api/marketing/campaigns | GET /api/marketing/referrals,showToast,-,-,n,y,CONTENT_MANAGE
+customer-management,MarketingAdmin,/admin/marketing,src/admin/MarketingAdmin.tsx:157,useEffect@157,effect(mount/dep),data load / sync on mount or dependency change,NONE,-,-,-,n,n,CONTENT_MANAGE
+customer-management,MarketingAdmin,/admin/marketing,src/admin/MarketingAdmin.tsx:177,handleAddNote,button click,handleAddNote action,POST /api/marketing/customers-crm/:x/notes,customers showToast,-,-,y,y,CONTENT_MANAGE
+customer-management,MarketingAdmin,/admin/marketing,src/admin/MarketingAdmin.tsx:201,handleToggleTag,button click,handleToggleTag action,POST /api/marketing/customers-crm/:x/tags,customers showToast,-,-,y,y,CONTENT_MANAGE
+customer-management,MarketingAdmin,/admin/marketing,src/admin/MarketingAdmin.tsx:225,handleSendCartNudge,button click,handleSendCartNudge action,POST /api/marketing/abandoned-carts/:x/recover,showToast,-,-,y,y,CONTENT_MANAGE
+customer-management,MarketingAdmin,/admin/marketing,src/admin/MarketingAdmin.tsx:253,handleCreateCampaign,form submit,handleCreateCampaign action,POST /api/marketing/campaigns,showToast,-,-,y,y,CONTENT_MANAGE
+customer-management,MarketingAdmin,/admin/marketing,src/admin/MarketingAdmin.tsx:280,handleDispatchCampaign,button click,handleDispatchCampaign action,POST /api/marketing/campaigns/:x/dispatch,showToast,-,-,y,y,CONTENT_MANAGE
+customer-management,MarketingAdmin,/admin/marketing,src/admin/MarketingAdmin.tsx:299,handleDisburseReferral,button click,handleDisburseReferral action,POST /api/marketing/referrals/disburse/:x,showToast,-,-,y,y,CONTENT_MANAGE
+customer-management,MarketingAdmin,/admin/marketing,src/admin/MarketingAdmin.tsx:318,handleUpdateConfig,form submit,handleUpdateConfig action,PUT /api/marketing/referrals/config,showToast,-,-,y,y,CONTENT_MANAGE
+shared-component,MarketingCommandCenter,(none),src/admin/MarketingCommandCenter.tsx:377,useEffect@377,effect(mount/dep),data load / sync on mount or dependency change,NONE,-,-,-,n,n,none
+shared-component,MarketingCommandCenter,(none),src/admin/MarketingCommandCenter.tsx:387,submitSpend,form submit,submitSpend action,NONE,showToast,-,-,n,y,none
+shared-component,MarketingCommandCenter,(none),src/admin/MarketingCommandCenter.tsx:423,submitVoid,button click,submitVoid action,NONE,showToast,-,-,n,y,none
+shared-component,MarketingCommandCenter,(none),src/admin/MarketingCommandCenter.tsx:441,submitAttribution,form submit,submitAttribution action,NONE,showToast,-,-,n,y,none
+shared-component,MarketingCommandCenter,(none),src/admin/MarketingCommandCenter.tsx:471,submitChannel,form submit,submitChannel action,NONE,showToast,-,-,n,y,none
+shared-component,MarketingCommandCenter,(none),src/admin/MarketingCommandCenter.tsx:509,submitChannelStatus,button click,submitChannelStatus action,NONE,showToast,-,-,n,y,none
+shared-component,MarketingCommandCenter,(none),src/admin/MarketingCommandCenter.tsx:529,openSpendModal,button click,openSpendModal action,NONE,-,-,-,n,n,none
+shared-component,MarketingCommandCenter,(none),src/admin/MarketingCommandCenter.tsx:553,openChannelModal,button click,openChannelModal action,NONE,-,-,-,n,n,none
+shared-component,MarketingCommandCenter,(none),src/admin/MarketingCommandCenter.tsx:571,downloadCsv,button click,downloadCsv action,NONE,-,-,-,n,n,none
+unrouted,OperationsAdmin,/admin/operations,src/admin/OperationsAdmin.tsx:87,fetchOperationsData,button click,fetchOperationsData action,GET /api/operations/jobs,-,-,-,n,y,SETTINGS_VIEW
+unrouted,OperationsAdmin,/admin/operations,src/admin/OperationsAdmin.tsx:128,useEffect@128,effect(mount/dep),data load / sync on mount or dependency change,NONE,-,-,-,n,n,SETTINGS_VIEW
+unrouted,OperationsAdmin,/admin/operations,src/admin/OperationsAdmin.tsx:133,handleSmsInputChange,input change,handleSmsInputChange action,POST /api/notifications/calculate-sms,-,-,-,n,y,SETTINGS_VIEW
+unrouted,OperationsAdmin,/admin/operations,src/admin/OperationsAdmin.tsx:151,handleDirectDispatch,form submit,handleDirectDispatch action,POST /api/notifications/dispatch | GET /api/notifications/logs,language showToast,-,-,y,y,SETTINGS_VIEW
+unrouted,OperationsAdmin,/admin/operations,src/admin/OperationsAdmin.tsx:192,handleTestConnection,button click,handleTestConnection action,POST /api/notifications/test-connection,showToast,-,-,n,y,SETTINGS_VIEW
+unrouted,OperationsAdmin,/admin/operations,src/admin/OperationsAdmin.tsx:216,handleTopupBalance,button click,handleTopupBalance action,POST /api/notifications/topup,showToast,-,-,n,y,SETTINGS_VIEW
+unrouted,OperationsAdmin,/admin/operations,src/admin/OperationsAdmin.tsx:242,handleRetryNotification,button click,handleRetryNotification action,POST /api/notifications/logs/:x/retry,showToast,-,-,n,y,SETTINGS_VIEW
+unrouted,OperationsAdmin,/admin/operations,src/admin/OperationsAdmin.tsx:258,handleSaveGatewayConfig,form submit,handleSaveGatewayConfig action,PUT /api/notifications/config,showToast,-,-,n,y,SETTINGS_VIEW
+unrouted,OperationsAdmin,/admin/operations,src/admin/OperationsAdmin.tsx:281,handleSaveTemplate,button click,handleSaveTemplate action,PUT /api/notifications/templates/:x,showToast,-,-,y,y,SETTINGS_VIEW
+unrouted,OperationsAdmin,/admin/operations,src/admin/OperationsAdmin.tsx:302,handleTickWorker,button click,handleTickWorker action,POST /api/operations/tick,showToast,-,-,n,y,SETTINGS_VIEW
+unrouted,OperationsAdmin,/admin/operations,src/admin/OperationsAdmin.tsx:319,handleRetryJob,button click,handleRetryJob action,POST /api/operations/jobs/:x/retry,showToast,-,-,n,y,SETTINGS_VIEW
+unrouted,OperationsAdmin,/admin/operations,src/admin/OperationsAdmin.tsx:336,handleSendTestPing,button click,handleSendTestPing action,POST /api/webhooks/endpoints/:x/ping,showToast,-,-,n,y,SETTINGS_VIEW
+unrouted,OperationsAdmin,/admin/operations,src/admin/OperationsAdmin.tsx:355,handleCreateWebhook,form submit,handleCreateWebhook action,POST /api/webhooks/endpoints,showToast,-,-,n,y,SETTINGS_VIEW
+unrouted,OperationsAdmin,/admin/operations,src/admin/OperationsAdmin.tsx:376,handleDeleteWebhook,button click,handleDeleteWebhook action,DELETE /api/webhooks/endpoints/:x,showToast,-,-,n,y,SETTINGS_VIEW
+sales-operations,OrdersAdmin,/admin/orders,src/admin/OrdersAdmin.tsx:53,useEffect@53,effect(mount/dep),data load / sync on mount or dependency change,NONE,-,-,-,n,n,ORDER_VIEW
+sales-operations,OrdersAdmin,/admin/orders,src/admin/OrdersAdmin.tsx:84,openWhatsAppForOrder,button click,openWhatsAppForOrder action,NONE,-,-,-,n,n,ORDER_VIEW
+sales-operations,OrdersAdmin,/admin/orders,src/admin/OrdersAdmin.tsx:139,handleExportExcel,prop:onExportExcel (child component),handleExportExcel action,NONE,orders showToast,-,-,n,y,ORDER_VIEW
+sales-operations,OrdersAdmin,/admin/orders,src/admin/OrdersAdmin.tsx:149,handleExportCsv,prop:onExportCsv (child component),handleExportCsv action,NONE,showToast,-,-,n,y,ORDER_VIEW
+sales-operations,PaymentsAdmin,/admin/payments,src/admin/PaymentsAdmin.tsx:33,fetchTransactions,button click,fetchTransactions action,GET /api/payments/transactions,-,-,-,n,n,PAYMENT_VIEW
+sales-operations,PaymentsAdmin,/admin/payments,src/admin/PaymentsAdmin.tsx:50,useEffect@50,effect(mount/dep),data load / sync on mount or dependency change,NONE,-,-,-,n,n,PAYMENT_VIEW
+sales-operations,PaymentsAdmin,/admin/payments,src/admin/PaymentsAdmin.tsx:55,useEffect@55,effect(mount/dep),data load / sync on mount or dependency change,POST /api/orders/fraud-check,orders,-,-,n,n,PAYMENT_VIEW
+sales-operations,PaymentsAdmin,/admin/payments,src/admin/PaymentsAdmin.tsx:114,handleTriggerIpn,form submit,handleTriggerIpn action,POST /api/payments/test-ipn,showToast,-,-,n,y,PAYMENT_VIEW
+sales-operations,PaymentsAdmin,/admin/payments,src/admin/PaymentsAdmin.tsx:145,handleProcessRefund,form submit,handleProcessRefund action,POST /api/payments/refund,showToast,-,-,n,y,PAYMENT_VIEW
+catalog-inventory,ProductsAdmin,/admin/products,src/admin/ProductsAdmin.tsx:66,useEffect@66,effect(mount/dep),data load / sync on mount or dependency change,GET /api/suppliers,-,-,-,n,n,PRODUCT_VIEW
+catalog-inventory,ProductsAdmin,/admin/products,src/admin/ProductsAdmin.tsx:157,handleSelectAll,button click,handleSelectAll action,NONE,-,-,-,n,n,PRODUCT_VIEW
+catalog-inventory,ProductsAdmin,/admin/products,src/admin/ProductsAdmin.tsx:165,handleToggleSelect,button click,handleToggleSelect action,NONE,-,-,-,n,n,PRODUCT_VIEW
+catalog-inventory,ProductsAdmin,/admin/products,src/admin/ProductsAdmin.tsx:172,handleAdjustStock,button click,handleAdjustStock action,NONE,language showToast,-,-,n,y,PRODUCT_VIEW
+catalog-inventory,ProductsAdmin,/admin/products,src/admin/ProductsAdmin.tsx:183,handleToggleStatus,prop:onToggleStatus (child component),handleToggleStatus action,NONE,language showToast,-,-,n,y,PRODUCT_VIEW
+catalog-inventory,ProductsAdmin,/admin/products,src/admin/ProductsAdmin.tsx:194,handleDuplicateProduct,button click,handleDuplicateProduct action,NONE,language showToast,-,-,n,y,PRODUCT_VIEW
+catalog-inventory,ProductsAdmin,/admin/products,src/admin/ProductsAdmin.tsx:216,handleCreateProduct,form submit,handleCreateProduct action,NONE,categories showToast,-,-,n,y,PRODUCT_VIEW
+catalog-inventory,ProductsAdmin,/admin/products,src/admin/ProductsAdmin.tsx:276,handleBulkDeleteConfirm,prop:onConfirm (child component),handleBulkDeleteConfirm action,NONE,products language showToast,-,-,n,y,PRODUCT_VIEW
+catalog-inventory,ProductsAdmin,/admin/products,src/admin/ProductsAdmin.tsx:287,handleBulkReadyToShip,button click,handleBulkReadyToShip action,NONE,products language showToast,-,-,n,y,PRODUCT_VIEW
+catalog-inventory,ProductsAdmin,/admin/products,src/admin/ProductsAdmin.tsx:298,handleExportCSV,button click,handleExportCSV action,NONE,products language showToast,-,-,n,y,PRODUCT_VIEW
+shared-component,PromotionsAdmin,(none),src/admin/PromotionsAdmin.tsx:71,fetchPromotionData,button click,fetchPromotionData action,GET /api/promotions/coupons,-,-,-,n,n,none
+shared-component,PromotionsAdmin,(none),src/admin/PromotionsAdmin.tsx:96,useEffect@96,effect(mount/dep),data load / sync on mount or dependency change,NONE,-,-,-,n,n,none
+shared-component,PromotionsAdmin,(none),src/admin/PromotionsAdmin.tsx:101,handleCopyCode,button click,handleCopyCode action,NONE,showToast,-,-,n,y,none
+shared-component,PromotionsAdmin,(none),src/admin/PromotionsAdmin.tsx:109,handleToggleStatus,button click,handleToggleStatus action,PUT /api/promotions/coupons/:x,showToast,-,-,n,y,none
+shared-component,PromotionsAdmin,(none),src/admin/PromotionsAdmin.tsx:128,handleDeleteCoupon,button click,handleDeleteCoupon action,DELETE /api/promotions/coupons/:x,showToast,-,-,n,y,none
+shared-component,PromotionsAdmin,(none),src/admin/PromotionsAdmin.tsx:147,handleSaveCoupon,form submit,handleSaveCoupon action,PUT /api/promotions/coupons/:x | POST /api/promotions/coupons,showToast,-,-,n,y,none
+shared-component,PromotionsAdmin,(none),src/admin/PromotionsAdmin.tsx:194,openEditModal,button click,openEditModal action,NONE,-,-,-,n,n,none
+shared-component,PromotionsAdmin,(none),src/admin/PromotionsAdmin.tsx:219,openCreateModal,button click,openCreateModal action,NONE,-,-,-,n,n,none
+shared-component,PromotionsAdmin,(none),src/admin/PromotionsAdmin.tsx:244,handleAdjustPointsSubmit,form submit,handleAdjustPointsSubmit action,POST /api/promotions/loyalty/adjust,showToast,-,-,n,y,none
+shared-component,PromotionsAdmin,(none),src/admin/PromotionsAdmin.tsx:276,runSimulator,button click,runSimulator action,POST /api/promotions/validate,products,-,-,n,n,none
+system-administration,ReportsAdmin,/admin/reports,src/admin/ReportsAdmin.tsx:101,fetchReport,button click,fetchReport action,NONE,showToast,-,-,n,y,REPORT_VIEW
+system-administration,ReportsAdmin,/admin/reports,src/admin/ReportsAdmin.tsx:132,useEffect@132,effect(mount/dep),data load / sync on mount or dependency change,NONE,-,-,-,n,n,REPORT_VIEW
+system-administration,ReportsAdmin,/admin/reports,src/admin/ReportsAdmin.tsx:137,openDoc,button click,openDoc action,NONE,orders,-,-,y,n,REPORT_VIEW
+system-administration,ReportsAdmin,/admin/reports,src/admin/ReportsAdmin.tsx:148,handleExportCsv,button click,handleExportCsv action,NONE,showToast,-,-,y,y,REPORT_VIEW
+unrouted,ReturnsRefundsAdmin,/admin/refunds,src/admin/ReturnsRefundsAdmin.tsx:207,saveRmaList,called internally,saveRmaList action,NONE,-,-,kisholoy_rma_records,n,n,REFUND_VIEW
+unrouted,ReturnsRefundsAdmin,/admin/refunds,src/admin/ReturnsRefundsAdmin.tsx:283,handleOpenInspection,button click,handleOpenInspection action,NONE,-,-,-,n,n,REFUND_VIEW
+unrouted,ReturnsRefundsAdmin,/admin/refunds,src/admin/ReturnsRefundsAdmin.tsx:291,handleSaveInspection,button click,handleSaveInspection action,NONE,showToast,-,-,y,y,REFUND_VIEW
+unrouted,ReturnsRefundsAdmin,/admin/refunds,src/admin/ReturnsRefundsAdmin.tsx:321,handleOpenRefund,button click,handleOpenRefund action,NONE,-,-,-,n,n,REFUND_VIEW
+unrouted,ReturnsRefundsAdmin,/admin/refunds,src/admin/ReturnsRefundsAdmin.tsx:330,handleExecuteRefund,button click,handleExecuteRefund action,NONE,showToast,-,-,y,y,REFUND_VIEW
+unrouted,ReturnsRefundsAdmin,/admin/refunds,src/admin/ReturnsRefundsAdmin.tsx:365,handleCreateRma,form submit,handleCreateRma action,NONE,orders showToast,-,-,y,y,REFUND_VIEW
+unrouted,ReturnsRefundsAdmin,/admin/refunds,src/admin/ReturnsRefundsAdmin.tsx:405,handleExportCsv,button click,handleExportCsv action,NONE,showToast,-,-,n,y,REFUND_VIEW
+system-administration,SettingsAdmin,/admin/settings,src/admin/SettingsAdmin.tsx:10,handleSave,form submit,handleSave action,NONE,siteContent showToast,updateSiteContent,-,n,y,SETTINGS_VIEW
+sales-operations,ShipmentsAdmin,/admin/shipments,src/admin/ShipmentsAdmin.tsx:85,handleOpenAddCourier,button click,handleOpenAddCourier action,NONE,-,-,-,n,n,ORDER_VIEW
+sales-operations,ShipmentsAdmin,/admin/shipments,src/admin/ShipmentsAdmin.tsx:103,handleOpenEditCourier,button click,handleOpenEditCourier action,NONE,-,-,-,n,n,ORDER_VIEW
+sales-operations,ShipmentsAdmin,/admin/shipments,src/admin/ShipmentsAdmin.tsx:123,handleSaveCourier,form submit,handleSaveCourier action,NONE,showToast,-,-,n,y,ORDER_VIEW
+sales-operations,ShipmentsAdmin,/admin/shipments,src/admin/ShipmentsAdmin.tsx:150,handleOpenDispatchModal,button click,handleOpenDispatchModal action,NONE,-,-,-,n,n,ORDER_VIEW
+sales-operations,ShipmentsAdmin,/admin/shipments,src/admin/ShipmentsAdmin.tsx:157,handleExecuteDispatch,form submit,handleExecuteDispatch action,POST /api/courier/book,-,-,-,n,n,ORDER_VIEW
+sales-operations,ShipmentsAdmin,/admin/shipments,src/admin/ShipmentsAdmin.tsx:192,handleSimulateWebhook,form submit,handleSimulateWebhook action,POST /api/courier/webhook,showToast,-,-,n,y,ORDER_VIEW
+catalog-inventory,SuppliersAdmin,/admin/suppliers,src/admin/SuppliersAdmin.tsx:113,loadSupplierData,button click,loadSupplierData action,GET /api/suppliers,-,-,-,n,n,SUPPLIER_VIEW
+catalog-inventory,SuppliersAdmin,/admin/suppliers,src/admin/SuppliersAdmin.tsx:131,loadPurchaseOrders,called internally,loadPurchaseOrders action,GET /api/suppliers/purchase-orders/all,orders,-,-,n,n,SUPPLIER_VIEW
+catalog-inventory,SuppliersAdmin,/admin/suppliers,src/admin/SuppliersAdmin.tsx:141,useEffect@141,effect(mount/dep),data load / sync on mount or dependency change,NONE,-,-,-,n,n,SUPPLIER_VIEW
+catalog-inventory,SuppliersAdmin,/admin/suppliers,src/admin/SuppliersAdmin.tsx:147,openSupplierDetail,button click,openSupplierDetail action,GET /api/suppliers/:x,-,-,-,n,n,SUPPLIER_VIEW
+catalog-inventory,SuppliersAdmin,/admin/suppliers,src/admin/SuppliersAdmin.tsx:168,handleCreateSupplier,form submit,handleCreateSupplier action,POST /api/suppliers,currentRole,-,-,n,n,SUPPLIER_VIEW
+catalog-inventory,SuppliersAdmin,/admin/suppliers,src/admin/SuppliersAdmin.tsx:219,handleCreatePo,form submit,handleCreatePo action,POST /api/suppliers/:x/purchase-orders,orders currentRole,-,-,n,n,SUPPLIER_VIEW
+catalog-inventory,SuppliersAdmin,/admin/suppliers,src/admin/SuppliersAdmin.tsx:266,handleMarkPoReceived,prop:onMarkPoReceived (child component),handleMarkPoReceived action,POST /api/suppliers/:x/pos/:x/delivery,currentRole,-,-,n,n,SUPPLIER_VIEW
+catalog-inventory,SuppliersAdmin,/admin/suppliers,src/admin/SuppliersAdmin.tsx:291,handleRecordPayment,form submit,handleRecordPayment action,NONE,currentRole,-,-,n,n,SUPPLIER_VIEW
+catalog-inventory,SuppliersAdmin,/admin/suppliers,src/admin/SuppliersAdmin.tsx:347,handleConfirmMfaPayment,form submit,handleConfirmMfaPayment action,NONE,-,-,-,n,n,SUPPLIER_VIEW
+catalog-inventory,SuppliersAdmin,/admin/suppliers,src/admin/SuppliersAdmin.tsx:357,handleTogglePortal,button click,handleTogglePortal action,POST /api/suppliers/:x/toggle-portal,currentRole,-,-,n,n,SUPPLIER_VIEW
+system-administration,UsersAdmin,/admin/users,src/admin/UsersAdmin.tsx:65,loadSecurityData,button click,loadSecurityData action,GET /api/security/users | GET /api/security/rate-limit/banned-ips,showToast,-,-,n,y,USER_MANAGE
+system-administration,UsersAdmin,/admin/users,src/admin/UsersAdmin.tsx:89,useEffect@89,effect(mount/dep),data load / sync on mount or dependency change,NONE,-,-,-,n,n,USER_MANAGE
+system-administration,UsersAdmin,/admin/users,src/admin/UsersAdmin.tsx:94,handleCreateStaff,form submit,handleCreateStaff action,POST /api/security/users/create,currentRole showToast,-,-,n,y,USER_MANAGE
+system-administration,UsersAdmin,/admin/users,src/admin/UsersAdmin.tsx:130,handleUpdateRole,prop:onConfirm (child component),handleUpdateRole action,POST /api/security/users/update-role,currentRole showToast,-,-,n,y,USER_MANAGE
+system-administration,UsersAdmin,/admin/users,src/admin/UsersAdmin.tsx:156,handleToggleStatus,button click,handleToggleStatus action,POST /api/security/users/update-status,currentRole showToast,-,-,n,y,USER_MANAGE
+system-administration,UsersAdmin,/admin/users,src/admin/UsersAdmin.tsx:181,handleRevokeSession,button click,handleRevokeSession action,POST /api/security/sessions/revoke,currentRole showToast,-,-,n,y,USER_MANAGE
+system-administration,UsersAdmin,/admin/users,src/admin/UsersAdmin.tsx:204,handleUnbanIp,button click,handleUnbanIp action,POST /api/security/rate-limit/unban,currentRole showToast,-,-,n,y,USER_MANAGE
+system-administration,UsersAdmin,/admin/users,src/admin/UsersAdmin.tsx:227,handleManualBan,form submit,handleManualBan action,POST /api/security/rate-limit/ban,currentRole showToast,-,-,n,y,USER_MANAGE
+shared-component,AdminNotificationAlerts,(none),src/components/admin/AdminNotificationAlerts.tsx:51,useEffect@51,effect(mount/dep),data load / sync on mount or dependency change,NONE,-,-,-,n,n,none
+shared-component,AdminNotificationAlerts,(none),src/components/admin/AdminNotificationAlerts.tsx:208,handleDismissAlert,button click,handleDismissAlert action,NONE,-,-,-,n,n,none
+shared-component,AdminNotificationAlerts,(none),src/components/admin/AdminNotificationAlerts.tsx:213,handleDismissAll,button click,handleDismissAll action,NONE,showToast,-,-,n,y,none
+shared-component,AdminNotificationAlerts,(none),src/components/admin/AdminNotificationAlerts.tsx:219,handleActionClick,button click,handleActionClick action,NONE,-,-,-,n,n,none
+shared-component,AdminNotificationAlerts,(none),src/components/admin/AdminNotificationAlerts.tsx:225,handleSimulateUrgentAlert,button click,handleSimulateUrgentAlert action,NONE,orders showToast,-,-,n,y,none
+shared-component,AdvancedSupplierLedgerModal,(none),src/components/admin/AdvancedSupplierLedgerModal.tsx:105,handleExportCsv,button click,handleExportCsv action,NONE,-,-,-,n,n,none
+shared-component,AdvancedSupplierLedgerModal,(none),src/components/admin/AdvancedSupplierLedgerModal.tsx:130,handlePrint,button click,handlePrint action,NONE,-,-,-,n,n,none
+shared-component,BusinessDocumentModal,(none),src/components/admin/BusinessDocumentModal.tsx:30,handlePrint,button click,handlePrint action,NONE,-,-,-,n,n,none
+shared-component,BusinessDocumentModal,(none),src/components/admin/BusinessDocumentModal.tsx:34,handleDownloadJson,button click,handleDownloadJson action,NONE,-,-,-,n,n,none
+shared-component,CreateCustomerModal,(none),src/components/admin/CreateCustomerModal.tsx:44,handleSubmit,form submit,handleSubmit action,POST /api/customers/:x/notes,customers showToast,-,-,n,y,none
+shared-component,Customer360Modal,(none),src/components/admin/Customer360Modal.tsx:77,fetchCustomerDetails,button click,fetchCustomerDetails action,GET /api/customers/:x,customers,-,-,n,n,none
+shared-component,Customer360Modal,(none),src/components/admin/Customer360Modal.tsx:175,useEffect@175,effect(mount/dep),data load / sync on mount or dependency change,NONE,-,-,-,n,n,none
+shared-component,Customer360Modal,(none),src/components/admin/Customer360Modal.tsx:182,handleAddNote,form submit,handleAddNote action,POST /api/customers/:x/notes,customers currentRole showToast,-,-,n,y,none
+shared-component,Customer360Modal,(none),src/components/admin/Customer360Modal.tsx:234,handleToggleTag,button click,handleToggleTag action,POST /api/customers/:x/tags,customers showToast,-,-,n,y,none
+shared-component,Customer360Modal,(none),src/components/admin/Customer360Modal.tsx:259,handleStatusToggle,button click,handleStatusToggle action,PATCH /api/customers/:x/status,customers currentRole showToast,-,-,n,y,none
+shared-component,CustomerQuickMessageModal,(none),src/components/admin/CustomerQuickMessageModal.tsx:31,useEffect@31,effect(mount/dep),data load / sync on mount or dependency change,NONE,-,-,-,n,n,none
+shared-component,CustomerQuickMessageModal,(none),src/components/admin/CustomerQuickMessageModal.tsx:70,handleSubmit,form submit,handleSubmit action,POST /api/customers/:x/quick-communication,customers currentRole showToast,-,-,n,y,none
+shared-component,DateRangeFilterBar,(none),src/components/admin/DateRangeFilterBar.tsx:75,handlePresetSelect,button click,handlePresetSelect action,NONE,-,-,-,n,n,none
+shared-component,DateRangeFilterBar,(none),src/components/admin/DateRangeFilterBar.tsx:93,handleYearChange,input change,handleYearChange action,NONE,-,-,-,n,n,none
+shared-component,DateRangeFilterBar,(none),src/components/admin/DateRangeFilterBar.tsx:101,handleMonthChange,input change,handleMonthChange action,NONE,-,-,-,n,n,none
+shared-component,DateRangeFilterBar,(none),src/components/admin/DateRangeFilterBar.tsx:110,handleWeekChange,input change,handleWeekChange action,NONE,-,-,-,n,n,none
+shared-component,DateRangeFilterBar,(none),src/components/admin/DateRangeFilterBar.tsx:119,handleCustomDateChange,input change,handleCustomDateChange action,NONE,-,-,-,n,n,none
+shared-component,DateRangeFilterBar,(none),src/components/admin/DateRangeFilterBar.tsx:128,handleReset,button click,handleReset action,NONE,-,-,-,n,n,none
+shared-component,DateRangeFilterBar,(none),src/components/admin/DateRangeFilterBar.tsx:139,handleTriggerExcel,button click,handleTriggerExcel action,NONE,-,-,-,n,n,none
+shared-component,DateRangeFilterBar,(none),src/components/admin/DateRangeFilterBar.tsx:148,handleTriggerCsv,button click,handleTriggerCsv action,NONE,-,-,-,n,n,none
+shared-component,DateWiseDataHubModal,(none),src/components/admin/DateWiseDataHubModal.tsx:181,handleExportDomainExcel,button click,handleExportDomainExcel action,NONE,showToast,-,-,y,y,none
+shared-component,DateWiseDataHubModal,(none),src/components/admin/DateWiseDataHubModal.tsx:265,handleExportDomainCsv,prop:onExportCsv (child component),handleExportDomainCsv action,NONE,showToast,-,-,y,y,none
+shared-component,DateWiseDataHubModal,(none),src/components/admin/DateWiseDataHubModal.tsx:307,handleFileUpload,input change,handleFileUpload action,NONE,showToast,-,-,n,y,none
+shared-component,ManualOrderModal,(none),src/components/admin/ManualOrderModal.tsx:118,handlePhoneChange,input change,handlePhoneChange action,NONE,customers,-,-,n,n,none
+shared-component,ManualOrderModal,(none),src/components/admin/ManualOrderModal.tsx:139,handleDistrictChange,input change,handleDistrictChange action,NONE,-,-,-,n,n,none
+shared-component,ManualOrderModal,(none),src/components/admin/ManualOrderModal.tsx:151,handleAddItem,button click,handleAddItem action,NONE,-,-,-,n,n,none
+shared-component,ManualOrderModal,(none),src/components/admin/ManualOrderModal.tsx:200,handleRemoveItem,button click,handleRemoveItem action,NONE,-,-,-,n,n,none
+shared-component,ManualOrderModal,(none),src/components/admin/ManualOrderModal.tsx:205,handleUpdateQty,button click,handleUpdateQty action,NONE,-,-,-,n,n,none
+shared-component,ManualOrderModal,(none),src/components/admin/ManualOrderModal.tsx:211,handleUpdateCustomPrice,input change,handleUpdateCustomPrice action,NONE,-,-,-,n,n,none
+shared-component,ManualOrderModal,(none),src/components/admin/ManualOrderModal.tsx:260,handleCreateOrder,button click,handleCreateOrder action,POST /api/orders/create,orders currentRole showToast,-,-,y,y,none
+shared-component,OrderCourierDispatchModal,(none),src/components/admin/OrderCourierDispatchModal.tsx:63,useEffect@63,effect(mount/dep),data load / sync on mount or dependency change,GET /api/courier/config,-,-,-,n,n,none
+shared-component,OrderCourierDispatchModal,(none),src/components/admin/OrderCourierDispatchModal.tsx:75,useEffect@75,effect(mount/dep),data load / sync on mount or dependency change,NONE,-,-,-,n,n,none
+shared-component,OrderCourierDispatchModal,(none),src/components/admin/OrderCourierDispatchModal.tsx:116,handleTriggerDispatch,form submit,handleTriggerDispatch action,POST /api/courier/book,showToast,-,-,n,y,none
+shared-component,OrderCourierDispatchModal,(none),src/components/admin/OrderCourierDispatchModal.tsx:163,handleCopyTracking,button click,handleCopyTracking action,NONE,showToast,-,-,n,y,none
+shared-component,OrderLiveTrackingTimeline,(none),src/components/admin/OrderLiveTrackingTimeline.tsx:56,fetchLiveTracking,button click,fetchLiveTracking action,GET /api/courier/track/:x,-,-,-,n,n,none
+shared-component,OrderLiveTrackingTimeline,(none),src/components/admin/OrderLiveTrackingTimeline.tsx:159,useEffect@159,effect(mount/dep),data load / sync on mount or dependency change,NONE,-,-,-,n,n,none
+shared-component,OrderLiveTrackingTimeline,(none),src/components/admin/OrderLiveTrackingTimeline.tsx:164,handleSyncStatus,button click,handleSyncStatus action,NONE,-,-,-,n,n,none
+shared-component,OrderLiveTrackingTimeline,(none),src/components/admin/OrderLiveTrackingTimeline.tsx:177,handleShareTrackingWhatsApp,button click,handleShareTrackingWhatsApp action,NONE,-,-,-,n,n,none
+shared-component,ProductEditModal,(none),src/components/admin/ProductEditModal.tsx:63,useEffect@63,effect(mount/dep),data load / sync on mount or dependency change,NONE,-,-,-,n,n,none
+shared-component,ProductEditModal,(none),src/components/admin/ProductEditModal.tsx:97,handleSubmit,form submit,handleSubmit action,NONE,categories,-,-,n,n,none
+shared-component,SupplierAgreementsView,(none),src/components/admin/SupplierAgreementsView.tsx:41,loadAgreements,button click,loadAgreements action,GET /api/suppliers/agreements/all,showToast,-,-,n,y,none
+shared-component,SupplierAgreementsView,(none),src/components/admin/SupplierAgreementsView.tsx:57,useEffect@57,effect(mount/dep),data load / sync on mount or dependency change,NONE,-,-,-,n,n,none
+shared-component,SupplierAgreementsView,(none),src/components/admin/SupplierAgreementsView.tsx:61,openCreateModal,button click,openCreateModal action,NONE,-,-,-,n,n,none
+shared-component,SupplierAgreementsView,(none),src/components/admin/SupplierAgreementsView.tsx:77,openEditModal,button click,openEditModal action,NONE,-,-,-,n,n,none
+shared-component,SupplierAgreementsView,(none),src/components/admin/SupplierAgreementsView.tsx:93,handleSubmit,form submit,handleSubmit action,NONE,currentRole showToast,-,-,n,y,none
+shared-component,SupplierAgreementsView,(none),src/components/admin/SupplierAgreementsView.tsx:137,handleDelete,button click,handleDelete action,DELETE /api/suppliers/agreements/:x,currentRole showToast,-,-,n,y,none
+shared-component,SupplierSettlementsView,(none),src/components/admin/SupplierSettlementsView.tsx:65,loadData,button click,loadData action,GET /api/suppliers/settlements/all,showToast,settlements,-,n,y,none
+shared-component,SupplierSettlementsView,(none),src/components/admin/SupplierSettlementsView.tsx:82,useEffect@82,effect(mount/dep),data load / sync on mount or dependency change,NONE,-,-,-,n,n,none
+shared-component,SupplierSettlementsView,(none),src/components/admin/SupplierSettlementsView.tsx:87,handleSyncDeliveredOrders,button click,handleSyncDeliveredOrders action,POST /api/suppliers/eligible-sales/sync-delivered,orders currentRole showToast,-,-,n,y,none
+shared-component,SupplierSettlementsView,(none),src/components/admin/SupplierSettlementsView.tsx:109,openCreateModal,button click,openCreateModal action,NONE,-,-,-,n,n,none
+shared-component,SupplierSettlementsView,(none),src/components/admin/SupplierSettlementsView.tsx:128,handleGenerateSettlement,form submit,handleGenerateSettlement action,POST /api/suppliers/:x/settlements,currentRole showToast,settlements,-,n,y,none
+shared-component,SupplierSettlementsView,(none),src/components/admin/SupplierSettlementsView.tsx:159,handleApplyReturnAdjustment,form submit,handleApplyReturnAdjustment action,POST /api/suppliers/eligible-sales/adjust-return,currentRole showToast,-,-,n,y,none
+shared-component,SupplierSettlementsView,(none),src/components/admin/SupplierSettlementsView.tsx:190,handleUpdateStatus,button click,handleUpdateStatus action,PUT /api/suppliers/settlements/:x/status,currentRole showToast,settlements,-,n,y,none
+shared-component,SupplierSettlementsView,(none),src/components/admin/SupplierSettlementsView.tsx:212,openPayModal,button click,openPayModal action,NONE,-,-,-,n,n,none
+shared-component,SupplierSettlementsView,(none),src/components/admin/SupplierSettlementsView.tsx:225,handleDisbursePayment,form submit,handleDisbursePayment action,POST /api/suppliers/settlements/:x/pay,currentRole showToast,settlements,-,n,y,none
+shared-component,SupplyBatchesView,(none),src/components/admin/SupplyBatchesView.tsx:43,loadBatches,button click,loadBatches action,GET /api/suppliers/batches/all,showToast,-,-,n,y,none
+shared-component,SupplyBatchesView,(none),src/components/admin/SupplyBatchesView.tsx:59,useEffect@59,effect(mount/dep),data load / sync on mount or dependency change,NONE,-,-,-,n,n,none
+shared-component,SupplyBatchesView,(none),src/components/admin/SupplyBatchesView.tsx:63,openCreateModal,button click,openCreateModal action,NONE,products,-,-,n,n,none
+shared-component,SupplyBatchesView,(none),src/components/admin/SupplyBatchesView.tsx:80,handleProductSelect,input change,handleProductSelect action,NONE,products,-,-,n,n,none
+shared-component,SupplyBatchesView,(none),src/components/admin/SupplyBatchesView.tsx:90,handleSubmit,form submit,handleSubmit action,POST /api/suppliers/:x/batches,currentRole showToast,-,-,n,y,none
