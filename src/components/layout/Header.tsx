@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { ShoppingBag, Search, Menu, X, ShieldCheck, User, Compass, PhoneCall, Heart, LogIn, Sparkles, Sun, Moon, Laptop } from 'lucide-react';
+import { ShoppingBag, Search, Menu, X, ShieldCheck, User, Compass, PhoneCall, Heart, LogIn, Sparkles, Sun, Moon } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { CustomerAuthModal } from '../auth/CustomerAuthModal';
 import { BrandLogo } from '../brand/BrandLogo';
 
 export function Header() {
-  const { language, setLanguage, cartCount, siteContent, wishlist, currentCustomerId, themeMode, setThemeMode, isDarkMode } = useApp();
+  const { language, setLanguage, cartCount, siteContent, wishlist, currentCustomerId, isDarkMode, toggleDarkMode } = useApp();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -152,26 +152,21 @@ export function Header() {
               <span>{language === 'EN' ? 'বাংলা' : 'English'}</span>
             </button>
 
-            {/* Theme Mode Switcher (Light / Dark / System) */}
+            {/* Day / Dark Mode Switcher */}
             <button
-              onClick={() => setThemeMode(themeMode === 'light' ? 'dark' : themeMode === 'dark' ? 'system' : 'light')}
-              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-stone-200 bg-stone-50 hover:bg-stone-100 dark:bg-slate-800 dark:border-slate-700 text-xs font-bold text-stone-800 dark:text-slate-200 transition-colors shadow-2xs"
-              title={themeMode === 'light' ? 'Theme: Light' : themeMode === 'dark' ? 'Theme: Dark' : 'Theme: System Auto'}
+              onClick={toggleDarkMode}
+              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-stone-200 bg-stone-50 hover:bg-stone-100 dark:bg-stone-800 dark:border-stone-700 text-xs font-bold text-stone-800 dark:text-stone-200 transition-colors shadow-2xs"
+              title={isDarkMode ? 'Light / Day Mode' : 'Dark Mode'}
             >
-              {themeMode === 'light' ? (
+              {isDarkMode ? (
                 <>
-                  <Sun className="w-3.5 h-3.5 text-amber-500" />
-                  <span className="hidden sm:inline">{language === 'BN' ? 'দিন' : 'Light'}</span>
-                </>
-              ) : themeMode === 'dark' ? (
-                <>
-                  <Moon className="w-3.5 h-3.5 text-indigo-400" />
-                  <span className="hidden sm:inline">{language === 'BN' ? 'রাত' : 'Dark'}</span>
+                  <Sun className="w-3.5 h-3.5 text-amber-400" />
+                  <span className="hidden sm:inline">{language === 'BN' ? 'দিন' : 'Day'}</span>
                 </>
               ) : (
                 <>
-                  <Laptop className="w-3.5 h-3.5 text-teal-500" />
-                  <span className="hidden sm:inline">{language === 'BN' ? 'অটো' : 'System'}</span>
+                  <Moon className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+                  <span className="hidden sm:inline">{language === 'BN' ? 'রাত' : 'Dark'}</span>
                 </>
               )}
             </button>
@@ -300,41 +295,16 @@ export function Header() {
               <User className="h-4 w-4 text-stone-500" />
               {language === 'BN' ? 'আমার অ্যাকাউন্ট' : 'My Account'}
             </Link>
-            <div className="p-1 bg-stone-100 dark:bg-slate-800 rounded-xl flex items-center gap-1 my-1">
-              <button
-                onClick={() => setThemeMode('light')}
-                className={`flex-1 py-1.5 px-2 text-xs font-semibold rounded-lg flex items-center justify-center gap-1.5 transition-all ${
-                  themeMode === 'light'
-                    ? 'bg-white dark:bg-slate-700 text-amber-600 dark:text-amber-400 shadow-xs'
-                    : 'text-stone-600 dark:text-slate-400 hover:text-stone-900'
-                }`}
-              >
-                <Sun className="h-3.5 w-3.5" />
-                <span>{language === 'BN' ? 'দিন' : 'Light'}</span>
-              </button>
-              <button
-                onClick={() => setThemeMode('dark')}
-                className={`flex-1 py-1.5 px-2 text-xs font-semibold rounded-lg flex items-center justify-center gap-1.5 transition-all ${
-                  themeMode === 'dark'
-                    ? 'bg-stone-900 text-indigo-400 shadow-xs'
-                    : 'text-stone-600 dark:text-slate-400 hover:text-stone-900'
-                }`}
-              >
-                <Moon className="h-3.5 w-3.5" />
-                <span>{language === 'BN' ? 'রাত' : 'Dark'}</span>
-              </button>
-              <button
-                onClick={() => setThemeMode('system')}
-                className={`flex-1 py-1.5 px-2 text-xs font-semibold rounded-lg flex items-center justify-center gap-1.5 transition-all ${
-                  themeMode === 'system'
-                    ? 'bg-white dark:bg-slate-700 text-teal-600 dark:text-teal-400 shadow-xs'
-                    : 'text-stone-600 dark:text-slate-400 hover:text-stone-900'
-                }`}
-              >
-                <Laptop className="h-3.5 w-3.5" />
-                <span>{language === 'BN' ? 'অটো' : 'System'}</span>
-              </button>
-            </div>
+            <button
+              onClick={toggleDarkMode}
+              className="flex items-center justify-between px-3 py-2 text-sm font-semibold text-stone-800 bg-stone-100 hover:bg-stone-200 rounded-lg w-full"
+            >
+              <div className="flex items-center gap-2">
+                {isDarkMode ? <Sun className="h-4 w-4 text-amber-500" /> : <Moon className="h-4 w-4 text-indigo-600" />}
+                <span>{isDarkMode ? (language === 'BN' ? 'ডে মোড চালু করুন' : 'Switch to Day Light Mode') : (language === 'BN' ? 'ডার্ক মোড চালু করুন' : 'Switch to Dark Mode')}</span>
+              </div>
+              <span className="text-xs px-2 py-0.5 rounded bg-white text-stone-700 font-mono">{isDarkMode ? 'DARK' : 'LIGHT'}</span>
+            </button>
             <Link
               to="/admin"
               className="flex items-center gap-2 px-3 py-2 text-sm font-semibold text-teal-900 bg-teal-50 border border-teal-200 rounded-lg"

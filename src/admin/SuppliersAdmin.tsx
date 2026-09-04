@@ -28,6 +28,7 @@ import { AdvancedSupplierLedgerModal } from '../components/admin/AdvancedSupplie
 import { SupplierAgreementsView } from '../components/admin/SupplierAgreementsView';
 import { SupplyBatchesView } from '../components/admin/SupplyBatchesView';
 import { SupplierSettlementsView } from '../components/admin/SupplierSettlementsView';
+import { supplierSchema, purchaseOrderSchema, formatZodError } from '../lib/validations';
 import { SupplierStatementModal } from '../components/admin/SupplierStatementModal';
 
 export function SuppliersAdmin() {
@@ -146,8 +147,21 @@ export function SuppliersAdmin() {
   // Create Supplier Handler
   const handleCreateSupplier = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newCompanyName || !newContactPerson || !newPhone || !newEmail) {
-      notify('Please fill in company name, contact, phone, and email.');
+
+    const rawSupplier = {
+      companyName: newCompanyName.trim(),
+      contactPerson: newContactPerson.trim(),
+      email: newEmail.trim(),
+      phone: newPhone.trim(),
+      address: newAddress.trim() || 'Central Dhaka',
+      tradeLicenseNumber: newTradeLicense.trim() || undefined,
+      tinNumber: newTaxId.trim() || undefined,
+      paymentTerms: newPaymentTerms,
+    };
+
+    const valResult = supplierSchema.safeParse(rawSupplier);
+    if (!valResult.success) {
+      notify(formatZodError(valResult.error));
       return;
     }
 
@@ -156,14 +170,7 @@ export function SuppliersAdmin() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          companyName: newCompanyName,
-          contactPerson: newContactPerson,
-          email: newEmail,
-          phone: newPhone,
-          address: newAddress,
-          taxIdentificationNumber: newTaxId,
-          tradeLicenseNumber: newTradeLicense,
-          paymentTerms: newPaymentTerms,
+          ...valResult.data,
           operator: currentRole
         })
       });
@@ -191,12 +198,25 @@ export function SuppliersAdmin() {
   // Issue Purchase Order Handler
   const handleCreatePo = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!poSupplierId) {
-      notify('Please select a supplier.');
-      return;
-    }
-    if (poItems.length === 0 || poItems.some(i => i.quantity <= 0 || i.unitCost < 0)) {
-      notify('Please enter valid line items with quantities and unit costs.');
+
+    const rawPo = {
+      supplierId: poSupplierId,
+      warehouseId: poWarehouse,
+      expectedDeliveryDate: poExpectedDate || new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0],
+      notes: poNotes.trim() || undefined,
+      items: poItems.map(item => ({
+        productId: item.productId,
+        productTitle: item.productName || 'Product Item',
+        sku: 'SKU-GEN',
+        quantity: Number(item.quantity),
+        unitCost: Number(item.unitCost)
+      })),
+      operatorName: `${currentRole} Operator`
+    };
+
+    const valResult = purchaseOrderSchema.safeParse(rawPo);
+    if (!valResult.success) {
+      notify(formatZodError(valResult.error));
       return;
     }
 
@@ -204,13 +224,7 @@ export function SuppliersAdmin() {
       const res = await fetch(`/api/suppliers/${poSupplierId}/purchase-orders`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          expectedDeliveryDate: poExpectedDate || new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0],
-          warehouseId: poWarehouse,
-          notes: poNotes,
-          items: poItems,
-          operatorName: `${currentRole} Operator`
-        })
+        body: JSON.stringify(valResult.data)
       });
       const data = await res.json();
       if (data.success) {
@@ -1137,13 +1151,13 @@ export function SuppliersAdmin() {
                           const prod = products.find(p => p.id === e.target.value);
                           const updated = [...poItems];
                           updated[idx].productId = e.target.value;
-                          updated[idx].productName = prod?.nameEn || 'Product';
+                          updated[idx].productName = prod?.title || prod?.titleBn || 'Product';
                           setPoItems(updated);
                         }}
                         className="w-full px-2 py-1.5 border border-stone-200 rounded text-xs bg-white"
                       >
                         {products.map(p => (
-                          <option key={p.id} value={p.id}>{p.nameEn}</option>
+                          <option key={p.id} value={p.id}>{p.title} ({p.sku})</option>
                         ))}
                       </select>
                     </div>

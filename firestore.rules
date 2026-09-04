@@ -1,0 +1,103 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (
+        request.auth.token.email == 'mdmuntasirshihab@gmail.com' ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['SUPER_ADMIN', 'ADMIN'])
+      );
+    }
+
+    function isValidUser(data) {
+      return data.keys().hasAll(['uid', 'email', 'role']) &&
+        data.uid is string &&
+        data.email is string &&
+        data.role is string;
+    }
+
+    function isValidProduct(data) {
+      return data.keys().hasAll(['id', 'title', 'price', 'stock']) &&
+        data.id is string &&
+        data.title is string && data.title.size() <= 200 &&
+        data.price is number &&
+        data.stock is number;
+    }
+
+    function isValidOrder(data) {
+      return data.keys().hasAll(['id', 'userId', 'totalAmount', 'orderStatus', 'paymentStatus']) &&
+        data.id is string &&
+        data.userId is string &&
+        data.totalAmount is number &&
+        data.orderStatus is string &&
+        data.paymentStatus is string;
+    }
+
+    function isValidReview(data) {
+      return data.keys().hasAll(['id', 'productId', 'userId', 'rating']) &&
+        data.id is string &&
+        data.productId is string &&
+        data.userId is string &&
+        data.rating is number;
+    }
+
+    // Default Deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Users Collection
+    match /users/{userId} {
+      allow get: if isSignedIn() && (isOwner(userId) || isAdmin());
+      allow list: if isAdmin();
+      allow create: if isSignedIn() && isOwner(userId) && isValidUser(incoming());
+      allow update: if isSignedIn() && (isOwner(userId) || isAdmin()) && isValidUser(incoming());
+      allow delete: if isAdmin();
+    }
+
+    // Products Collection
+    match /products/{productId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin() && isValidProduct(incoming());
+    }
+
+    // Orders Collection
+    match /orders/{orderId} {
+      allow get: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow list: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isSignedIn() && incoming().userId == request.auth.uid && isValidOrder(incoming());
+      allow update: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin()) && isValidOrder(incoming());
+      allow delete: if isAdmin();
+    }
+
+    // Reviews Collection
+    match /reviews/{reviewId} {
+      allow read: if true;
+      allow create: if isSignedIn() && incoming().userId == request.auth.uid && isValidReview(incoming());
+      allow update: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin()) && isValidReview(incoming());
+      allow delete: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+    }
+  }
+}

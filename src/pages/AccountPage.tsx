@@ -9,7 +9,6 @@ import {
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { CustomerAddress, WishlistItem, CustomerReturnRequest } from '../types';
-import { CustomerOrderTimeline } from '../components/customer/CustomerOrderTimeline';
 
 export function AccountPage() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -987,28 +986,23 @@ export function AccountPage() {
                           {order.items.map((item, idx) => (
                             <div key={idx} className="flex items-center justify-between gap-4 text-xs">
                               <div className="flex items-center gap-3 min-w-0">
-                                <div className="w-10 h-10 rounded-lg bg-stone-100 dark:bg-slate-800 border border-stone-200 dark:border-slate-700 flex items-center justify-center font-mono font-bold text-stone-700 dark:text-slate-200 shrink-0">
+                                <div className="w-10 h-10 rounded-lg bg-stone-100 border border-stone-200 flex items-center justify-center font-mono font-bold text-stone-700 shrink-0">
                                   {item.quantity}x
                                 </div>
                                 <div className="min-w-0">
-                                  <h4 className="font-bold text-stone-900 dark:text-slate-100 truncate">
+                                  <h4 className="font-bold text-stone-900 truncate">
                                     {language === 'BN' ? item.titleBn || item.title : item.title}
                                   </h4>
-                                  <span className="text-[11px] text-stone-500 dark:text-slate-400 block">
+                                  <span className="text-[11px] text-stone-500 block">
                                     Unit Price: ৳{item.price.toLocaleString()} • SKU: {item.sku || 'KSH-GEN'}
                                   </span>
                                 </div>
                               </div>
-                              <span className="font-mono font-bold text-stone-900 dark:text-slate-100 shrink-0">
+                              <span className="font-mono font-bold text-stone-900 shrink-0">
                                 ৳{(item.price * item.quantity).toLocaleString()}
                               </span>
                             </div>
                           ))}
-                        </div>
-
-                        {/* Automated Real-Time Order Timeline Visualization */}
-                        <div className="pt-2">
-                          <CustomerOrderTimeline order={order} language={language} />
                         </div>
 
                         {/* Order Footer & Actions */}

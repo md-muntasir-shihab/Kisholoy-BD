@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { auth, onAuthStateChanged, testFirestoreConnection } from '../lib/firebase';
 import { 
-  Language, ThemeMode, Role, Product, Category, CartItem, Order, OrderStatus, 
+  Language, Role, Product, Category, CartItem, Order, OrderStatus, 
   Customer, InventoryTransaction, ExpenseRecord, AutomationJob, 
   AuditLog, SiteContent, SettlementRecord, SettlementStatus, ContentRevision,
   BatchRestockPayload,
@@ -26,8 +27,6 @@ interface AppContextType {
   setLanguage: (lang: Language) => void;
   currentRole: Role;
   setCurrentRole: (role: Role) => void;
-  themeMode: ThemeMode;
-  setThemeMode: (mode: ThemeMode) => void;
   isDarkMode: boolean;
   toggleDarkMode: () => void;
   
@@ -162,7 +161,7 @@ interface AppContextType {
 
   // Notification Toast
   toastMessage: string | null;
-  showToast: (msg: string) => void;
+  showToast: (msgOrType: string, msgOptional?: string) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -170,53 +169,26 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [language, setLanguage] = useState<Language>('EN');
   const [currentRole, setCurrentRole] = useState<Role>('SUPER_ADMIN');
-  const [themeMode, setThemeMode] = useState<ThemeMode>(() => {
+  const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
     if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('themeMode') as ThemeMode;
-      if (saved && (saved === 'light' || saved === 'dark' || saved === 'system')) return saved;
-      const legacySaved = localStorage.getItem('theme');
-      if (legacySaved === 'dark') return 'dark';
-      if (legacySaved === 'light') return 'light';
+      const saved = localStorage.getItem('theme');
+      if (saved) return saved === 'dark';
+      return window.matchMedia('(prefers-color-scheme: dark)').matches;
     }
-    return 'system';
+    return false;
   });
 
-  const [isDarkMode, setIsDarkMode] = useState<boolean>(false);
-
   useEffect(() => {
-    const applyTheme = () => {
-      let activeDark = false;
-      if (themeMode === 'dark') {
-        activeDark = true;
-      } else if (themeMode === 'light') {
-        activeDark = false;
-      } else {
-        activeDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-      }
-
-      setIsDarkMode(activeDark);
-      if (activeDark) {
-        document.documentElement.classList.add('dark');
-      } else {
-        document.documentElement.classList.remove('dark');
-      }
-      localStorage.setItem('themeMode', themeMode);
-      localStorage.setItem('theme', activeDark ? 'dark' : 'light');
-    };
-
-    applyTheme();
-
-    if (themeMode === 'system' && window.matchMedia) {
-      const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-      const handleChange = () => applyTheme();
-      mediaQuery.addEventListener('change', handleChange);
-      return () => mediaQuery.removeEventListener('change', handleChange);
+    if (isDarkMode) {
+      document.documentElement.classList.add('dark');
+      localStorage.setItem('theme', 'dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+      localStorage.setItem('theme', 'light');
     }
-  }, [themeMode]);
+  }, [isDarkMode]);
 
-  const toggleDarkMode = () => {
-    setThemeMode(prev => (prev === 'dark' ? 'light' : 'dark'));
-  };
+  const toggleDarkMode = () => setIsDarkMode(prev => !prev);
   
   const [products, setProducts] = useState<Product[]>(INITIAL_PRODUCTS);
   const [categories, setCategories] = useState<Category[]>(INITIAL_CATEGORIES);
@@ -312,6 +284,38 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setDispatchManifests(data.manifests);
       }
     });
+
+    // Test Firestore connection on boot
+    testFirestoreConnection();
+
+    // Firebase Auth State Listener
+    const unsubscribe = onAuthStateChanged(auth, (fbUser) => {
+      if (fbUser) {
+        console.log('Firebase user logged in:', fbUser.email, fbUser.uid);
+        // If logged in as admin email, escalate role to SUPER_ADMIN
+        if (fbUser.email === 'mdmuntasirshihab@gmail.com') {
+          setCurrentRole('SUPER_ADMIN');
+        }
+        setCustomerProfile(prev => prev ? {
+          ...prev,
+          name: fbUser.displayName || prev.name,
+          email: fbUser.email || prev.email,
+        } : {
+          id: fbUser.uid,
+          name: fbUser.displayName || 'Kisholoy User',
+          email: fbUser.email || '',
+          phone: fbUser.phoneNumber || '01700000000',
+          tier: 'GOLD',
+          points: 150,
+          joinedDate: new Date().toISOString().split('T')[0],
+          defaultAddressId: 'addr-1',
+          totalOrdersCount: 1,
+          totalSpentAmount: 2500
+        });
+      }
+    });
+
+    return () => unsubscribe();
   }, []);
 
   // Cart state initialized from localStorage if available
@@ -491,10 +495,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     showToast(val ? 'Multi-Hub routing is now OPTIONAL (Direct Dispatch Preferred)' : 'Enterprise Multi-Hub routing is now ACTIVE');
   };
 
-  const showToast = (msg: string) => {
-    setToastMessage(msg);
+  const showToast = (msgOrType: string, msgOptional?: string) => {
+    const message = msgOptional !== undefined ? msgOptional : msgOrType;
+    setToastMessage(message);
     setTimeout(() => {
-      setToastMessage((prev) => (prev === msg ? null : prev));
+      setToastMessage((prev) => (prev === message ? null : prev));
     }, 3500);
   };
 
@@ -1876,8 +1881,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setLanguage,
         currentRole,
         setCurrentRole,
-        themeMode,
-        setThemeMode,
         isDarkMode,
         toggleDarkMode,
         products,

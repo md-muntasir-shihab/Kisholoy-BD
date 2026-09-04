@@ -1,0 +1,87 @@
+{
+  "entities": {
+    "User": {
+      "title": "User Profile",
+      "description": "User profile document storing basic account information and role",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "User UID" },
+        "email": { "type": "string", "description": "User email" },
+        "displayName": { "type": "string", "description": "Display name", "maxLength": 100 },
+        "photoURL": { "type": "string", "description": "Avatar photo URL", "maxLength": 500 },
+        "phone": { "type": "string", "description": "Phone number", "maxLength": 20 },
+        "role": { "type": "string", "enum": ["CUSTOMER", "SUPER_ADMIN", "ADMIN", "ORDER_MANAGER", "INVENTORY_MANAGER", "FINANCE", "SUPPORT", "MERCHANT", "SUPPLIER"] },
+        "createdAt": { "type": "string", "description": "ISO timestamp" },
+        "updatedAt": { "type": "string", "description": "ISO timestamp" }
+      },
+      "required": ["uid", "email", "role"]
+    },
+    "Product": {
+      "title": "Product Item",
+      "description": "E-commerce product entity",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string", "maxLength": 200 },
+        "titleBn": { "type": "string", "maxLength": 200 },
+        "slug": { "type": "string", "maxLength": 200 },
+        "price": { "type": "number" },
+        "originalPrice": { "type": "number" },
+        "category": { "type": "string" },
+        "sku": { "type": "string" },
+        "stock": { "type": "number" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "title", "price", "stock"]
+    },
+    "Order": {
+      "title": "Customer Order",
+      "description": "Customer purchase order document",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "customerName": { "type": "string" },
+        "customerPhone": { "type": "string" },
+        "totalAmount": { "type": "number" },
+        "orderStatus": { "type": "string" },
+        "paymentStatus": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "userId", "totalAmount", "orderStatus", "paymentStatus"]
+    },
+    "Review": {
+      "title": "Product Review",
+      "description": "User review for a product",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "productId": { "type": "string" },
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "rating": { "type": "number" },
+        "comment": { "type": "string", "maxLength": 1000 },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "productId", "userId", "rating"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "#/entities/User",
+      "description": "User profiles collection"
+    },
+    "/products/{productId}": {
+      "schema": "#/entities/Product",
+      "description": "Catalog products collection"
+    },
+    "/orders/{orderId}": {
+      "schema": "#/entities/Order",
+      "description": "Customer orders collection"
+    },
+    "/reviews/{reviewId}": {
+      "schema": "#/entities/Review",
+      "description": "Product reviews collection"
+    }
+  }
+}

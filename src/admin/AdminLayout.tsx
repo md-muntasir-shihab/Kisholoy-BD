@@ -3,7 +3,7 @@ import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { 
   Menu, X, ExternalLink, UserCheck, Compass, 
   BookOpen, HelpCircle, ArrowUpRight, Layers, ShieldCheck,
-  Lock, LogOut, KeyRound, Building2, Sun, Moon, Laptop
+  Lock, LogOut, KeyRound, Building2, Sun, Moon
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { Role } from '../types';
@@ -43,7 +43,7 @@ const ROUTE_PERMISSIONS: Record<string, { requiredPermission: string; allowedRol
 };
 
 export function AdminLayout() {
-  const { currentRole, setCurrentRole, orders, products, language, setLanguage, siteContent, showToast, themeMode, setThemeMode, isDarkMode } = useApp();
+  const { currentRole, setCurrentRole, orders, products, language, setLanguage, siteContent, showToast, isDarkMode, toggleDarkMode } = useApp();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [guideModalOpen, setGuideModalOpen] = useState(false);
   const [guideInitialSection, setGuideInitialSection] = useState<string>('all');
@@ -179,27 +179,22 @@ export function AdminLayout() {
             <span>{language}</span>
           </button>
 
-          {/* Theme Mode Toggle (Day / Dark / System Mode) */}
+          {/* Theme Mode Toggle (Day / Dark Mode) */}
           <button
             id="admin-theme-toggle-btn"
-            onClick={() => setThemeMode(themeMode === 'light' ? 'dark' : themeMode === 'dark' ? 'system' : 'light')}
+            onClick={toggleDarkMode}
             className="px-2.5 py-1.5 text-stone-300 hover:text-white rounded-xl bg-stone-900 hover:bg-stone-850 border border-stone-800 text-xs font-bold flex items-center gap-1.5 transition-all shadow-2xs"
-            title={themeMode === 'light' ? (isBn ? 'মোড: ডে / লাইট' : 'Theme: Light Mode') : themeMode === 'dark' ? (isBn ? 'মোড: ডার্ক' : 'Theme: Dark Mode') : (isBn ? 'মোড: সিস্টেম অটো' : 'Theme: System Auto')}
+            title={isDarkMode ? (isBn ? 'ডে / লাইট মোডে পরিবর্তন করুন' : 'Switch to Day Light Mode') : (isBn ? 'ডার্ক মোডে পরিবর্তন করুন' : 'Switch to Dark Mode')}
           >
-            {themeMode === 'light' ? (
+            {isDarkMode ? (
               <>
                 <Sun className="w-4 h-4 text-amber-400" />
-                <span className="hidden xl:inline text-amber-300 font-semibold">{isBn ? 'ডে মুড' : 'Light'}</span>
-              </>
-            ) : themeMode === 'dark' ? (
-              <>
-                <Moon className="w-4 h-4 text-indigo-400" />
-                <span className="hidden xl:inline text-stone-300 font-semibold">{isBn ? 'ডার্ক মুড' : 'Dark'}</span>
+                <span className="hidden xl:inline text-amber-300 font-semibold">{isBn ? 'ডে মুড' : 'Day'}</span>
               </>
             ) : (
               <>
-                <Laptop className="w-4 h-4 text-teal-400" />
-                <span className="hidden xl:inline text-teal-300 font-semibold">{isBn ? 'সিস্টেম' : 'Auto'}</span>
+                <Moon className="w-4 h-4 text-indigo-400" />
+                <span className="hidden xl:inline text-stone-300 font-semibold">{isBn ? 'ডার্ক মুড' : 'Dark'}</span>
               </>
             )}
           </button>

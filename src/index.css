@@ -192,42 +192,6 @@ html.dark .shadow-2xl {
   box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.7), 0 8px 10px -6px rgba(0, 0, 0, 0.7) !important;
 }
 
-/* Custom Smooth Scrollbar for Tables and Containers */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
-  border-radius: 9999px;
-}
-
-html.dark ::-webkit-scrollbar-thumb {
-  background: #334155;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
-}
-
-/* Ensure horizontal scroll containers in Admin tables work smoothly without layout breaks */
-.responsive-table-wrapper {
-  width: 100%;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-}
-
-/* Ensure images maintain aspect ratio */
-img {
-  max-width: 100%;
-  height: auto;
-}
-
 @media print {
   body {
     background: white !important;

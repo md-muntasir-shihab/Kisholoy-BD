@@ -13,6 +13,7 @@ import { Product, Supplier } from '../types';
 import { ProductQuickViewModal } from '../components/admin/ProductQuickViewModal';
 import { ProductEditModal } from '../components/admin/ProductEditModal';
 import { ProductDeleteConfirmModal } from '../components/admin/ProductDeleteConfirmModal';
+import { productSchema, formatZodError } from '../lib/validations';
 
 export function ProductsAdmin() {
   const { products, categories, addProduct, updateProduct, deleteProduct, language, showToast } = useApp();
@@ -44,14 +45,21 @@ export function ProductsAdmin() {
   const [addSku, setAddSku] = useState('');
   const [addCategory, setAddCategory] = useState(categories[0]?.name || 'Traditional Clothing');
   const [addPrice, setAddPrice] = useState(1500);
+  const [addOriginalPrice, setAddOriginalPrice] = useState<number | ''>('');
   const [addCostPrice, setAddCostPrice] = useState(900);
   const [addTaxRate, setAddTaxRate] = useState(0);
   const [addStock, setAddStock] = useState(20);
   const [addLowStockThreshold, setAddLowStockThreshold] = useState(5);
   const [addWeight, setAddWeight] = useState(0.5);
+  const [addMaterial, setAddMaterial] = useState('');
+  const [addOrigin, setAddOrigin] = useState('');
   const [addImageUrl, setAddImageUrl] = useState('https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&q=80&w=800');
   const [addDescription, setAddDescription] = useState('');
+  const [addDescriptionBn, setAddDescriptionBn] = useState('');
   const [addBadge, setAddBadge] = useState('Artisan Handcrafted');
+  const [addBadgeBn, setAddBadgeBn] = useState('হস্তনির্মিত');
+  const [addReadyToShip, setAddReadyToShip] = useState(true);
+  const [addIsFeatured, setAddIsFeatured] = useState(true);
   const [addSupplierId, setAddSupplierId] = useState('');
   const [addFormTab, setAddFormTab] = useState<'general' | 'finance' | 'logistics'>('general');
 
@@ -207,40 +215,60 @@ export function ProductsAdmin() {
   // Create Product Handler
   const handleCreateProduct = (e: React.FormEvent) => {
     e.preventDefault();
+
     const catObj = categories.find((c) => c.name === addCategory);
     const slug = addTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
 
-    addProduct({
-      title: addTitle,
-      titleBn: addTitleBn || addTitle,
+    const rawProduct = {
+      title: addTitle.trim(),
+      titleBn: addTitleBn.trim() || addTitle.trim(),
       slug,
-      description: addDescription || 'Artisanal authentic handcrafted masterpiece.',
-      descriptionBn: addTitleBn || 'হস্তনির্মিত ঐতিহ্যবাহী খাঁটি পণ্য।',
-      price: Number(addPrice),
-      costPrice: Number(addCostPrice),
-      taxRate: Number(addTaxRate),
       sku: addSku.toUpperCase().trim(),
       category: addCategory,
       categorySlug: catObj?.slug || 'traditional-clothing',
-      images: [addImageUrl],
-      stock: Number(addStock),
-      lowStockThreshold: Number(addLowStockThreshold),
+      description: addDescription.trim() || 'Artisanal authentic handcrafted masterpiece.',
+      descriptionBn: addDescriptionBn.trim() || addTitleBn.trim() || 'হস্তনির্মিত ঐতিহ্যবাহী খাঁটি পণ্য।',
+      price: Number(addPrice),
+      originalPrice: addOriginalPrice && Number(addOriginalPrice) > Number(addPrice) ? Number(addOriginalPrice) : undefined,
+      costPrice: Number(addCostPrice || 0),
+      taxRate: Number(addTaxRate || 0),
+      stock: Number(addStock || 0),
+      lowStockThreshold: Number(addLowStockThreshold || 5),
+      images: [addImageUrl || 'https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&q=80&w=800'],
+      badge: addBadge || undefined,
+      badgeBn: addBadgeBn || undefined,
+      isFeatured: addIsFeatured,
+      readyToShip: addReadyToShip,
+      supplierId: addSupplierId || undefined,
       rating: 5.0,
       reviewsCount: 0,
-      badge: addBadge,
-      badgeBn: 'হস্তনির্মিত',
-      isFeatured: true,
-      readyToShip: true,
-      supplierId: addSupplierId || undefined,
       attributes: {
-        weight: addWeight.toString()
+        weight: addWeight.toString(),
+        material: addMaterial.trim() || undefined,
+        origin: addOrigin.trim() || undefined
       }
-    });
+    };
+
+    // Zod validation check
+    const validationResult = productSchema.safeParse(rawProduct);
+    if (!validationResult.success) {
+      const errorMsg = formatZodError(validationResult.error);
+      showToast('error', errorMsg);
+      return;
+    }
+
+    // Call addProduct with validated data
+    addProduct(validationResult.data as any);
 
     setShowAddModal(false);
     setAddTitle('');
     setAddTitleBn('');
     setAddSku('');
+    setAddDescription('');
+    setAddDescriptionBn('');
+    setAddOriginalPrice('');
+    setAddMaterial('');
+    setAddOrigin('');
     setAddFormTab('general');
   };
 
@@ -1073,83 +1101,90 @@ export function ProductsAdmin() {
             <form onSubmit={handleCreateProduct} className="flex flex-col flex-1 overflow-hidden">
               <div className="p-5 sm:p-6 overflow-y-auto flex-1 text-sm bg-white space-y-4">
                 
-                {addFormTab === 'general' && (
-                  <div className="space-y-4 animate-in fade-in duration-150">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div>
-                        <label className="font-bold text-stone-700 block mb-1 text-xs uppercase tracking-wider">
-                          Product Title (English) *
-                        </label>
-                        <input 
-                          type="text" 
-                          required 
-                          placeholder="e.g. Tangail Pure Silk Handloom Saree" 
-                          value={addTitle} 
-                          onChange={(e) => setAddTitle(e.target.value)} 
-                          className="w-full p-2.5 bg-stone-50 border border-stone-200 rounded-lg focus:outline-none focus:border-teal-900 focus:bg-white transition-colors" 
-                        />
-                      </div>
-                      <div>
-                        <label className="font-bold text-stone-700 block mb-1 text-xs uppercase tracking-wider">
-                          Product Title (Bangla) *
-                        </label>
-                        <input 
-                          type="text" 
-                          required 
-                          placeholder="e.g. টাঙ্গাইল পিউর সিল্ক তাঁতের শাড়ি" 
-                          value={addTitleBn} 
-                          onChange={(e) => setAddTitleBn(e.target.value)} 
-                          className="w-full p-2.5 bg-stone-50 border border-stone-200 rounded-lg focus:outline-none focus:border-teal-900 focus:bg-white transition-colors font-bangla" 
-                        />
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div>
-                        <label className="font-bold text-stone-700 block mb-1 text-xs uppercase tracking-wider">
-                          SKU Code *
-                        </label>
-                        <input 
-                          type="text" 
-                          required 
-                          placeholder="e.g. KSH-TNG-007" 
-                          value={addSku} 
-                          onChange={(e) => setAddSku(e.target.value)} 
-                          className="w-full p-2.5 bg-stone-50 border border-stone-200 rounded-lg uppercase font-mono font-bold focus:outline-none focus:border-teal-900 focus:bg-white" 
-                        />
-                      </div>
-                      <div>
-                        <label className="font-bold text-stone-700 block mb-1 text-xs uppercase tracking-wider">
-                          Category *
-                        </label>
-                        <select 
-                          value={addCategory} 
-                          onChange={(e) => setAddCategory(e.target.value)} 
-                          className="w-full p-2.5 bg-stone-50 border border-stone-200 rounded-lg focus:outline-none focus:border-teal-900 focus:bg-white cursor-pointer font-medium"
-                        >
-                          {categories.map((c) => (
-                            <option key={c.id} value={c.name}>{c.name}</option>
-                          ))}
-                        </select>
-                      </div>
-                    </div>
-
+                {/* General Info Tab */}
+                <div className={addFormTab === 'general' ? 'space-y-4 animate-in fade-in duration-150' : 'hidden'}>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <label className="font-bold text-stone-700 block mb-1 text-xs uppercase tracking-wider">
-                        Image URL (Unsplash or CDN) *
+                        Product Title (English) *
                       </label>
                       <input 
-                        type="url" 
+                        type="text" 
                         required 
-                        value={addImageUrl} 
-                        onChange={(e) => setAddImageUrl(e.target.value)} 
-                        className="w-full p-2.5 bg-stone-50 border border-stone-200 rounded-lg focus:outline-none focus:border-teal-900 text-xs font-mono" 
+                        placeholder="e.g. Tangail Pure Silk Handloom Saree" 
+                        value={addTitle} 
+                        onChange={(e) => setAddTitle(e.target.value)} 
+                        className="w-full p-2.5 bg-stone-50 border border-stone-200 rounded-lg focus:outline-none focus:border-teal-900 focus:bg-white transition-colors" 
                       />
                     </div>
-
                     <div>
                       <label className="font-bold text-stone-700 block mb-1 text-xs uppercase tracking-wider">
-                        Product Description
+                        Product Title (Bangla) *
+                      </label>
+                      <input 
+                        type="text" 
+                        required 
+                        placeholder="e.g. টাঙ্গাইল পিউর সিল্ক তাঁতের শাড়ি" 
+                        value={addTitleBn} 
+                        onChange={(e) => setAddTitleBn(e.target.value)} 
+                        className="w-full p-2.5 bg-stone-50 border border-stone-200 rounded-lg focus:outline-none focus:border-teal-900 focus:bg-white transition-colors font-bangla" 
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="font-bold text-stone-700 block mb-1 text-xs uppercase tracking-wider">
+                        SKU Code *
+                      </label>
+                      <input 
+                        type="text" 
+                        required 
+                        placeholder="e.g. KSH-TNG-007" 
+                        value={addSku} 
+                        onChange={(e) => setAddSku(e.target.value)} 
+                        className="w-full p-2.5 bg-stone-50 border border-stone-200 rounded-lg uppercase font-mono font-bold focus:outline-none focus:border-teal-900 focus:bg-white" 
+                      />
+                    </div>
+                    <div>
+                      <label className="font-bold text-stone-700 block mb-1 text-xs uppercase tracking-wider">
+                        Category *
+                      </label>
+                      <select 
+                        value={addCategory} 
+                        onChange={(e) => setAddCategory(e.target.value)} 
+                        className="w-full p-2.5 bg-stone-50 border border-stone-200 rounded-lg focus:outline-none focus:border-teal-900 focus:bg-white cursor-pointer font-medium"
+                      >
+                        {categories.map((c) => (
+                          <option key={c.id} value={c.name}>{c.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="font-bold text-stone-700 block mb-1 text-xs uppercase tracking-wider">
+                      Image URL (Unsplash or CDN) *
+                    </label>
+                    <input 
+                      type="url" 
+                      required 
+                      value={addImageUrl} 
+                      onChange={(e) => setAddImageUrl(e.target.value)} 
+                      className="w-full p-2.5 bg-stone-50 border border-stone-200 rounded-lg focus:outline-none focus:border-teal-900 text-xs font-mono" 
+                    />
+                    {addImageUrl && (
+                      <div className="mt-2 flex items-center gap-3">
+                        <img src={addImageUrl} alt="Preview" className="w-12 h-12 rounded-lg object-cover border border-stone-200" />
+                        <span className="text-xs text-stone-500">Live preview of cover thumbnail image.</span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="font-bold text-stone-700 block mb-1 text-xs uppercase tracking-wider">
+                        Product Description (English)
                       </label>
                       <textarea 
                         rows={3} 
@@ -1159,155 +1194,237 @@ export function ProductsAdmin() {
                         className="w-full p-2.5 bg-stone-50 border border-stone-200 rounded-lg focus:outline-none focus:border-teal-900 focus:bg-white resize-none text-xs" 
                       />
                     </div>
+                    <div>
+                      <label className="font-bold text-stone-700 block mb-1 text-xs uppercase tracking-wider">
+                        Product Description (Bangla)
+                      </label>
+                      <textarea 
+                        rows={3} 
+                        value={addDescriptionBn} 
+                        onChange={(e) => setAddDescriptionBn(e.target.value)} 
+                        placeholder="হস্তনির্মিত ঐতিহ্যবাহী খাঁটি দেশীয় কারুপণ্য..." 
+                        className="w-full p-2.5 bg-stone-50 border border-stone-200 rounded-lg focus:outline-none focus:border-teal-900 focus:bg-white resize-none text-xs font-bangla" 
+                      />
+                    </div>
                   </div>
-                )}
+                </div>
 
-                {addFormTab === 'finance' && (
-                  <div className="space-y-4 animate-in fade-in duration-150">
-                    <div className="bg-emerald-50 p-4 rounded-xl border border-emerald-100">
-                      <div className="flex items-center gap-2 mb-2">
-                        <Activity className="w-4 h-4 text-emerald-700" />
-                        <h4 className="font-bold text-xs uppercase text-emerald-900 tracking-wider">
-                          Financial Margin Projection
-                        </h4>
-                      </div>
-                      <div className="grid grid-cols-3 gap-3">
-                        <div className="bg-white p-2.5 rounded-lg border border-emerald-100">
-                          <span className="text-[10px] text-emerald-600 uppercase font-bold block">Gross Price</span>
-                          <span className="font-mono font-bold text-base text-emerald-900">৳{Number(addPrice || 0).toLocaleString()}</span>
-                        </div>
-                        <div className="bg-white p-2.5 rounded-lg border border-emerald-100">
-                          <span className="text-[10px] text-emerald-600 uppercase font-bold block">Tax Deducted</span>
-                          <span className="font-mono font-bold text-base text-emerald-900">৳{(addPrice * (addTaxRate / 100)).toFixed(0)}</span>
-                        </div>
-                        <div className="bg-white p-2.5 rounded-lg border border-emerald-100">
-                          <span className="text-[10px] text-emerald-600 uppercase font-bold block">Profit Margin</span>
-                          <span className="font-mono font-bold text-base text-emerald-900">{getMargin(addPrice, addCostPrice, addTaxRate)}%</span>
-                        </div>
-                      </div>
+                {/* Finance & Sourcing Tab */}
+                <div className={addFormTab === 'finance' ? 'space-y-4 animate-in fade-in duration-150' : 'hidden'}>
+                  <div className="bg-emerald-50 p-4 rounded-xl border border-emerald-100">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Activity className="w-4 h-4 text-emerald-700" />
+                      <h4 className="font-bold text-xs uppercase text-emerald-900 tracking-wider">
+                        Financial Margin Projection
+                      </h4>
                     </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div>
-                        <label className="font-bold text-stone-700 block mb-1 text-xs uppercase tracking-wider">
-                          Retail Price (৳) *
-                        </label>
-                        <input 
-                          type="number" 
-                          required 
-                          value={addPrice} 
-                          onChange={(e) => setAddPrice(Number(e.target.value))} 
-                          className="w-full p-2.5 border border-stone-200 rounded-lg font-mono focus:outline-none focus:border-teal-900 bg-stone-50 focus:bg-white" 
-                        />
+                    <div className="grid grid-cols-3 gap-3">
+                      <div className="bg-white p-2.5 rounded-lg border border-emerald-100">
+                        <span className="text-[10px] text-emerald-600 uppercase font-bold block">Gross Price</span>
+                        <span className="font-mono font-bold text-base text-emerald-900">৳{Number(addPrice || 0).toLocaleString()}</span>
                       </div>
-                      <div>
-                        <label className="font-bold text-stone-700 block mb-1 text-xs uppercase tracking-wider">
-                          Applicable Tax / VAT (%)
-                        </label>
-                        <input 
-                          type="number" 
-                          step="0.1" 
-                          value={addTaxRate} 
-                          onChange={(e) => setAddTaxRate(Number(e.target.value))} 
-                          className="w-full p-2.5 border border-stone-200 rounded-lg font-mono focus:outline-none focus:border-teal-900 bg-stone-50 focus:bg-white" 
-                        />
+                      <div className="bg-white p-2.5 rounded-lg border border-emerald-100">
+                        <span className="text-[10px] text-emerald-600 uppercase font-bold block">Tax Deducted</span>
+                        <span className="font-mono font-bold text-base text-emerald-900">৳{(addPrice * (addTaxRate / 100)).toFixed(0)}</span>
                       </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div>
-                        <label className="font-bold text-stone-700 block mb-1 text-xs uppercase tracking-wider">
-                          Cost Price (COGS ৳) *
-                        </label>
-                        <input 
-                          type="number" 
-                          required 
-                          value={addCostPrice} 
-                          onChange={(e) => setAddCostPrice(Number(e.target.value))} 
-                          className="w-full p-2.5 border border-stone-200 rounded-lg font-mono focus:outline-none focus:border-teal-900 bg-stone-50 focus:bg-white" 
-                        />
-                        <p className="text-[10px] text-stone-500 mt-1">Base procurement cost for weaver accounts payable.</p>
-                      </div>
-                      <div>
-                        <label className="font-bold text-stone-700 block mb-1 text-xs uppercase tracking-wider">
-                          Associated Supplier
-                        </label>
-                        <select 
-                          value={addSupplierId} 
-                          onChange={(e) => setAddSupplierId(e.target.value)} 
-                          className="w-full p-2.5 bg-stone-50 border border-stone-200 rounded-lg focus:outline-none focus:border-teal-900 focus:bg-white cursor-pointer font-medium"
-                        >
-                          <option value="">Internal / No External Supplier</option>
-                          {suppliers.map(s => (
-                            <option key={s.id} value={s.id}>{s.companyName} ({s.code})</option>
-                          ))}
-                        </select>
-                        <p className="text-[10px] text-stone-500 mt-1">Links product sales directly to supplier balance ledgers.</p>
+                      <div className="bg-white p-2.5 rounded-lg border border-emerald-100">
+                        <span className="text-[10px] text-emerald-600 uppercase font-bold block">Profit Margin</span>
+                        <span className="font-mono font-bold text-base text-emerald-900">{getMargin(addPrice, addCostPrice, addTaxRate)}%</span>
                       </div>
                     </div>
                   </div>
-                )}
 
-                {addFormTab === 'logistics' && (
-                  <div className="space-y-4 animate-in fade-in duration-150">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div>
-                        <label className="font-bold text-stone-700 block mb-1 text-xs uppercase tracking-wider">
-                          Initial Stock Qty *
-                        </label>
-                        <input 
-                          type="number" 
-                          required 
-                          value={addStock} 
-                          onChange={(e) => setAddStock(Number(e.target.value))} 
-                          className="w-full p-2.5 border border-stone-200 rounded-lg font-mono focus:outline-none focus:border-teal-900 bg-stone-50 focus:bg-white" 
-                        />
-                      </div>
-                      <div>
-                        <label className="font-bold text-stone-700 block mb-1 text-xs uppercase tracking-wider">
-                          Low Stock Threshold *
-                        </label>
-                        <input 
-                          type="number" 
-                          required 
-                          value={addLowStockThreshold} 
-                          onChange={(e) => setAddLowStockThreshold(Number(e.target.value))} 
-                          className="w-full p-2.5 border border-stone-200 rounded-lg font-mono focus:outline-none focus:border-teal-900 bg-stone-50 focus:bg-white" 
-                        />
-                        <p className="text-[10px] text-stone-500 mt-1">Triggers reorder alert when stock falls below this number.</p>
-                      </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div>
+                      <label className="font-bold text-stone-700 block mb-1 text-xs uppercase tracking-wider">
+                        Retail Price (৳) *
+                      </label>
+                      <input 
+                        type="number" 
+                        required 
+                        value={addPrice} 
+                        onChange={(e) => setAddPrice(Number(e.target.value))} 
+                        className="w-full p-2.5 border border-stone-200 rounded-lg font-mono focus:outline-none focus:border-teal-900 bg-stone-50 focus:bg-white" 
+                      />
                     </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div>
-                        <label className="font-bold text-stone-700 block mb-1 text-xs uppercase tracking-wider">
-                          Unit Weight (kg) *
-                        </label>
-                        <input 
-                          type="number" 
-                          step="0.01" 
-                          required 
-                          value={addWeight} 
-                          onChange={(e) => setAddWeight(Number(e.target.value))} 
-                          className="w-full p-2.5 border border-stone-200 rounded-lg font-mono focus:outline-none focus:border-teal-900 bg-stone-50 focus:bg-white" 
-                        />
-                        <p className="text-[10px] text-stone-500 mt-1">Used for Pathao/Steadfast shipping calculations.</p>
-                      </div>
-                      <div>
-                        <label className="font-bold text-stone-700 block mb-1 text-xs uppercase tracking-wider">
-                          Badge Tag
-                        </label>
-                        <input 
-                          type="text" 
-                          value={addBadge} 
-                          onChange={(e) => setAddBadge(e.target.value)} 
-                          className="w-full p-2.5 bg-stone-50 border border-stone-200 rounded-lg focus:outline-none focus:border-teal-900 focus:bg-white text-xs" 
-                          placeholder="e.g. Masterpiece Edition" 
-                        />
-                      </div>
+                    <div>
+                      <label className="font-bold text-stone-700 block mb-1 text-xs uppercase tracking-wider">
+                        Original Price (৳) <span className="text-stone-400 font-normal">(Optional)</span>
+                      </label>
+                      <input 
+                        type="number" 
+                        value={addOriginalPrice} 
+                        onChange={(e) => setAddOriginalPrice(e.target.value ? Number(e.target.value) : '')} 
+                        placeholder="e.g. 1800 (for cross-out discount)"
+                        className="w-full p-2.5 border border-stone-200 rounded-lg font-mono focus:outline-none focus:border-teal-900 bg-stone-50 focus:bg-white text-xs" 
+                      />
+                    </div>
+                    <div>
+                      <label className="font-bold text-stone-700 block mb-1 text-xs uppercase tracking-wider">
+                        Applicable Tax / VAT (%)
+                      </label>
+                      <input 
+                        type="number" 
+                        step="0.1" 
+                        value={addTaxRate} 
+                        onChange={(e) => setAddTaxRate(Number(e.target.value))} 
+                        className="w-full p-2.5 border border-stone-200 rounded-lg font-mono focus:outline-none focus:border-teal-900 bg-stone-50 focus:bg-white" 
+                      />
                     </div>
                   </div>
-                )}
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="font-bold text-stone-700 block mb-1 text-xs uppercase tracking-wider">
+                        Cost Price (COGS ৳) *
+                      </label>
+                      <input 
+                        type="number" 
+                        required 
+                        value={addCostPrice} 
+                        onChange={(e) => setAddCostPrice(Number(e.target.value))} 
+                        className="w-full p-2.5 border border-stone-200 rounded-lg font-mono focus:outline-none focus:border-teal-900 bg-stone-50 focus:bg-white" 
+                      />
+                      <p className="text-[10px] text-stone-500 mt-1">Base procurement cost for weaver accounts payable.</p>
+                    </div>
+                    <div>
+                      <label className="font-bold text-stone-700 block mb-1 text-xs uppercase tracking-wider">
+                        Associated Supplier
+                      </label>
+                      <select 
+                        value={addSupplierId} 
+                        onChange={(e) => setAddSupplierId(e.target.value)} 
+                        className="w-full p-2.5 bg-stone-50 border border-stone-200 rounded-lg focus:outline-none focus:border-teal-900 focus:bg-white cursor-pointer font-medium"
+                      >
+                        <option value="">Internal / No External Supplier</option>
+                        {suppliers.map(s => (
+                          <option key={s.id} value={s.id}>{s.companyName} ({s.code})</option>
+                        ))}
+                      </select>
+                      <p className="text-[10px] text-stone-500 mt-1">Links product sales directly to supplier balance ledgers.</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Stock & Logistics Tab */}
+                <div className={addFormTab === 'logistics' ? 'space-y-4 animate-in fade-in duration-150' : 'hidden'}>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="font-bold text-stone-700 block mb-1 text-xs uppercase tracking-wider">
+                        Initial Stock Qty *
+                      </label>
+                      <input 
+                        type="number" 
+                        required 
+                        value={addStock} 
+                        onChange={(e) => setAddStock(Number(e.target.value))} 
+                        className="w-full p-2.5 border border-stone-200 rounded-lg font-mono focus:outline-none focus:border-teal-900 bg-stone-50 focus:bg-white" 
+                      />
+                    </div>
+                    <div>
+                      <label className="font-bold text-stone-700 block mb-1 text-xs uppercase tracking-wider">
+                        Low Stock Threshold *
+                      </label>
+                      <input 
+                        type="number" 
+                        required 
+                        value={addLowStockThreshold} 
+                        onChange={(e) => setAddLowStockThreshold(Number(e.target.value))} 
+                        className="w-full p-2.5 border border-stone-200 rounded-lg font-mono focus:outline-none focus:border-teal-900 bg-stone-50 focus:bg-white" 
+                      />
+                      <p className="text-[10px] text-stone-500 mt-1">Triggers reorder alert when stock falls below this number.</p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div>
+                      <label className="font-bold text-stone-700 block mb-1 text-xs uppercase tracking-wider">
+                        Unit Weight (kg) *
+                      </label>
+                      <input 
+                        type="number" 
+                        step="0.01" 
+                        required 
+                        value={addWeight} 
+                        onChange={(e) => setAddWeight(Number(e.target.value))} 
+                        className="w-full p-2.5 border border-stone-200 rounded-lg font-mono focus:outline-none focus:border-teal-900 bg-stone-50 focus:bg-white" 
+                      />
+                    </div>
+                    <div>
+                      <label className="font-bold text-stone-700 block mb-1 text-xs uppercase tracking-wider">
+                        Material
+                      </label>
+                      <input 
+                        type="text" 
+                        value={addMaterial} 
+                        onChange={(e) => setAddMaterial(e.target.value)} 
+                        className="w-full p-2.5 bg-stone-50 border border-stone-200 rounded-lg focus:outline-none focus:border-teal-900 focus:bg-white text-xs" 
+                        placeholder="e.g. Pure Silk / Handloom Cotton" 
+                      />
+                    </div>
+                    <div>
+                      <label className="font-bold text-stone-700 block mb-1 text-xs uppercase tracking-wider">
+                        Origin Hub
+                      </label>
+                      <input 
+                        type="text" 
+                        value={addOrigin} 
+                        onChange={(e) => setAddOrigin(e.target.value)} 
+                        className="w-full p-2.5 bg-stone-50 border border-stone-200 rounded-lg focus:outline-none focus:border-teal-900 focus:bg-white text-xs" 
+                        placeholder="e.g. Tangail, Bangladesh" 
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="font-bold text-stone-700 block mb-1 text-xs uppercase tracking-wider">
+                        Badge Tag (English)
+                      </label>
+                      <input 
+                        type="text" 
+                        value={addBadge} 
+                        onChange={(e) => setAddBadge(e.target.value)} 
+                        className="w-full p-2.5 bg-stone-50 border border-stone-200 rounded-lg focus:outline-none focus:border-teal-900 focus:bg-white text-xs" 
+                        placeholder="e.g. Masterpiece Edition" 
+                      />
+                    </div>
+                    <div>
+                      <label className="font-bold text-stone-700 block mb-1 text-xs uppercase tracking-wider">
+                        Badge Tag (Bangla)
+                      </label>
+                      <input 
+                        type="text" 
+                        value={addBadgeBn} 
+                        onChange={(e) => setAddBadgeBn(e.target.value)} 
+                        className="w-full p-2.5 bg-stone-50 border border-stone-200 rounded-lg focus:outline-none focus:border-teal-900 focus:bg-white text-xs font-bangla" 
+                        placeholder="e.g. হস্তনির্মিত মাস্টারপিস" 
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-6 pt-2 border-t border-stone-100">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input 
+                        type="checkbox" 
+                        checked={addReadyToShip} 
+                        onChange={(e) => setAddReadyToShip(e.target.checked)} 
+                        className="w-4 h-4 text-teal-900 rounded accent-teal-900 cursor-pointer" 
+                      />
+                      <span className="text-xs font-bold text-stone-800">Ready to Ship (In Hub)</span>
+                    </label>
+
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input 
+                        type="checkbox" 
+                        checked={addIsFeatured} 
+                        onChange={(e) => setAddIsFeatured(e.target.checked)} 
+                        className="w-4 h-4 text-teal-900 rounded accent-teal-900 cursor-pointer" 
+                      />
+                      <span className="text-xs font-bold text-stone-800">Featured Showcase</span>
+                    </label>
+                  </div>
+                </div>
               </div>
 
               {/* Footer */}
@@ -1316,6 +1433,24 @@ export function ProductsAdmin() {
                   Fields with <span className="text-red-500 font-bold">*</span> are required.
                 </div>
                 <div className="flex items-center gap-2.5 w-full sm:w-auto justify-end">
+                  {addFormTab !== 'general' && (
+                    <button 
+                      type="button" 
+                      onClick={() => setAddFormTab(addFormTab === 'logistics' ? 'finance' : 'general')} 
+                      className="px-3.5 py-2 text-stone-700 hover:bg-stone-200 bg-stone-100 rounded-lg font-bold text-xs transition-colors"
+                    >
+                      Previous
+                    </button>
+                  )}
+                  {addFormTab !== 'logistics' && (
+                    <button 
+                      type="button" 
+                      onClick={() => setAddFormTab(addFormTab === 'general' ? 'finance' : 'logistics')} 
+                      className="px-4 py-2 bg-stone-800 text-white rounded-lg font-bold text-xs hover:bg-stone-900 transition-colors"
+                    >
+                      Next Step →
+                    </button>
+                  )}
                   <button 
                     type="button" 
                     onClick={() => setShowAddModal(false)} 

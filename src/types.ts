@@ -1,5 +1,4 @@
 export type Language = 'EN' | 'BN';
-export type ThemeMode = 'light' | 'dark' | 'system';
 
 export type Division = 
   | 'Dhaka' 
@@ -1717,6 +1716,42 @@ export interface BackupScheduleConfig {
   autoPruneOld: boolean;
   lastRunAt: string;
   nextRunAt: string;
+}
+
+export interface GoogleDriveConfig {
+  connected: boolean;
+  userEmail: string;
+  folderName: string;
+  folderId: string;
+  folderUrl: string;
+  spreadsheetName: string;
+  spreadsheetId: string;
+  spreadsheetUrl: string;
+  autoSyncEnabled: boolean;
+  syncFrequency: 'REALTIME' | 'HOURLY' | 'DAILY';
+  syncTargets: string[];
+  lastSyncAt: string | null;
+  totalSyncedFiles: number;
+  syncLog: {
+    id: string;
+    timestamp: string;
+    action: string;
+    status: 'SUCCESS' | 'FAILED';
+    details: string;
+    itemCount?: number;
+  }[];
+}
+
+export interface GoogleDriveFileItem {
+  id: string;
+  name: string;
+  mimeType: string;
+  sizeBytes: number;
+  createdAt: string;
+  webViewLink: string;
+  fileType: 'JSON_SNAPSHOT' | 'SHEET_TAB' | 'CSV_EXPORT';
+  recordCount?: number;
+  checksumSha256?: string;
 }
 
 export interface DisasterRecoveryMetrics {

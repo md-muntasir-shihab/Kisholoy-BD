@@ -4,6 +4,7 @@ import {
   Check, Save, DollarSign, Package, AlertCircle 
 } from 'lucide-react';
 import { Product, Category, Supplier } from '../../types';
+import { productUpdateSchema, formatZodError } from '../../lib/validations';
 
 interface ProductEditModalProps {
   product: Product | null;
@@ -91,11 +92,14 @@ export function ProductEditModal({
   const marginValue = postTaxPrice - costPrice;
   const marginPercent = postTaxPrice > 0 ? (((postTaxPrice - costPrice) / postTaxPrice) * 100).toFixed(1) : '0.0';
 
+  const [validationError, setValidationError] = useState<string | null>(null);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setValidationError(null);
     const catObj = categories.find(c => c.name === category);
 
-    onSave({
+    const updatePayload = {
       title,
       titleBn: titleBn || title,
       sku: sku.toUpperCase().trim(),
@@ -122,8 +126,15 @@ export function ProductEditModal({
         material: material || product.attributes?.material,
         origin: origin || product.attributes?.origin
       }
-    });
+    };
 
+    const result = productUpdateSchema.safeParse(updatePayload);
+    if (!result.success) {
+      setValidationError(formatZodError(result.error));
+      return;
+    }
+
+    onSave(result.data as Partial<Product>);
     onClose();
   };
 
@@ -154,6 +165,14 @@ export function ProductEditModal({
             <X className="w-5 h-5" />
           </button>
         </div>
+
+        {validationError && (
+          <div className="mx-6 mt-4 p-3 bg-red-50 border border-red-200 rounded-xl flex items-start gap-2 text-xs text-red-800">
+            <AlertCircle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
+            <div className="flex-1 font-medium">{validationError}</div>
+            <button type="button" onClick={() => setValidationError(null)} className="text-red-500 hover:text-red-700 font-bold ml-2">×</button>
+          </div>
+        )}
 
         {/* Tab Navigation (Responsive horizontal scrolling on mobile) */}
         <div className="flex px-4 sm:px-6 border-b border-stone-200 bg-stone-50/70 overflow-x-auto scrollbar-none">

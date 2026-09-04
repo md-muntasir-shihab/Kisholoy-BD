@@ -18,7 +18,9 @@ import {
   DisasterRecoveryMetrics, 
   SystemHealthOverview, 
   RestoreDryRunResult,
-  DataImportResult
+  DataImportResult,
+  GoogleDriveConfig,
+  GoogleDriveFileItem
 } from '../types';
 import { BACKUP_HELP_DEFINITIONS, BackupFunctionHelp } from './backupHelpData';
 
@@ -26,7 +28,7 @@ export function BackupAdmin() {
   const { language, currentRole, showToast, logAudit, products, orders, customers } = useApp();
 
   // Tab State
-  const [activeTab, setActiveTab] = useState<'snapshots' | 'dr_pipeline' | 'export_import' | 'system_health'>('snapshots');
+  const [activeTab, setActiveTab] = useState<'snapshots' | 'google_drive' | 'dr_pipeline' | 'export_import' | 'system_health'>('snapshots');
 
   // Help Modal State (11-point requirement)
   const [selectedHelp, setSelectedHelp] = useState<BackupFunctionHelp | null>(null);
@@ -81,13 +83,161 @@ export function BackupAdmin() {
   const [verifyingId, setVerifyingId] = useState<string | null>(null);
   const [verifyResult, setVerifyResult] = useState<{ id: string; valid: boolean; checksum: string; details: string } | null>(null);
 
+  // Google Drive & Sheets State
+  const [driveConfig, setDriveConfig] = useState<GoogleDriveConfig | null>(null);
+  const [loadingDriveConfig, setLoadingDriveConfig] = useState(false);
+  const [driveFiles, setDriveFiles] = useState<GoogleDriveFileItem[]>([]);
+  const [loadingDriveFiles, setLoadingDriveFiles] = useState(false);
+  const [syncingDrive, setSyncingDrive] = useState(false);
+  const [connectingDrive, setConnectingDrive] = useState(false);
+  const [restoringFromDrive, setRestoringFromDrive] = useState<string | null>(null);
+  const [connectEmailInput, setConnectEmailInput] = useState('mdmuntasirshihab@gmail.com');
+  const [connectFolderInput, setConnectFolderInput] = useState('KISHOLOY-Backups');
+
   // Initial Data Fetch
   useEffect(() => {
     fetchSnapshots();
     fetchSchedule();
     fetchDrMetrics();
     fetchHealth();
+    fetchDriveConfig();
+    fetchDriveFiles();
   }, []);
+
+  const fetchDriveConfig = async () => {
+    setLoadingDriveConfig(true);
+    try {
+      const res = await fetch('/api/system/drive/config');
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && data.config) {
+          setDriveConfig(data.config);
+          if (data.config.userEmail) setConnectEmailInput(data.config.userEmail);
+          if (data.config.folderName) setConnectFolderInput(data.config.folderName);
+        }
+      }
+    } catch (e) {
+      console.error('Failed to fetch Google Drive config:', e);
+    } finally {
+      setLoadingDriveConfig(false);
+    }
+  };
+
+  const fetchDriveFiles = async () => {
+    setLoadingDriveFiles(true);
+    try {
+      const res = await fetch('/api/system/drive/files');
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && Array.isArray(data.files)) {
+          setDriveFiles(data.files);
+        }
+      }
+    } catch (e) {
+      console.error('Failed to fetch Google Drive files:', e);
+    } finally {
+      setLoadingDriveFiles(false);
+    }
+  };
+
+  const handleConnectDrive = async () => {
+    setConnectingDrive(true);
+    try {
+      const res = await fetch('/api/system/drive/connect', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userEmail: connectEmailInput,
+          folderName: connectFolderInput,
+          operator: currentRole
+        })
+      });
+      const data = await res.json();
+      if (data.success) {
+        showToast(language === 'BN' ? 'গুগল ড্রাইভ ও গুগল শিটস সফলভাবে কানেক্ট করা হয়েছে!' : 'Google Drive & Google Sheets connected successfully!');
+        fetchDriveConfig();
+        fetchDriveFiles();
+      } else {
+        showToast(`Drive connection failed: ${data.error || 'Unknown error'}`);
+      }
+    } catch (e: any) {
+      showToast(`Error connecting Drive: ${e.message}`);
+    } finally {
+      setConnectingDrive(false);
+    }
+  };
+
+  const handleDisconnectDrive = async () => {
+    try {
+      const res = await fetch('/api/system/drive/disconnect', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ operator: currentRole })
+      });
+      const data = await res.json();
+      if (data.success) {
+        showToast(language === 'BN' ? 'গুগল ড্রাইভ ডিসকানেক্ট করা হয়েছে' : 'Google Drive disconnected');
+        fetchDriveConfig();
+      }
+    } catch (e: any) {
+      showToast(`Error disconnecting Drive: ${e.message}`);
+    }
+  };
+
+  const handleSyncDriveNow = async () => {
+    setSyncingDrive(true);
+    try {
+      const res = await fetch('/api/system/drive/sync-now', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ operator: currentRole })
+      });
+      const data = await res.json();
+      if (data.success) {
+        showToast(language === 'BN' ? 'গুগল ড্রাইভ ও গুগল শিটসে ডাটাবেস স্ন্যাপশট ও ব্যাকআপ সম্পন্ন হয়েছে!' : 'Database snapshot & Google Sheets synced to Drive successfully!');
+        fetchDriveConfig();
+        fetchDriveFiles();
+        fetchSnapshots();
+        logAudit('SYNC_GOOGLE_DRIVE', 'BackupEngine', 'drive-sync', 'Manual instant backup to Google Drive & Sheets');
+      } else {
+        showToast(`Sync failed: ${data.error || data.message || 'Unknown error'}`);
+      }
+    } catch (e: any) {
+      showToast(`Error syncing to Drive: ${e.message}`);
+    } finally {
+      setSyncingDrive(false);
+    }
+  };
+
+  const handleRestoreFromDriveFile = async (fileId: string, fileName: string) => {
+    if (!confirm(language === 'BN' 
+      ? `আপনি কি নিশ্চিত যে গুগল ড্রাইভের ব্যাকআপ ফাইল '${fileName}' থেকে ডাটাবেস রিকভার করতে চান?`
+      : `Are you sure you want to restore database from Google Drive file '${fileName}'?`
+    )) {
+      return;
+    }
+
+    setRestoringFromDrive(fileId);
+    try {
+      const res = await fetch('/api/system/drive/restore', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fileId, operator: currentRole })
+      });
+      const data = await res.json();
+      if (data.success) {
+        showToast(language === 'BN' ? 'গুগল ড্রাইভ থেকে সফলভাবে রিকভারি সম্পন্ন হয়েছে!' : 'Successfully restored database from Google Drive backup!');
+        fetchSnapshots();
+        fetchHealth();
+      } else {
+        showToast(`Drive restore failed: ${data.error || data.message || 'Unknown error'}`);
+      }
+    } catch (e: any) {
+      showToast(`Error restoring from Drive: ${e.message}`);
+    } finally {
+      setRestoringFromDrive(null);
+    }
+  };
 
   const fetchSnapshots = async () => {
     setLoadingSnapshots(true);
@@ -473,6 +623,23 @@ export function BackupAdmin() {
         </button>
 
         <button
+          onClick={() => setActiveTab('google_drive')}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-t-lg text-xs font-bold transition-colors whitespace-nowrap border-b-2 ${
+            activeTab === 'google_drive'
+              ? 'border-teal-900 text-teal-900 bg-white'
+              : 'border-transparent text-stone-500 hover:text-stone-800 hover:bg-stone-50'
+          }`}
+        >
+          <HardDrive className="w-4 h-4 text-emerald-700" />
+          <span>{language === 'BN' ? 'গুগল ড্রাইভ ও শিটস ব্যাকআপ' : 'Google Drive & Sheets Sync'}</span>
+          <span className={`ml-1 px-1.5 py-0.5 rounded-full text-[10px] font-mono font-bold ${
+            driveConfig?.connected ? 'bg-emerald-100 text-emerald-800' : 'bg-stone-200 text-stone-600'
+          }`}>
+            {driveConfig?.connected ? 'CONNECTED' : 'OFFLINE'}
+          </span>
+        </button>
+
+        <button
           onClick={() => setActiveTab('dr_pipeline')}
           className={`flex items-center gap-2 px-4 py-2.5 rounded-t-lg text-xs font-bold transition-colors whitespace-nowrap border-b-2 ${
             activeTab === 'dr_pipeline'
@@ -851,6 +1018,299 @@ export function BackupAdmin() {
                       </td>
                     </tr>
                   ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* TAB 2: GOOGLE DRIVE & GOOGLE SHEETS INTEGRATION */}
+      {/* ========================================================================= */}
+      {activeTab === 'google_drive' && (
+        <div className="space-y-6">
+          {/* Top Banner & Status Card */}
+          <div className="p-6 rounded-2xl bg-gradient-to-r from-emerald-900 to-teal-900 text-white shadow-xs">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="px-2.5 py-0.5 rounded-full bg-emerald-400/20 text-emerald-300 border border-emerald-400/30 text-[10px] font-bold uppercase tracking-wider">
+                    Google Workspace Live Cloud Sync
+                  </span>
+                  <button
+                    onClick={() => setSelectedHelp(BACKUP_HELP_DEFINITIONS.backup_snapshot)}
+                    className="text-stone-300 hover:text-white"
+                  >
+                    <HelpCircle className="w-4 h-4" />
+                  </button>
+                </div>
+                <h2 className="text-xl font-serif font-bold mt-2">
+                  {language === 'BN' ? 'গুগল ড্রাইভ ও গুগল শিটস ব্যাকআপ সেন্টার' : 'Google Drive & Sheets Automated Backup Center'}
+                </h2>
+                <p className="text-xs text-emerald-100/80 max-w-2xl mt-1">
+                  {language === 'BN' 
+                    ? 'আপনার সমস্ত ওয়েবসাইটের তথ্য (পণ্য, অর্ডার, কাস্টমার, ফিন্যান্স, ও ডাটাবেস স্ন্যাপশট) সরাসরি আপনার গুগল ড্রাইভে এবং গুগল শিটসে অটোমেটিক ব্যাকআপ হিসেবে সংরক্ষিত থাকে।'
+                    : 'Automatically backs up all website database snapshots, CSV exports, and live Google Sheets to your personal Google Drive for instant offsite redundancy and manual recovery.'}
+                </p>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={handleSyncDriveNow}
+                  disabled={syncingDrive || !driveConfig?.connected}
+                  className="px-5 py-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-stone-950 font-bold text-xs flex items-center gap-2 shadow-md transition-all disabled:opacity-50"
+                >
+                  <RefreshCw className={`w-4 h-4 ${syncingDrive ? 'animate-spin' : ''}`} />
+                  <span>
+                    {syncingDrive 
+                      ? (language === 'BN' ? 'ড্রাইভ ও শিটসে ব্যাকআপ হচ্ছে...' : 'Syncing to Drive & Sheets...') 
+                      : (language === 'BN' ? 'এখনই ড্রাইভে সিঙ্ক করুন' : 'Sync to Drive & Sheets Now')}
+                  </span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Connection Settings & Live Spreadsheets Link */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Drive Connection Status & Account Info */}
+            <div className="lg:col-span-2 bg-white p-6 rounded-xl border border-stone-200 shadow-xs space-y-4">
+              <div className="flex items-center justify-between border-b border-stone-100 pb-3">
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 bg-emerald-50 text-emerald-800 rounded-xl">
+                    <HardDrive className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-stone-900">
+                      {language === 'BN' ? 'গুগল অ্যাকাউন্ট ও ড্রাইভ ফোল্ডার' : 'Google Drive Connection & Folder'}
+                    </h3>
+                    <p className="text-xs text-stone-500">
+                      {driveConfig?.connected 
+                        ? (language === 'BN' ? 'গুগল ড্রাইভ কানেক্টেড রয়েছে।' : 'Google Drive account is active and connected.')
+                        : (language === 'BN' ? 'গুগল ড্রাইভ ম্যানুয়ালি কানেক্ট করুন।' : 'Connect your Google Drive account manually.')}
+                    </p>
+                  </div>
+                </div>
+
+                <span className={`px-3 py-1 rounded-full text-xs font-bold font-mono ${
+                  driveConfig?.connected 
+                    ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' 
+                    : 'bg-amber-100 text-amber-800 border border-amber-300'
+                }`}>
+                  {driveConfig?.connected ? '● CONNECTED' : '○ DISCONNECTED'}
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-stone-700 mb-1">
+                    {language === 'BN' ? 'গুগল অ্যাকাউন্ট ইমেইল' : 'Google Account Email'}
+                  </label>
+                  <input
+                    type="email"
+                    value={connectEmailInput}
+                    onChange={(e) => setConnectEmailInput(e.target.value)}
+                    disabled={driveConfig?.connected}
+                    placeholder="e.g. mdmuntasirshihab@gmail.com"
+                    className="w-full px-3 py-2 rounded-lg border border-stone-300 text-xs focus:ring-1 focus:ring-teal-900 bg-stone-50/50 disabled:bg-stone-100 disabled:text-stone-600"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-stone-700 mb-1">
+                    {language === 'BN' ? 'ড্রাইভ ব্যাকআপ ফোল্ডারের নাম' : 'Google Drive Backup Folder'}
+                  </label>
+                  <input
+                    type="text"
+                    value={connectFolderInput}
+                    onChange={(e) => setConnectFolderInput(e.target.value)}
+                    disabled={driveConfig?.connected}
+                    placeholder="e.g. KISHOLOY-Backups"
+                    className="w-full px-3 py-2 rounded-lg border border-stone-300 text-xs focus:ring-1 focus:ring-teal-900 bg-stone-50/50 disabled:bg-stone-100 disabled:text-stone-600"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between pt-2">
+                {driveConfig?.connected ? (
+                  <div className="flex items-center gap-3 w-full justify-between">
+                    <div className="text-xs text-stone-600">
+                      <span className="font-semibold text-stone-800">{language === 'BN' ? 'সর্বশেষ সিঙ্ক:' : 'Last Synced:'}</span>{' '}
+                      {driveConfig.lastSyncedAt ? new Date(driveConfig.lastSyncedAt).toLocaleString() : 'Never'}
+                    </div>
+
+                    <button
+                      onClick={handleDisconnectDrive}
+                      className="px-4 py-2 rounded-lg bg-stone-100 hover:bg-rose-50 text-stone-700 hover:text-rose-800 text-xs font-bold transition-colors border border-stone-200 hover:border-rose-200"
+                    >
+                      {language === 'BN' ? 'ডিসকানেক্ট করুন' : 'Disconnect Drive'}
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={handleConnectDrive}
+                    disabled={connectingDrive}
+                    className="w-full py-2.5 bg-emerald-800 hover:bg-emerald-900 text-white rounded-lg text-xs font-bold flex items-center justify-center gap-2 shadow-xs transition-colors"
+                  >
+                    {connectingDrive ? (
+                      <>
+                        <RefreshCw className="w-4 h-4 animate-spin" />
+                        <span>{language === 'BN' ? 'কানেক্ট করা হচ্ছে...' : 'Connecting to Google Drive...'}</span>
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle2 className="w-4 h-4" />
+                        <span>{language === 'BN' ? 'গুগল ড্রাইভ ম্যানুয়ালি কানেক্ট করুন' : 'Connect Google Drive Account'}</span>
+                      </>
+                    )}
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Quick Access to Google Sheets Worksheets */}
+            <div className="bg-white p-6 rounded-xl border border-stone-200 shadow-xs space-y-3 flex flex-col justify-between">
+              <div>
+                <div className="flex items-center gap-2 mb-2">
+                  <FileSpreadsheet className="w-5 h-5 text-emerald-700" />
+                  <h3 className="text-sm font-bold text-stone-900">
+                    {language === 'BN' ? 'গুগল শিটস লাইভ ওয়ার্কবুক' : 'Google Sheets Master Book'}
+                  </h3>
+                </div>
+                <p className="text-xs text-stone-500 mb-3">
+                  {language === 'BN' 
+                    ? 'আপনার সমস্ত পণ্য, অর্ডার, কাস্টমার এবং আর্থিক তথ্য সুন্দরভাবে আলাদা ওয়ার্কশিটে রিয়েল-টাইমে সেভ থাকে।'
+                    : 'Auto-updated Google Sheets spreadsheet with dedicated tabs for Products, Orders, Customers, Finance, and Audit logs.'}
+                </p>
+
+                <div className="space-y-1.5 text-xs">
+                  <div className="p-2 rounded-lg bg-emerald-50/50 border border-emerald-200/60 flex items-center justify-between">
+                    <span className="font-medium text-emerald-950 flex items-center gap-1.5">
+                      <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-700" />
+                      Products Sheet
+                    </span>
+                    <span className="text-[11px] font-bold text-emerald-800">{products.length} items</span>
+                  </div>
+
+                  <div className="p-2 rounded-lg bg-emerald-50/50 border border-emerald-200/60 flex items-center justify-between">
+                    <span className="font-medium text-emerald-950 flex items-center gap-1.5">
+                      <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-700" />
+                      Orders Sheet
+                    </span>
+                    <span className="text-[11px] font-bold text-emerald-800">{orders.length} records</span>
+                  </div>
+
+                  <div className="p-2 rounded-lg bg-emerald-50/50 border border-emerald-200/60 flex items-center justify-between">
+                    <span className="font-medium text-emerald-950 flex items-center gap-1.5">
+                      <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-700" />
+                      Customers Sheet
+                    </span>
+                    <span className="text-[11px] font-bold text-emerald-800">{customers.length} users</span>
+                  </div>
+                </div>
+              </div>
+
+              {driveConfig?.spreadsheetUrl && (
+                <a
+                  href={driveConfig.spreadsheetUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="w-full py-2 bg-stone-900 hover:bg-stone-800 text-white rounded-lg text-xs font-bold text-center block transition-colors"
+                >
+                  {language === 'BN' ? 'গুগল শিটসে ওপেন করুন ↗' : 'Open Google Sheet ↗'}
+                </a>
+              )}
+            </div>
+          </div>
+
+          {/* Table of Synced Files in Google Drive with One-Click Recovery */}
+          <div className="bg-white rounded-xl border border-stone-200 shadow-xs overflow-hidden">
+            <div className="p-4 border-b border-stone-200 bg-stone-50/80 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <HardDrive className="w-4 h-4 text-emerald-800" />
+                <h3 className="text-xs font-bold uppercase tracking-wider text-stone-700">
+                  {language === 'BN' ? 'গুগল ড্রাইভে সংরক্ষিত ব্যাকআপ ফাইল ও রিকভারি অপশন' : 'Google Drive Backup Files & One-Click Recovery'}
+                </h3>
+                <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold font-mono">
+                  {driveFiles.length}
+                </span>
+              </div>
+
+              <button
+                onClick={fetchDriveFiles}
+                disabled={loadingDriveFiles}
+                className="p-1.5 rounded-lg border border-stone-200 hover:bg-stone-100 text-stone-600 text-xs flex items-center gap-1"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${loadingDriveFiles ? 'animate-spin' : ''}`} />
+                <span>{language === 'BN' ? 'রিফ্রেশ' : 'Refresh List'}</span>
+              </button>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse text-xs">
+                <thead>
+                  <tr className="border-b border-stone-200 bg-stone-100/70 text-stone-600 font-bold uppercase tracking-wider text-[10px]">
+                    <th className="py-3 px-4">File Name & Type</th>
+                    <th className="py-3 px-4">Size</th>
+                    <th className="py-3 px-4">Record Count</th>
+                    <th className="py-3 px-4">Created At</th>
+                    <th className="py-3 px-4 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-stone-200">
+                  {driveFiles.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="py-8 text-center text-stone-500">
+                        {language === 'BN' 
+                          ? 'গুগল ড্রাইভে এখনও কোন ব্যাকআপ ফাইল পাওয়া যায়নি। "এখনই ড্রাইভে সিঙ্ক করুন" এ ক্লিক করুন।'
+                          : 'No backup files stored in Drive yet. Click "Sync to Drive & Sheets Now" to create your first cloud snapshot.'}
+                      </td>
+                    </tr>
+                  ) : (
+                    driveFiles.map((file) => (
+                      <tr key={file.id} className="hover:bg-stone-50 transition-colors">
+                        <td className="py-3 px-4 font-mono font-medium text-stone-900">
+                          <div className="flex items-center gap-2">
+                            {file.fileType === 'JSON_SNAPSHOT' ? (
+                              <FileJson className="w-4 h-4 text-teal-800" />
+                            ) : file.fileType === 'SPREADSHEET' ? (
+                              <FileSpreadsheet className="w-4 h-4 text-emerald-800" />
+                            ) : (
+                              <FileText className="w-4 h-4 text-blue-800" />
+                            )}
+                            <div>
+                              <div className="font-bold text-stone-900">{file.name}</div>
+                              <div className="text-[10px] text-stone-500 font-sans">{file.mimeType}</div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="py-3 px-4 font-mono text-stone-700">
+                          {(file.sizeBytes / 1024).toFixed(1)} KB
+                        </td>
+                        <td className="py-3 px-4 font-mono font-bold text-stone-800">
+                          {file.recordsCount} items
+                        </td>
+                        <td className="py-3 px-4 text-stone-600">
+                          {new Date(file.createdAt).toLocaleString()}
+                        </td>
+                        <td className="py-3 px-4 text-right">
+                          <button
+                            onClick={() => handleRestoreFromDriveFile(file.id, file.name)}
+                            disabled={restoringFromDrive === file.id}
+                            className="px-3 py-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-900 border border-emerald-300 text-xs font-bold inline-flex items-center gap-1.5 transition-colors disabled:opacity-50"
+                          >
+                            <RefreshCw className={`w-3.5 h-3.5 ${restoringFromDrive === file.id ? 'animate-spin' : ''}`} />
+                            <span>
+                              {restoringFromDrive === file.id 
+                                ? (language === 'BN' ? 'রিকভার হচ্ছে...' : 'Restoring...') 
+                                : (language === 'BN' ? 'ড্রাইভ থেকে রিকভার করুন' : 'Restore Data')}
+                            </span>
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>
