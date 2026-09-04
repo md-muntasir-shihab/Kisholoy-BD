@@ -7,6 +7,7 @@ import { useApp } from '../../context/AppContext';
 import { logAuthEvent } from '../../utils/telemetryLogger';
 import { signInWithGoogle } from '../../lib/firebase';
 import { BrandLogo } from '../brand/BrandLogo';
+import { setCustomerToken } from '../../lib/apiClient';
 
 interface CustomerAuthModalProps {
   isOpen: boolean;
@@ -62,6 +63,7 @@ export const CustomerAuthModal: React.FC<CustomerAuthModalProps> = ({
       });
       const data = await res.json();
       if (data.success && data.customer) {
+        setCustomerToken(data.token || null);
         setCurrentCustomerId(data.customer.id);
         logAuthEvent({
           userId: data.customer.id,
@@ -138,6 +140,7 @@ export const CustomerAuthModal: React.FC<CustomerAuthModalProps> = ({
       const data = await res.json();
       if (data.success && data.customer) {
         setCustomers([...customers, data.customer]);
+        setCustomerToken(data.token || null);
         setCurrentCustomerId(data.customer.id);
         showToast(`Account created! Welcome, ${data.customer.name}.`);
         onClose();

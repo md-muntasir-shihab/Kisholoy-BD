@@ -162,7 +162,7 @@ export function AccountPage() {
       });
       const data = await res.json();
       if (data.success && data.customer) {
-        loginCustomer(data.customer.id, data.customer);
+        loginCustomer(data.customer.id, data.customer, data.token || null);
         showToast(`Welcome back, ${data.customer.name}!`);
       } else {
         showToast(data.error || 'Invalid credentials.');
@@ -197,7 +197,7 @@ export function AccountPage() {
       });
       const data = await res.json();
       if (data.success && data.customer) {
-        loginCustomer(data.customer.id, data.customer);
+        loginCustomer(data.customer.id, data.customer, data.token || null);
         showToast(`Account created! Welcome, ${data.customer.name}.`);
       } else {
         showToast(data.error || 'Registration failed.');

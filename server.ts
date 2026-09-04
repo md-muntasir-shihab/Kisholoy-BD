@@ -31,6 +31,7 @@ import {
   marketingAttributionEntrySchema,
 } from './src/lib/validations';
 import { securityEngine } from './server/securityEngine';
+import { normalizeBdMobilePhone, phoneDigits } from './src/lib/phone';
 import { backupEngine } from './server/backupEngine';
 import { supplierEngine } from './server/supplierEngine';
 import {
@@ -478,6 +479,14 @@ async function startServer() {
   // -------------------------------------------------------------
   app.get('/api/orders', (req, res) => {
     try {
+      // Identify the caller. A customer session bearer (`ksh-cust-sess-<id>-<ts>`)
+      // scopes the response down to that customer's own orders; staff/system
+      // callers keep the full list.
+      const authHeader = req.headers.authorization;
+      const bearer = authHeader?.startsWith('Bearer ') ? authHeader.slice(7).trim() : '';
+      const custMatch = /^ksh-cust-sess-(.+)-\d+$/.exec(bearer);
+      const scopedCustomerId = custMatch ? custMatch[1] : null;
+
       // Ensure all orders have an authoritative fraud risk assessment
       const orders = serverDb.orders.map(o => {
         if (!o.fraudRisk) {
@@ -495,6 +504,19 @@ async function startServer() {
         }
         return o;
       });
+
+      if (scopedCustomerId) {
+        const customer = serverDb.customers.find(c => c.id === scopedCustomerId);
+        const customerPhone = normalizeBdMobilePhone(customer?.phone);
+        const scoped = orders.filter(o => {
+          if (o.customer?.id && o.customer.id === scopedCustomerId) return true;
+          if ((o as any).customerId && (o as any).customerId === scopedCustomerId) return true;
+          const orderPhone = normalizeBdMobilePhone(o.customer?.phone);
+          return !!customerPhone && !!orderPhone && customerPhone === orderPhone;
+        });
+        return res.json({ success: true, orders: scoped, scopedTo: scopedCustomerId });
+      }
+
       res.json({ success: true, orders });
     } catch (e: any) {
       res.status(500).json({ success: false, error: e.message });
@@ -510,10 +532,33 @@ async function startServer() {
       return res.status(400).json({ error: 'Provide orderNumber or phone to track order.' });
     }
 
+    const rawPhone = phone ? String(phone).trim() : '';
+    // Canonical BD mobile form of the query (null when the input is not a
+    // plausible BD mobile — e.g. the user typed an order number here).
+    const queryPhone = rawPhone ? normalizeBdMobilePhone(rawPhone) : null;
+    // Legacy fallback only makes sense for a long-enough digit run; short or
+    // garbage input must never substring-match an unrelated order.
+    const queryDigits = phoneDigits(rawPhone);
+    const allowLegacyDigitFallback = queryDigits.length >= 10;
+
+    const matchPhoneFor = (stored?: string | null) => {
+      if (!rawPhone) return false;
+      // 1. Canonical match — works for +8801…, 8801…, 01…, 008801…, spaced/dashed.
+      if (queryPhone) {
+        const storedCanonical = normalizeBdMobilePhone(stored);
+        if (storedCanonical && storedCanonical === queryPhone) return true;
+      }
+      // 2. Legacy substring fallback for historical/non-canonical stored values.
+      if (!allowLegacyDigitFallback) return false;
+      const storedDigits = phoneDigits(stored);
+      if (!storedDigits) return false;
+      return storedDigits.includes(queryDigits) || queryDigits.includes(storedDigits);
+    };
+
     const order = serverDb.orders.find(o => {
       const matchNum = orderNumber ? o.orderNumber.toLowerCase() === String(orderNumber).trim().toLowerCase() : false;
-      const matchPhone = phone ? o.customer.phone.includes(String(phone).trim()) : false;
-      return matchNum || matchPhone;
+      if (matchNum) return true;
+      return matchPhoneFor(o.customer?.phone) || matchPhoneFor(o.shippingAddress?.phone);
     });
 
     if (!order) {

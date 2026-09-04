@@ -11,6 +11,7 @@ import {
   CustomerNotification, CustomCourierConfig
 } from '../types';
 import { logAuthEvent } from '../utils/telemetryLogger';
+import { apiFetch, apiFetchJson, setCustomerToken } from '../lib/apiClient';
 import { 
   INITIAL_PRODUCTS, INITIAL_CATEGORIES, INITIAL_ORDERS, 
   INITIAL_CUSTOMERS, INITIAL_CONTENT, INITIAL_AUDIT_LOGS, 
@@ -142,7 +143,7 @@ interface AppContextType {
   // Customer Account Portal & Wishlists (Phase 15)
   currentCustomerId: string;
   setCurrentCustomerId: (id: string) => void;
-  loginCustomer: (customerId: string, profile?: CustomerProfile) => void;
+  loginCustomer: (customerId: string, profile?: CustomerProfile, sessionToken?: string | null) => void;
   logoutCustomer: () => void;
   customerProfile: CustomerProfile | null;
   savedAddresses: CustomerAddress[];
@@ -178,17 +179,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [theme, setThemeState] = useState<ThemePreference>(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('kisholoy-theme');
-arena/01a06c02-kisholoy-bd
       const valid: ThemePreference[] = ['light', 'dark', 'system'];
       if (saved && valid.includes(saved as ThemePreference)) return saved as ThemePreference;
       const legacy = localStorage.getItem('theme');
       if (legacy) return legacy === 'dark' ? 'dark' : 'light';
       return 'system';
-
-      if (saved === 'dark') return 'dark';
-      // Default is always Day (Light) theme for both Storefront and Admin
-      return 'light';
- main
     }
     return 'light';
   });
@@ -270,12 +265,6 @@ arena/01a06c02-kisholoy-bd
       }
     });
 
-    // Sync initial orders from server API
-    safeFetchJson('/api/orders').then(data => {
-      if (data?.success && Array.isArray(data.orders) && data.orders.length > 0) {
-        setOrders(data.orders);
-      }
-    });
 
     // Sync authoritative products catalog from server API
     safeFetchJson('/api/products').then(data => {
@@ -937,7 +926,7 @@ arena/01a06c02-kisholoy-bd
 
   const refreshOrders = async () => {
     try {
-      const res = await fetch('/api/orders');
+      const res = await apiFetch('/api/orders');
       const data = await res.json();
       if (data?.success && Array.isArray(data.orders)) {
         setOrders(data.orders);
@@ -1524,7 +1513,7 @@ arena/01a06c02-kisholoy-bd
         if (data.manifest) {
           setDispatchManifests(prev => [data.manifest, ...prev]);
           // Refresh orders since their courier status was updated to SHIPPED
-          const oRes = await fetch('/api/orders');
+          const oRes = await apiFetch('/api/orders');
           if (oRes.ok) {
             const oData = await oRes.json();
             if (oData.orders) setOrders(oData.orders);
@@ -1634,8 +1623,26 @@ arena/01a06c02-kisholoy-bd
     }
   };
 
-  const loginCustomer = (customerId: string, profile?: CustomerProfile) => {
+  // Orders hydration. Runs on mount and whenever the customer session changes,
+  // always through apiFetch so the staff token (admin tabs) or the customer
+  // session token (storefront tabs) is attached — without a bearer the server
+  // can never return the scoped list.
+  useEffect(() => {
+    let cancelled = false;
+    apiFetchJson('/api/orders').then(data => {
+      if (cancelled) return;
+      if (data?.success && Array.isArray(data.orders) && data.orders.length > 0) {
+        setOrders(data.orders);
+      }
+    });
+    return () => { cancelled = true; };
+  }, [currentCustomerId]);
+
+  const loginCustomer = (customerId: string, profile?: CustomerProfile, sessionToken?: string | null) => {
     setCurrentCustomerId(customerId);
+    // Persist the customer session bearer so scoped endpoints (e.g. GET /api/orders)
+    // receive an identity even when no staff token exists in this tab.
+    if (sessionToken !== undefined) setCustomerToken(sessionToken || null);
     try {
       localStorage.setItem('kisholoy_customer_id', customerId);
     } catch {}
@@ -1682,6 +1689,7 @@ arena/01a06c02-kisholoy-bd
     setReturnRequests([]);
     setCustomerNotifications([]);
     setCustomerLoyalty(null);
+    setCustomerToken(null);
     try {
       localStorage.removeItem('kisholoy_customer_id');
     } catch {}

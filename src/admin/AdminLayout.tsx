@@ -18,6 +18,7 @@ import { AdminUrgentAlertBanner } from '../components/admin/AdminUrgentAlertBann
 import { ScannerModal } from '../components/scan/ScannerModal';
 import { LanguageButton } from '../components/layout/LanguageButton';
 import { ThemeButton } from '../components/layout/ThemeButton';
+import { AUTH_EXPIRED_EVENT, setStaffToken } from '../lib/apiClient';
 
 // Route Access Control Matrix
 const ROUTE_PERMISSIONS: Record<string, { requiredPermission: string; allowedRoles: Role[] }> = {
@@ -68,6 +69,24 @@ export function AdminLayout() {
       return next;
     });
   }, [location.pathname]);
+  // Staff session expiry gate.
+  // `kisholoy-auth-expired` is dispatched by apiClient ONLY for 401s coming
+  // back from staff-guarded API paths while a staff token was actually sent.
+  // A stale customer/portal token 401 in this tab can no longer log the whole
+  // admin panel out. We double-check the scope here as a defensive guard.
+  useEffect(() => {
+    const onAuthExpired = (e: Event) => {
+      const detail = (e as CustomEvent)?.detail || {};
+      if (detail.scope && detail.scope !== 'STAFF') return;
+      setStaffToken(null);
+      showToast('Staff session expired. Please sign in again.');
+      setCurrentRole('CUSTOMER');
+      navigate('/');
+    };
+    window.addEventListener(AUTH_EXPIRED_EVENT, onAuthExpired as EventListener);
+    return () => window.removeEventListener(AUTH_EXPIRED_EVENT, onAuthExpired as EventListener);
+  }, [navigate, setCurrentRole, showToast]);
+
   const toggleSection = (id: string) => {
     setExpandedSections((prev) => {
       const next = new Set(prev);
@@ -266,11 +285,7 @@ export function AdminLayout() {
                   {currentRole.replace('_', ' ')}
                 </span>
                 <span className="text-[10px] text-teal-700 dark:text-teal-400 font-mono block truncate">
-arena/01a06c02-kisholoy-bd
-                  {isBn ? 'আরবিএসি সক্রিয়' : 'RBAC Active'} • {isBn ? 'রুলস দেখুন' : 'Click to view rules'}
-
                   {isBn ? 'আরবিএসি সক্রিয়' : 'RBAC Active'} • {isBn ? 'রুলস দেখুন' : 'View rules'}
- main
                 </span>
               </div>
               <KeyRound className="w-3.5 h-3.5 text-stone-400 dark:text-stone-500 group-hover:text-teal-600 dark:group-hover:text-teal-400 transition-colors" />
