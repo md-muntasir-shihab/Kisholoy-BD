@@ -176,15 +176,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // ---------------- Theme (Light / Dark / System) ----------------
   const [theme, setThemeState] = useState<ThemePreference>(() => {
     if (typeof window !== 'undefined') {
- arena/01a06a72-kisholoy-bd
       const saved = localStorage.getItem('kisholoy-theme');
       const valid: ThemePreference[] = ['light', 'dark', 'system'];
       if (saved && valid.includes(saved as ThemePreference)) return saved as ThemePreference;
+      const legacy = localStorage.getItem('theme');
+      if (legacy) return legacy === 'dark' ? 'dark' : 'light';
       return 'system';
-
-      const saved = localStorage.getItem('theme');
-      if (saved) return saved === 'dark';
-main
     }
     return 'system';
   });

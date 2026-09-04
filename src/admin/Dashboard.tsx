@@ -4,9 +4,10 @@ import {
   TrendingUp, ShoppingCart, Receipt, Wallet, Package, DollarSign, Users,
   Repeat, Award, AlertTriangle, Banknote, RotateCcw, Ticket, Truck,
   BarChart3, MapPin, PieChart, Filter, Calendar, ArrowRight, Sparkles,
-  Layers, Landmark, Tag, PackagePlus, ChevronRight,
+  Layers, Landmark, Tag, PackagePlus, ChevronRight, ArrowUpRight,
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
+import { ADMIN_SECTIONS_DATA } from './adminModulesData';
 import {
   Order, CategoryMetric, DistrictMetric, CustomerCohortMetric,
   CourierPerformanceMetric, SalesTrendPoint, FinancialPnLReport, InventoryVelocityMetric,
@@ -222,6 +223,7 @@ export function Dashboard() {
   const [report, setReport] = useState<DashboardReport | null>(null);
   const [loading, setLoading] = useState(false);
   const [suppliers, setSuppliers] = useState<{ id: string; companyName: string; totalDue: number }[]>([]);
+  const [activeSectionFilter, setActiveSectionFilter] = useState<string>('all');
 
   // Fetch server analytics report (range-aware)
   useEffect(() => {
@@ -580,7 +582,6 @@ export function Dashboard() {
           </div>
         </section>
 
- arena/01a06a72-kisholoy-bd
         {/* Payment mix */}
         <section className="bg-white dark:bg-slate-800 rounded-3xl border border-stone-200/90 dark:border-slate-700 shadow-xs p-6">
           <SectionHeader title="Cash vs Digital" titleBn="ক্যাশ বনাম ডিজিটাল" icon={<PieChart className="w-4 h-4" />} link="/admin/payments" linkText={isBn ? 'পেমেন্ট' : 'Payments'} isBn={isBn} />
@@ -608,6 +609,9 @@ export function Dashboard() {
           <div className="grid grid-cols-2 gap-3 text-xs mt-2">
             <Metric label={isBn ? 'নিজস্ব বিক্রয়' : 'In-house'} value={fmtMoney(inHouseVsPartner.inHouse)} />
             <Metric label={isBn ? 'পার্টনার বিক্রয়' : 'Partner'} value={fmtMoney(inHouseVsPartner.partner)} />
+          </div>
+        </section>
+      </div>
 
       {/* SECTION DIRECTORY & WORK BREAKDOWN */}
       <section id="work-directory-section" className="space-y-6">
@@ -658,10 +662,46 @@ export function Dashboard() {
                 {isBn ? sec.titleBn : sec.title} ({sec.items.length})
               </button>
             ))}
- main
           </div>
-        </section>
+        </div>
 
+        {/* Directory cards: operational desks, filtered by the section pills */}
+        <div className="space-y-4">
+          {ADMIN_SECTIONS_DATA.filter((sec) => activeSectionFilter === 'all' || sec.id === activeSectionFilter).map((sec) => (
+            <div key={`dash-sec-${sec.id}`} className="bg-white dark:bg-slate-800 rounded-3xl border border-stone-200/90 dark:border-slate-700 shadow-xs p-5 sm:p-6">
+              <div className="flex items-center justify-between gap-3 flex-wrap">
+                <h3 className="text-sm font-black text-stone-900 dark:text-slate-100">{isBn ? sec.titleBn : sec.title}</h3>
+                <span className="text-[10px] font-mono font-bold text-stone-400 dark:text-slate-500">{sec.items.length} {isBn ? 'ডেস্ক' : 'desks'}</span>
+              </div>
+              <p className="text-[11px] text-stone-500 dark:text-slate-400 mt-1 mb-3 max-w-3xl leading-relaxed">{isBn ? sec.summaryBn : sec.summary}</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
+                {sec.items.map((item) => {
+                  const ItemIcon = item.icon;
+                  return (
+                    <Link
+                      key={item.id}
+                      id={`dash-desk-${item.id}`}
+                      to={item.path}
+                      className="group border border-stone-200 dark:border-slate-700 rounded-2xl p-3.5 hover:border-teal-400 dark:hover:border-teal-600 hover:shadow-sm transition-all bg-stone-50/60 dark:bg-slate-900/40"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="p-1.5 rounded-lg bg-teal-900/5 text-teal-800 dark:bg-teal-400/10 dark:text-teal-300 border border-teal-200/60 dark:border-teal-700/40">
+                          <ItemIcon className="w-4 h-4" />
+                        </div>
+                        <ArrowUpRight className="w-3.5 h-3.5 text-stone-300 dark:text-slate-600 group-hover:text-teal-700 dark:group-hover:text-teal-300 transition-colors" />
+                      </div>
+                      <p className="text-xs font-black text-stone-900 dark:text-slate-100 mt-2">{isBn ? item.labelBn : item.label}</p>
+                      <p className="text-[10px] text-stone-500 dark:text-slate-400 mt-0.5 line-clamp-2">{isBn ? item.taglineBn : item.tagline}</p>
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Profit by product */}
         <section className="bg-white dark:bg-slate-800 rounded-3xl border border-stone-200/90 dark:border-slate-700 shadow-xs p-6">
           <SectionHeader title="Profit by Product" titleBn="পণ্য অনুযায়ী মুনাফা" icon={<Package className="w-4 h-4" />} link="/admin/products" linkText={isBn ? 'পণ্য' : 'Products'} isBn={isBn} />

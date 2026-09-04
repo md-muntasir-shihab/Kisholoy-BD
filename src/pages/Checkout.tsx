@@ -4,6 +4,7 @@ import { ShieldCheck, Truck, CreditCard, Banknote, ArrowLeft, CheckCircle, Smart
 import { useApp } from '../context/AppContext';
 import { SslcommerzModal } from '../components/payment/SslcommerzModal';
 import { BkashModal } from '../components/payment/BkashModal';
+import { getStoredUtmPayload } from '../utils/utmCapture';
 
 export function Checkout() {
   const { cart, cartSubtotal, siteContent, createOrder, clearCart, syncServerOrder, language, showToast, savedAddresses, customerProfile } = useApp();
@@ -155,7 +156,9 @@ export function Checkout() {
           })),
           paymentMethod,
           couponCode: appliedCoupon?.code,
-          notes: notes.trim() || undefined
+          notes: notes.trim() || undefined,
+          // Marketing Command Center: first-touch UTM auto-tag (metadata only, re-sanitized server-side)
+          utm: getStoredUtmPayload() || undefined
         })
       });
 

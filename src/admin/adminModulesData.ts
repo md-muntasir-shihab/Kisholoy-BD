@@ -379,11 +379,11 @@ export const ADMIN_SECTIONS_DATA: AdminSectionGroup[] = [
   {
     id: 'customer-management',
     title: 'Customer Management & CRM',
-    titleBn: 'গ্রাহক ও সিআরএম ব্যবস্থাপনা',
-    summary: 'Manage customer profiles, purchase records, delivery addresses, lifetime value (LTV), phone verification, and anti-abuse security alerts.',
-    summaryBn: 'গ্রাহকদের সম্পূর্ণ প্রোফাইল, কেনাকাটার রেকর্ড, সংরক্ষিত ঠিকানা, লাইফটাইম ভ্যালু ও নিরাপত্তা ঝুঁকি পরিচালনা।',
-    badgeText: '1 CRM Directory Hub',
-    badgeTextBn: '১টি সিআরএম ডিরেক্টরি হাব',
+    titleBn: 'গ্রাহক, সিআরএম ও মার্কেটিং',
+    summary: 'Manage customer profiles, purchase records, delivery addresses, lifetime value (LTV), phone verification, anti-abuse alerts, plus the Marketing Command Center (spend ledger, attribution & ROI).',
+    summaryBn: 'গ্রাহকদের সম্পূর্ণ প্রোফাইল, কেনাকাটার রেকর্ড, সংরক্ষিত ঠিকানা, লাইফটাইম ভ্যালু, নিরাপত্তা ঝুঁকি — আর মার্কেটিং কমান্ড সেন্টার (স্পেন্ড লেজার, অ্যাট্রিবিউশন ও ROI) পরিচালনা করুন।',
+    badgeText: '2 CRM & Marketing Hubs',
+    badgeTextBn: '২টি সিআরএম ও মার্কেটিং হাব',
     accentColor: 'emerald',
     items: [
       {
@@ -412,6 +412,34 @@ export const ADMIN_SECTIONS_DATA: AdminSectionGroup[] = [
           'গ্রাহকের ফ্রড ঝুঁকি অ্যালার্ট, রিটার্ন হিস্ট্রি ও ব্ল্যাকলিস্ট স্ট্যাটাস খতিয়ে দেখা',
           'গ্রাহকের সংরক্ষিত ঠিকানা ও স্পেশাল ডেলিভারি নোট পর্যালোচনা',
           'বিশ্বস্ত কাস্টমারদের ভিআইপি মর্যাদা প্রদান বা সমস্যাযুক্ত একাউন্ট ফ্ল্যাগ করা'
+        ]
+      },
+      {
+        id: 'admin-nav-marketing',
+        sectionId: 'customer-management',
+        label: 'Marketing Command Center',
+        labelBn: 'মার্কেটিং কমান্ড সেন্টার',
+        path: '/admin/marketing',
+        icon: Megaphone,
+        role: 'Admin, Marketing Lead',
+        roleBn: 'অ্যাডমিন, মার্কেটিং প্রধান',
+        tagline: 'Channel registry, boost/ad/send spend ledger, UTM attribution and server-side ROAS & ROI engine',
+        taglineBn: 'চ্যানেল রেজিস্ট্রি, বুস্ট/অ্যাড/সেন্ড খরচের লেজার, UTM অ্যাট্রিবিউশন ও সার্ভার-সাইড ROAS-ROI ইঞ্জিন',
+        description: 'Register Facebook, Instagram, WhatsApp, Telegram and other marketing channels; log every ad, boost and broadcast send cost in BDT with impressions, clicks and sends; link spend to Campaigns module runs; record attributed revenue and orders per channel/campaign, then read the auto-computed ROI dashboard, monthly summary and CSV exports. Strictly additive — it reconciles read-only against Finance and never mutates orders.',
+        descriptionBn: 'ফেসবুক, ইনস্টাগ্রাম, হোয়াটসঅ্যাপ, টেলিগ্রামসহ মার্কেটিং চ্যানেল নিবন্ধন; প্রতিটি অ্যাড, বুস্ট ও ব্রডকাস্ট সেন্ডের খরচ (ইম্প্রেশন, ক্লিক, সেন্ডসহ) লেজারে লগ; ক্যাম্পেইন মডিউলের সাথে লিংক; চ্যানেল/ক্যাম্পেইনভিত্তিক রেভিনিউ-অর্ডার অ্যাট্রিবিউশন রেকর্ড; এরপর সার্ভারে স্বয়ংক্রিয়ভাবে হিসাব করা ROI ড্যাশবোর্ড, মাসিক সারাংশ ও CSV রিপোর্ট। ফাইন্যান্সের সাথে শুধু-পড়া মিলানো — কোনো অর্ডার বা খরচ রেকর্ড এখান থেকে বদলায় না।',
+        tasksEn: [
+          'Register page/channel handles and manage ACTIVE/PAUSED/ARCHIVED lifecycle',
+          'Log boost, ad and broadcast send spend in BDT per period with campaign links',
+          'Record attributed revenue & orders from UTM, Ads Manager, WhatsApp or Telegram',
+          'Review ROAS, ROI%, CPO, cost/click and cost/conversation per channel and campaign',
+          'Export bilingual-friendly CSV reports and reconcile against Finance (read-only)'
+        ],
+        tasksBn: [
+          'পেজ/চ্যানেল হ্যান্ডেল নিবন্ধন ও স্ট্যাটাস (সক্রিয়/বিরতি/আর্কাইভ) ব্যবস্থাপনা',
+          'ক্যাম্পেইন লিংকসহ প্রতি সময়সীমায় অ্যাড, বুস্ট ও সেন্ড খরচ (৳) লেজারে লগ',
+          'UTM, অ্যাডস ম্যানেজার, হোয়াটসঅ্যাপ বা টেলিগ্রাম থেকে আসা রেভিনিউ-অর্ডার অ্যাট্রিবিউশন রেকর্ড',
+          'প্রতি চ্যানেল/ক্যাম্পেইনের ROAS, ROI%, CPO, কস্ট-পার-ক্লিক ও কস্ট-পার-কথোপকথন পর্যালোচনা',
+          'CSV রিপোর্ট এক্সপোর্ট এবং ফাইন্যান্সের সাথে (শুধু পড়ে) খরচ মিলিয়ে দেখা'
         ]
       }
     ]

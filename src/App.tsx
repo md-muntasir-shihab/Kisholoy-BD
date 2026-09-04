@@ -41,6 +41,7 @@ import { AuditAdmin } from './admin/AuditAdmin';
 import { BackupAdmin } from './admin/BackupAdmin';
 import { FraudRiskDashboard } from './admin/FraudRiskDashboard';
 import { FulfillmentAdmin } from './admin/FulfillmentAdmin';
+import { MarketingAdmin } from './admin/MarketingAdmin';
 import { SupplierLoginPage } from './pages/supplier/SupplierLoginPage';
 import { SupplierPortalPage } from './pages/supplier/SupplierPortalPage';
 import { Navigate } from 'react-router-dom';
@@ -120,7 +121,8 @@ export default function App() {
             <Route path="settings" element={<SettingsAdmin />} />
             <Route path="users" element={<UsersAdmin />} />
             <Route path="promotions" element={<Navigate to="/admin" replace />} />
-            <Route path="marketing" element={<Navigate to="/admin" replace />} />
+            <Route path="marketing" element={<MarketingAdmin />} />
+            <Route path="marketing/command" element={<Navigate to="/admin/marketing?tab=command" replace />} />
             <Route path="fraud" element={<FraudRiskDashboard />} />
             <Route path="fulfillment" element={<FulfillmentAdmin />} />
             <Route path="audit" element={<AuditAdmin />} />
