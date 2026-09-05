@@ -5,6 +5,7 @@
  */
 
 import React, { useState, useEffect, useMemo } from 'react';
+import { OfflineDataBanner } from '../components/admin/OfflineDataBanner';
 import { 
   ShieldCheck, Search, Shield, Filter, AlertTriangle, RefreshCw, 
   HelpCircle, CheckCircle2, X, Download, Lock, Key, ShieldAlert,
@@ -41,6 +42,7 @@ export function AuditAdmin() {
   // Ledger from server API
   const [serverLedger, setServerLedger] = useState<AuditLog[]>([]);
   const [loading, setLoading] = useState(false);
+  const [usingFallback, setUsingFallback] = useState(false);
 
   // Verification state
   const [verifying, setVerifying] = useState(false);
@@ -71,13 +73,19 @@ export function AuditAdmin() {
       const data = await res.json();
       if (data.success && Array.isArray(data.ledger)) {
         setServerLedger(data.ledger);
+        setUsingFallback(false);
       } else {
         // Fallback to context logs if server returns empty
         setServerLedger(contextAuditLogs);
+        setUsingFallback(true);
       }
     } catch (err: any) {
+      // An audit ledger is a compliance artefact: silently swapping in local
+      // logs let it look complete and verified when the real chain was never
+      // loaded (F-305).
       console.error('Failed to load server audit ledger:', err);
       setServerLedger(contextAuditLogs);
+      setUsingFallback(true);
     } finally {
       setLoading(false);
     }
@@ -230,6 +238,14 @@ export function AuditAdmin() {
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
+      <OfflineDataBanner
+        visible={usingFallback}
+        resource="cryptographic audit ledger"
+        resourceBn="ক্রিপ্টোগ্রাফিক অডিট লেজার"
+        onRetry={fetchLedger}
+        retrying={loading}
+      />
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>

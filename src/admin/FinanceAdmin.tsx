@@ -101,6 +101,7 @@ export function FinanceAdmin() {
       }
     } catch (e) {
       console.error('Failed to fetch server financial summary', e);
+      showToast('Could not load the financial summary from the server — figures may be incomplete.', 'info');
     } finally {
       setLoadingSummary(false);
     }

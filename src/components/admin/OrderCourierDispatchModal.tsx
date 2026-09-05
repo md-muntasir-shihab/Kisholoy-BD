@@ -58,6 +58,7 @@ export function OrderCourierDispatchModal({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [lastBookingResponse, setLastBookingResponse] = useState<any | null>(null);
   const [copiedTracking, setCopiedTracking] = useState(false);
+  const [configLoadFailed, setConfigLoadFailed] = useState(false);
 
   // Fetch courier API status from server
   useEffect(() => {
@@ -68,7 +69,11 @@ export function OrderCourierDispatchModal({
           setCourierConfigs(data.config);
         }
       })
-      .catch(err => console.warn('Could not fetch courier configs:', err));
+      .catch(err => {
+        // Without the config the modal silently offers stale provider options.
+        console.warn('Could not fetch courier configs:', err);
+        setConfigLoadFailed(true);
+      });
   }, []);
 
   // Initialize fields when order changes
@@ -312,11 +317,15 @@ export function OrderCourierDispatchModal({
                   <div className="mt-2 pt-2 border-t border-stone-200 flex items-center justify-between text-[10px]">
                     <span className="text-stone-500">API Status:</span>
                     <span className={`font-semibold px-1.5 py-0.2 rounded ${
-                      courierConfigs?.steadfast.configured 
+                      configLoadFailed
+                        ? 'bg-stone-200 text-stone-700'
+                        : courierConfigs?.steadfast.configured 
                         ? 'bg-emerald-100 text-emerald-800' 
                         : 'bg-amber-100 text-amber-800'
                     }`}>
-                      {courierConfigs?.steadfast.configured ? 'Live API Ready' : 'Sandbox (Simulated)'}
+                      {configLoadFailed
+                        ? 'Status unknown'
+                        : courierConfigs?.steadfast.configured ? 'Live API Ready' : 'Sandbox (Simulated)'}
                     </span>
                   </div>
                 </div>
@@ -347,11 +356,15 @@ export function OrderCourierDispatchModal({
                   <div className="mt-2 pt-2 border-t border-stone-200 flex items-center justify-between text-[10px]">
                     <span className="text-stone-500">API Status:</span>
                     <span className={`font-semibold px-1.5 py-0.2 rounded ${
-                      courierConfigs?.pathao.configured 
+                      configLoadFailed
+                        ? 'bg-stone-200 text-stone-700'
+                        : courierConfigs?.pathao.configured 
                         ? 'bg-emerald-100 text-emerald-800' 
                         : 'bg-amber-100 text-amber-800'
                     }`}>
-                      {courierConfigs?.pathao.configured ? 'Live API Ready' : 'Sandbox (Simulated)'}
+                      {configLoadFailed
+                        ? 'Status unknown'
+                        : courierConfigs?.pathao.configured ? 'Live API Ready' : 'Sandbox (Simulated)'}
                     </span>
                   </div>
                 </div>

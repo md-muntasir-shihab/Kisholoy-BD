@@ -74,7 +74,12 @@ export function ProductsAdmin() {
           }
         }
       })
-      .catch(console.error);
+      .catch(err => {
+        // An empty supplier dropdown looks like "no suppliers exist" rather
+        // than "the list failed to load" (F-305).
+        console.error(err);
+        showToast('Could not load the supplier list — the supplier field may be empty.');
+      });
   }, []);
 
   // Financial KPI Metrics

@@ -59,11 +59,28 @@ function readSrc(rel) {
 /** Extract the body of a function starting at/after `line`, by brace balance. */
 function functionBody(src, startLine, name) {
   const lines = src.split('\n');
-  let idx = Math.max(0, startLine - 1);
-  // Search a small window for the declaration, in case line drifted.
+  const idx = Math.max(0, startLine - 1);
+
+  // Locate the declaration anywhere in the file and take the occurrence
+  // nearest the recorded line. A narrow +/-8 window silently read the WRONG
+  // function whenever edits shifted line numbers, which produced phantom
+  // "no catch" findings after the batch 3 edits.
   let found = -1;
-  for (let i = Math.max(0, idx - 6); i < Math.min(lines.length, idx + 8); i++) {
-    if (name && lines[i].includes(name)) { found = i; break; }
+  if (name) {
+    const decl = new RegExp(`(const|function|let)\\s+${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`);
+    let best = Infinity;
+    for (let i = 0; i < lines.length; i++) {
+      if (decl.test(lines[i])) {
+        const d = Math.abs(i - idx);
+        if (d < best) { best = d; found = i; }
+      }
+    }
+    // useEffect rows carry no unique name; fall back to the recorded line.
+    if (found === -1) {
+      for (let i = Math.max(0, idx - 8); i < Math.min(lines.length, idx + 8); i++) {
+        if (lines[i].includes(name)) { found = i; break; }
+      }
+    }
   }
   if (found === -1) found = idx;
   let depth = 0, started = false, out = [];
@@ -148,7 +165,13 @@ for (const r of rows) {
   // 9. error UX
   // `catch {` (optional binding) is valid ES2019 and common in this codebase.
   const hasCatch = /catch\s*[({]/.test(body);
-  const surfaces = /showToast|setError|toast\.|alert\(|setMessage|setFeedback/.test(body);
+  // Each screen names its user-facing feedback differently; missing one of
+  // these aliases reports a handled error as a silent catch.
+  // A handler "surfaces" an error either by toasting, or by setting a state
+  // flag that the render path turns into a visible banner/placeholder. The
+  // second form is preferable for loaders (no toast storm on mount), so it
+  // must count as handled rather than as a silent catch.
+  const surfaces = /showToast|showNotification|notify\(|setError|toast\.|alert\(|setMessage|setFeedback|setNotification|setStatusMessage|setBanner|noteLoadFailure|setLoadFailures|setUsingFallback|setConfigLoadFailed|set\w*(Failed|Failure|Unavailable|Offline)\w*\(/.test(body);
   const errorUX = !hasApi ? 'n/a' : !hasCatch ? 'NO-CATCH' : surfaces ? 'yes' : 'SILENT-CATCH';
 
   // 10. loading + disabled

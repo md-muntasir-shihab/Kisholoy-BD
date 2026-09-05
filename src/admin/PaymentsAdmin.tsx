@@ -42,6 +42,7 @@ export function PaymentsAdmin() {
       }
     } catch (e) {
       console.error(e);
+      showToast('Could not load payment transactions from the server.', 'info');
     } finally {
       setIsLoadingTx(false);
     }

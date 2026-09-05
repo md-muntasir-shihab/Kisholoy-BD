@@ -162,6 +162,7 @@ export function ShipmentsAdmin() {
     try {
       // Try API integration if built-in
       const isBuiltIn = dispatchSelectedCourier.toLowerCase().includes('steadfast') || dispatchSelectedCourier.toLowerCase().includes('pathao');
+      let bookingFailed: string | null = null;
       if (isBuiltIn) {
         try {
           const res = await fetch('/api/courier/book', {
@@ -173,16 +174,28 @@ export function ShipmentsAdmin() {
             })
           });
           const data = await res.json().catch(() => null);
-          if (data && !data.success) {
-            console.warn('API booking warning, falling back to instant provider assignment:', data.error);
+          if (!res.ok || (data && !data.success)) {
+            bookingFailed = data?.error || `Courier API returned ${res.status}.`;
           }
-        } catch (err) {
-          console.warn('Live API offline, recording dispatch locally:', err);
+        } catch (err: any) {
+          bookingFailed = err?.message || 'Courier API unreachable.';
         }
       }
 
       dispatchCourier(dispatchModalOrder.id, dispatchSelectedCourier, dispatchCustomTracking);
       setDispatchModalOrder(null);
+
+      // The consignment was NOT booked with the carrier. Recording it locally
+      // is the intended fallback, but staying silent let an operator believe
+      // the parcel was booked when no carrier ever received it (F-305).
+      if (bookingFailed) {
+        showToast(
+          language === 'BN'
+            ? `কুরিয়ার বুকিং ব্যর্থ (${bookingFailed}) — ডিসপ্যাচ শুধু লোকালি রেকর্ড হয়েছে। কনসাইনমেন্ট হাতে নিশ্চিত করুন।`
+            : `Courier booking failed (${bookingFailed}) — dispatch recorded locally only. Confirm the consignment manually.`,
+          'info'
+        );
+      }
     } finally {
       setIsDispatching(null);
     }

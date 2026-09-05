@@ -5,6 +5,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { OfflineDataBanner } from '../components/admin/OfflineDataBanner';
 import { Link, useSearchParams } from 'react-router-dom';
 import { 
   ShieldAlert, ShieldCheck, AlertTriangle, Ban, PhoneCall, CheckCircle, 
@@ -36,6 +37,7 @@ export const FraudRiskDashboard: React.FC<FraudDashboardProps> = ({
   const [settings, setSettings] = useState<FraudRiskSettings | null>(null);
   const [orders, setOrders] = useState<Order[]>(propOrders || contextOrders || []);
   const [loading, setLoading] = useState(false);
+  const [loadFailures, setLoadFailures] = useState<string[]>([]);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [feedbackMsg, setFeedbackMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
@@ -100,8 +102,23 @@ export const FraudRiskDashboard: React.FC<FraudDashboardProps> = ({
       } else if (contextOrders && contextOrders.length > 0) {
         setOrders(contextOrders);
       }
+
+      // Each sub-request degrades independently. An empty blacklist panel
+      // reads as "nobody is blacklisted" when it really means "the list never
+      // loaded" — a dangerous misreading on a fraud screen (F-305).
+      const failed = [
+        !statsRes.success && 'risk statistics',
+        !blRes.success && 'blacklist',
+        !setRes.success && 'risk settings',
+      ].filter(Boolean) as string[];
+      setLoadFailures(failed);
+      if (failed.length > 0) {
+        showNotification('error', `Could not load: ${failed.join(', ')}. Panels below may be incomplete.`);
+      }
     } catch (err) {
       console.error('Failed to load fraud engine data:', err);
+      setLoadFailures(['risk statistics', 'blacklist', 'risk settings']);
+      showNotification('error', 'Could not reach the fraud engine — this screen is not showing live data.');
     } finally {
       setLoading(false);
     }
@@ -413,6 +430,14 @@ export const FraudRiskDashboard: React.FC<FraudDashboardProps> = ({
 
   return (
     <div id="fraud-risk-engine-container" className="space-y-6">
+      <OfflineDataBanner
+        visible={loadFailures.length > 0}
+        resource={`fraud engine data (${loadFailures.join(', ')})`}
+        resourceBn={`ফ্রড ইঞ্জিনের তথ্য (${loadFailures.join(', ')})`}
+        onRetry={fetchData}
+        retrying={loading}
+      />
+
       {/* Top Header & Quick Actions */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
         <div>

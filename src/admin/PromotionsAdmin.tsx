@@ -88,6 +88,7 @@ export function PromotionsAdmin() {
       if (loyaltyData.success) setLoyaltyWallets(loyaltyData.wallets || []);
     } catch (err) {
       console.error('Failed to load promotions data:', err);
+      showToast('Could not load promotions from the server — the list may be out of date.');
     } finally {
       setLoading(false);
     }
@@ -294,9 +295,15 @@ export function PromotionsAdmin() {
       const data = await res.json();
       if (data.success) {
         setSimResult(data.evaluation);
+      } else {
+        setSimResult(null);
+        showToast(data.error || 'Coupon simulation failed. Please try again.');
       }
     } catch (e) {
-      console.error(e);
+      // A blank result panel used to be the only sign of failure, which reads
+      // as "this coupon is invalid" rather than "the check never ran" (F-305).
+      setSimResult(null);
+      showToast('Could not reach the promotions engine — simulation did not run.');
     } finally {
       setSimulating(false);
     }

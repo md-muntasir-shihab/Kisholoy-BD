@@ -178,3 +178,59 @@ smoke 98/9 unchanged · storefront unaffected (`/api/products`, `/api/categories
 **Remaining from PHASE 3:** F-305 (33 silent catches), F-306 (71 mutations with
 no in-flight state), F-307 (41 modals with no Esc/focus-trap), F-308 (responsive,
 belongs to PHASE 5), F-309 (3 English-only screens).
+
+---
+
+## Batch 4 — F-305: silent error handling
+
+### The reported count was wrong
+
+PHASE 3 reported 33 silent catches. Re-running the analyzer after the batch 3
+edits produced 34 — with phantom entries — which exposed two detector bugs:
+
+1. **Stale line numbers.** `functionBody()` searched only ±8 lines around the
+   inventory's recorded line for the declaration. Once batch 3 shifted lines in
+   `PaymentsAdmin`, it silently extracted the *wrong function* and reported
+   `handleTriggerIpn` / `handleProcessRefund` as having no catch when both do.
+   It now finds the declaration anywhere in the file and takes the occurrence
+   nearest the recorded line.
+2. **Unknown feedback aliases.** The detector only recognised `showToast`.
+   Screens using `notify(...)` (SuppliersAdmin) or `showNotification(...)`
+   (FraudRiskDashboard) — 13 functions — were reported as silent when they
+   already told the user.
+
+Corrected baseline: **21 genuine cases** (5 mutations, 16 loaders), not 33.
+
+### Fixes
+
+Mutations — silent failure here destroys the operator's work or misleads them:
+
+| Function | Was | Now |
+|---|---|---|
+| `ShipmentsAdmin.handleExecuteDispatch` | Courier booking failure logged to console; UI showed the order as dispatched. **An operator could believe a parcel was booked when no carrier ever received it.** | Records locally (intended fallback) but toasts that booking failed and the consignment must be confirmed manually |
+| `BackupAdmin.handleOpenRestoreModal` | Dry-run failure left an empty impact panel — a restore could be run without ever seeing what it would overwrite | Clears the result and warns "Do not restore without it" |
+| `PromotionsAdmin.runSimulator` | Blank result panel, which reads as "coupon invalid" rather than "check never ran" | Explicit failure toast |
+| `OperationsAdmin.handleSmsInputChange` | Silent | **Kept silent, now documented** — fires per keystroke on a character counter; a toast per keystroke would be worse |
+| `PaymentsAdmin useEffect@55` | — | Already fixed in batch 3 (F-303); silence is the correct behaviour there |
+
+Loaders — the fallback is good, but the operator must know the data is not live:
+
+- New shared `src/components/admin/OfflineDataBanner.tsx` (bilingual, `role="status"`, retry button) wired into **CustomersAdmin** (stale CRM figures), **AuditAdmin** (a compliance ledger that looked complete while the real chain never loaded) and **FraudRiskDashboard** (an empty blacklist reads as "nobody is blacklisted").
+- **BackupAdmin**: six independent loaders collected into one `loadFailures` banner with a retry-all, instead of six empty cards that look like "no backups".
+- **Dashboard**: the Vendor Payable tile showed a confident `৳0` on failure, understating what the business owes; now renders `—` / "Could not load".
+- **OrderCourierDispatchModal**: on config failure the badge claimed "Sandbox (Simulated)" even for live-configured carriers; now "Status unknown".
+- Toast-only fixes: `FinanceAdmin.fetchSummary`, `PaymentsAdmin.fetchTransactions`, `PromotionsAdmin.fetchPromotionData`, `SuppliersAdmin.loadPurchaseOrders` / `openSupplierDetail`, `ProductsAdmin` supplier dropdown.
+
+### Result
+
+Silent catches **21 → 2**, and both survivors are deliberate and commented
+(per-keystroke SMS counter; the F-303 fraud fallback where staying quiet is the
+fix). The detector now also recognises state-flag error surfacing, so
+banner-based handling is no longer miscounted as silence.
+
+**Gates:** `tsc --noEmit` clean · build green (`dist/server.cjs` 849.8 kB) ·
+smoke 98/9 unchanged · storefront and auth regression battery green.
+
+**Remaining from PHASE 3:** F-306 (79 mutations with no in-flight state),
+F-307 (41 modals with no Esc/focus-trap), F-308 (responsive → PHASE 5),
+F-309 (3 English-only screens).

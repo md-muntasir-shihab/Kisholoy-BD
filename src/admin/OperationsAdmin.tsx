@@ -143,6 +143,9 @@ export function OperationsAdmin() {
         if (data.telemetry) setSmsTestTelemetry(data.telemetry);
       }
     } catch (e) {
+      // Deliberately silent: this fires on every keystroke of the SMS preview
+      // box and only refreshes a character/segment counter. A toast per
+      // keystroke would be worse than a stale counter. Reviewed for F-305.
       console.error(e);
     }
   };

@@ -135,6 +135,7 @@ export function SuppliersAdmin() {
       if (data.success) setAllPurchaseOrders(data.pos || []);
     } catch (err) {
       console.error('Failed to load purchase orders', err);
+      notify('Could not load purchase orders from the server.');
     }
   };
 
@@ -159,6 +160,7 @@ export function SuppliersAdmin() {
       }
     } catch (err) {
       console.error('Failed to fetch supplier detail:', err);
+      notify('Could not load this supplier\'s details from the server.');
     } finally {
       setLoadingDetail(false);
     }

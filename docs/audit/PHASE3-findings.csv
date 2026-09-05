@@ -8,40 +8,40 @@ system-administration,AnalyticsAdmin,src/admin/AnalyticsAdmin.tsx:101,useEffect@
 system-administration,AnalyticsAdmin,src/admin/AnalyticsAdmin.tsx:102,handleStorageChange,UNWIRED?,NONE,true,local-only,n/a,n/a,n/a,n/a,yes,yes,NO,yes
 system-administration,AnalyticsAdmin,src/admin/AnalyticsAdmin.tsx:117,useEffect@117,effect(mount/dep),NONE,true,local-only,n/a,n/a,n/a,n/a,yes,yes,NO,yes
 system-administration,AnalyticsAdmin,src/admin/AnalyticsAdmin.tsx:326,handleExportCSV,button click,NONE,true,local-only,n/a,n/a,n/a,n/a,yes,yes,NO,yes
-system-administration,AuditAdmin,src/admin/AuditAdmin.tsx:67,fetchLedger,button click,GET /api/security/audit-chain/ledger,true,yes,STAFF,n/a,SILENT-CATCH,yes,yes,yes,NO,yes
+system-administration,AuditAdmin,src/admin/AuditAdmin.tsx:67,fetchLedger,button click,GET /api/security/audit-chain/ledger,true,yes,STAFF,n/a,yes,yes,yes,yes,NO,yes
 system-administration,AuditAdmin,src/admin/AuditAdmin.tsx:86,useEffect@86,effect(mount/dep),NONE,true,local-only,n/a,n/a,n/a,n/a,yes,yes,NO,yes
 system-administration,AuditAdmin,src/admin/AuditAdmin.tsx:91,handleVerifyLedger,button click,GET /api/security/audit-chain/verify,true,yes,STAFF,n/a,yes,NO,yes,yes,NO,yes
 system-administration,AuditAdmin,src/admin/AuditAdmin.tsx:116,handleRunDiagnostics,button click,GET /api/security/diagnostics,true,yes,STAFF,n/a,yes,NO,yes,yes,NO,yes
 system-administration,AuditAdmin,src/admin/AuditAdmin.tsx:135,handleExportJson,button click,NONE,true,local-only,n/a,n/a,n/a,n/a,yes,yes,NO,yes
 system-administration,AuditAdmin,src/admin/AuditAdmin.tsx:201,handleExportExcel,button click,NONE,true,local-only,n/a,n/a,n/a,n/a,yes,yes,NO,yes
 system-administration,AuditAdmin,src/admin/AuditAdmin.tsx:218,handleExportCsv,prop:onExportCsv (child component),NONE,true,local-only,n/a,n/a,n/a,n/a,yes,yes,NO,yes
-system-administration,BackupAdmin,src/admin/BackupAdmin.tsx:98,useEffect@98,effect(mount/dep),NONE,true,local-only,n/a,n/a,n/a,n/a,yes,yes,NO,yes
-system-administration,BackupAdmin,src/admin/BackupAdmin.tsx:107,fetchDriveConfig,called internally,GET /api/system/drive/config,true,yes,STAFF,n/a,NO-CATCH,NO,yes,yes,NO,yes
-system-administration,BackupAdmin,src/admin/BackupAdmin.tsx:126,fetchDriveFiles,button click,GET /api/system/drive/files,true,yes,STAFF,n/a,SILENT-CATCH,yes,yes,yes,NO,yes
-system-administration,BackupAdmin,src/admin/BackupAdmin.tsx:143,handleConnectDrive,button click,POST /api/system/drive/connect,true,yes,STAFF,yes,yes,NO,yes,yes,NO,yes
-system-administration,BackupAdmin,src/admin/BackupAdmin.tsx:170,handleDisconnectDrive,button click,POST /api/system/drive/disconnect,true,yes,STAFF,yes,yes,NO,yes,yes,NO,yes
-system-administration,BackupAdmin,src/admin/BackupAdmin.tsx:187,handleSyncDriveNow,button click,POST /api/system/drive/sync-now,true,yes,STAFF,yes,yes,NO,yes,yes,NO,yes
-system-administration,BackupAdmin,src/admin/BackupAdmin.tsx:212,handleRestoreFromDriveFile,button click,POST /api/system/drive/restore,true,yes,STAFF,yes,yes,NO,yes,yes,NO,yes
-system-administration,BackupAdmin,src/admin/BackupAdmin.tsx:242,fetchSnapshots,button click,GET /api/system/backups,true,yes,STAFF,n/a,SILENT-CATCH,yes,yes,yes,NO,yes
-system-administration,BackupAdmin,src/admin/BackupAdmin.tsx:259,fetchSchedule,called internally,GET /api/system/backups/schedule,true,yes,STAFF,n/a,SILENT-CATCH,NO,yes,yes,NO,yes
-system-administration,BackupAdmin,src/admin/BackupAdmin.tsx:273,fetchDrMetrics,called internally,GET /api/system/dr-metrics,true,yes,STAFF,n/a,SILENT-CATCH,NO,yes,yes,NO,yes
-system-administration,BackupAdmin,src/admin/BackupAdmin.tsx:287,fetchHealth,button click,GET /api/system/health,true,yes,STAFF,n/a,SILENT-CATCH,yes,yes,yes,NO,yes
-system-administration,BackupAdmin,src/admin/BackupAdmin.tsx:305,handleCreateSnapshot,button click,POST /api/system/backups/create,true,yes,STAFF,yes,yes,NO,yes,yes,NO,yes
-system-administration,BackupAdmin,src/admin/BackupAdmin.tsx:336,handleVerifyChecksum,button click,POST /api/system/backups/:x/verify,true,yes,STAFF,yes,yes,NO,yes,yes,NO,yes
-system-administration,BackupAdmin,src/admin/BackupAdmin.tsx:362,handleOpenRestoreModal,button click,POST /api/system/backups/pre-restore,true,yes,STAFF,yes,SILENT-CATCH,NO,yes,yes,NO,yes
-system-administration,BackupAdmin,src/admin/BackupAdmin.tsx:387,handleExecuteRestore,button click,POST /api/system/backups/restore,true,yes,STAFF,yes,yes,NO,yes,yes,NO,yes
-system-administration,BackupAdmin,src/admin/BackupAdmin.tsx:423,handleRunDrill,button click,POST /api/system/dr-drill,true,yes,STAFF,yes,yes,NO,yes,yes,NO,yes
-system-administration,BackupAdmin,src/admin/BackupAdmin.tsx:449,handleTriggerExport,button click,POST /api/system/export,true,yes,STAFF,yes,yes,NO,yes,yes,NO,yes
-system-administration,BackupAdmin,src/admin/BackupAdmin.tsx:478,handleValidateImport,button click,POST /api/system/import,true,yes,STAFF,yes,yes,NO,yes,yes,NO,yes
+system-administration,BackupAdmin,src/admin/BackupAdmin.tsx:98,useEffect@98,effect(mount/dep),NONE,true,local-only,n/a,n/a,n/a,n/a,yes,yes,yes,yes
+system-administration,BackupAdmin,src/admin/BackupAdmin.tsx:107,fetchDriveConfig,called internally,GET /api/system/drive/config,true,yes,STAFF,n/a,yes,yes,yes,yes,yes,yes
+system-administration,BackupAdmin,src/admin/BackupAdmin.tsx:126,fetchDriveFiles,button click,GET /api/system/drive/files,true,yes,STAFF,n/a,yes,yes,yes,yes,yes,yes
+system-administration,BackupAdmin,src/admin/BackupAdmin.tsx:143,handleConnectDrive,button click,POST /api/system/drive/connect,true,yes,STAFF,yes,yes,NO,yes,yes,yes,yes
+system-administration,BackupAdmin,src/admin/BackupAdmin.tsx:170,handleDisconnectDrive,button click,POST /api/system/drive/disconnect,true,yes,STAFF,yes,yes,NO,yes,yes,yes,yes
+system-administration,BackupAdmin,src/admin/BackupAdmin.tsx:187,handleSyncDriveNow,button click,POST /api/system/drive/sync-now,true,yes,STAFF,yes,yes,NO,yes,yes,yes,yes
+system-administration,BackupAdmin,src/admin/BackupAdmin.tsx:212,handleRestoreFromDriveFile,button click,POST /api/system/drive/restore,true,yes,STAFF,yes,yes,NO,yes,yes,yes,yes
+system-administration,BackupAdmin,src/admin/BackupAdmin.tsx:242,fetchSnapshots,button click,GET /api/system/backups,true,yes,STAFF,n/a,yes,yes,yes,yes,yes,yes
+system-administration,BackupAdmin,src/admin/BackupAdmin.tsx:259,fetchSchedule,called internally,GET /api/system/backups/schedule,true,yes,STAFF,n/a,yes,NO,yes,yes,yes,yes
+system-administration,BackupAdmin,src/admin/BackupAdmin.tsx:273,fetchDrMetrics,called internally,GET /api/system/dr-metrics,true,yes,STAFF,n/a,yes,NO,yes,yes,yes,yes
+system-administration,BackupAdmin,src/admin/BackupAdmin.tsx:287,fetchHealth,button click,GET /api/system/health,true,yes,STAFF,n/a,yes,yes,yes,yes,yes,yes
+system-administration,BackupAdmin,src/admin/BackupAdmin.tsx:305,handleCreateSnapshot,button click,POST /api/system/backups/create,true,yes,STAFF,yes,yes,NO,yes,yes,yes,yes
+system-administration,BackupAdmin,src/admin/BackupAdmin.tsx:336,handleVerifyChecksum,button click,POST /api/system/backups/:x/verify,true,yes,STAFF,yes,yes,NO,yes,yes,yes,yes
+system-administration,BackupAdmin,src/admin/BackupAdmin.tsx:362,handleOpenRestoreModal,button click,POST /api/system/backups/pre-restore,true,yes,STAFF,yes,yes,NO,yes,yes,yes,yes
+system-administration,BackupAdmin,src/admin/BackupAdmin.tsx:387,handleExecuteRestore,button click,POST /api/system/backups/restore,true,yes,STAFF,yes,yes,NO,yes,yes,yes,yes
+system-administration,BackupAdmin,src/admin/BackupAdmin.tsx:423,handleRunDrill,button click,POST /api/system/dr-drill,true,yes,STAFF,yes,yes,NO,yes,yes,yes,yes
+system-administration,BackupAdmin,src/admin/BackupAdmin.tsx:449,handleTriggerExport,button click,POST /api/system/export,true,yes,STAFF,yes,yes,NO,yes,yes,yes,yes
+system-administration,BackupAdmin,src/admin/BackupAdmin.tsx:478,handleValidateImport,button click,POST /api/system/import,true,yes,STAFF,yes,yes,NO,yes,yes,yes,yes
 shared-component,BulkSupplierImportModal,src/admin/BulkSupplierImportModal.tsx:288,handleDragOver,prop:onDragOver (child component),NONE,true,local-only,n/a,n/a,n/a,n/a,yes,NO,NO,n/a
 shared-component,BulkSupplierImportModal,src/admin/BulkSupplierImportModal.tsx:294,handleDragLeave,prop:onDragLeave (child component),NONE,true,local-only,n/a,n/a,n/a,n/a,yes,NO,NO,n/a
 shared-component,BulkSupplierImportModal,src/admin/BulkSupplierImportModal.tsx:300,handleDrop,prop:onDrop (child component),NONE,true,local-only,n/a,n/a,n/a,n/a,yes,NO,NO,n/a
 shared-component,BulkSupplierImportModal,src/admin/BulkSupplierImportModal.tsx:316,handleFileInputChange,input change,NONE,true,local-only,n/a,n/a,n/a,n/a,yes,NO,NO,n/a
-shared-component,BulkSupplierImportModal,src/admin/BulkSupplierImportModal.tsx:328,handleParseRawText,button click,POST /api/suppliers/bulk-import,true,yes,STAFF,yes,SILENT-CATCH,NO,yes,NO,NO,n/a
+shared-component,BulkSupplierImportModal,src/admin/BulkSupplierImportModal.tsx:328,handleParseRawText,button click,POST /api/suppliers/bulk-import,true,yes,STAFF,yes,yes,NO,yes,NO,NO,n/a
 shared-component,BulkSupplierImportModal,src/admin/BulkSupplierImportModal.tsx:337,handleRemoveRow,button click,NONE,true,local-only,n/a,n/a,n/a,n/a,yes,NO,NO,n/a
 shared-component,BulkSupplierImportModal,src/admin/BulkSupplierImportModal.tsx:341,handleDownloadCsvTemplate,button click,NONE,true,local-only,n/a,n/a,n/a,n/a,yes,NO,NO,n/a
 shared-component,BulkSupplierImportModal,src/admin/BulkSupplierImportModal.tsx:360,handleDownloadJsonTemplate,button click,NONE,true,local-only,n/a,n/a,n/a,n/a,yes,NO,NO,n/a
-shared-component,BulkSupplierImportModal,src/admin/BulkSupplierImportModal.tsx:423,handleCommitImport,button click,POST /api/suppliers/bulk-import,true,yes,STAFF,yes,SILENT-CATCH,NO,yes,NO,NO,n/a
+shared-component,BulkSupplierImportModal,src/admin/BulkSupplierImportModal.tsx:423,handleCommitImport,button click,POST /api/suppliers/bulk-import,true,yes,STAFF,yes,yes,NO,yes,NO,NO,n/a
 catalog-inventory,CategoriesAdmin,src/admin/CategoriesAdmin.tsx:13,handleAddCategory,form submit,NONE,true,local-only,n/a,n/a,n/a,n/a,yes,yes,NO,n/a
 catalog-inventory,CategoriesAdmin,src/admin/CategoriesAdmin.tsx:37,handleDelete,button click,NONE,true,local-only,n/a,n/a,n/a,n/a,yes,yes,NO,n/a
 system-administration,ContentAdmin,src/admin/ContentAdmin.tsx:84,handleResetToPublished,button click,NONE,true,local-only,n/a,n/a,n/a,n/a,yes,yes,NO,yes
@@ -50,13 +50,13 @@ system-administration,ContentAdmin,src/admin/ContentAdmin.tsx:97,handleConfirmPu
 system-administration,ContentAdmin,src/admin/ContentAdmin.tsx:106,handleRestoreRevision,button click,NONE,true,local-only,n/a,n/a,n/a,n/a,yes,yes,NO,yes
 system-administration,ContentAdmin,src/admin/ContentAdmin.tsx:115,handleSelectPresetImage,button click,NONE,true,local-only,n/a,n/a,n/a,n/a,yes,yes,NO,yes
 customer-management,CustomersAdmin,src/admin/CustomersAdmin.tsx:78,useEffect@78,effect(mount/dep),NONE,true,local-only,n/a,n/a,n/a,n/a,yes,yes,NO,yes
-customer-management,CustomersAdmin,src/admin/CustomersAdmin.tsx:92,fetchCustomers,button click,GET /api/customers,true,yes,STAFF,n/a,SILENT-CATCH,yes,yes,yes,NO,yes
+customer-management,CustomersAdmin,src/admin/CustomersAdmin.tsx:92,fetchCustomers,button click,GET /api/customers,true,yes,STAFF,n/a,yes,yes,yes,yes,NO,yes
 customer-management,CustomersAdmin,src/admin/CustomersAdmin.tsx:173,useEffect@173,effect(mount/dep),NONE,true,local-only,n/a,n/a,n/a,n/a,yes,yes,NO,yes
 customer-management,CustomersAdmin,src/admin/CustomersAdmin.tsx:230,handleExportCsv,button click,NONE,true,local-only,n/a,n/a,n/a,n/a,yes,yes,NO,yes
 sales-operations,Dashboard,src/admin/Dashboard.tsx:229,useEffect@229,effect(mount/dep),NONE,true,local-only,n/a,n/a,n/a,n/a,yes,yes,NO,yes
 sales-operations,Dashboard,src/admin/Dashboard.tsx:231,load,called internally,NONE,true,local-only,n/a,n/a,n/a,n/a,yes,yes,NO,yes
-sales-operations,Dashboard,src/admin/Dashboard.tsx:264,useEffect@264,effect(mount/dep),GET /api/suppliers,true,yes,OPEN-READ,n/a,SILENT-CATCH,n/a,yes,yes,NO,yes
-sales-operations,FinanceAdmin,src/admin/FinanceAdmin.tsx:94,fetchSummary,button click,GET /api/finance/summary,true,yes,STAFF,n/a,SILENT-CATCH,yes,yes,yes,NO,yes
+sales-operations,Dashboard,src/admin/Dashboard.tsx:264,useEffect@264,effect(mount/dep),GET /api/suppliers,true,yes,OPEN-READ,n/a,yes,n/a,yes,yes,NO,yes
+sales-operations,FinanceAdmin,src/admin/FinanceAdmin.tsx:94,fetchSummary,button click,GET /api/finance/summary,true,yes,STAFF,n/a,yes,yes,yes,yes,NO,yes
 sales-operations,FinanceAdmin,src/admin/FinanceAdmin.tsx:110,handleRunReconciliation,button click,GET /api/finance/reconciliation,true,yes,STAFF,n/a,yes,NO,yes,yes,NO,yes
 sales-operations,FinanceAdmin,src/admin/FinanceAdmin.tsx:127,useEffect@127,effect(mount/dep),NONE,true,local-only,n/a,n/a,n/a,n/a,yes,yes,NO,yes
 sales-operations,FinanceAdmin,src/admin/FinanceAdmin.tsx:182,handleCreateExpense,form submit,POST /api/finance/expenses,true,yes,STAFF,yes,yes,NO,yes,yes,NO,yes
@@ -66,16 +66,16 @@ sales-operations,FinanceAdmin,src/admin/FinanceAdmin.tsx:294,handleConfirmPayout
 sales-operations,FinanceAdmin,src/admin/FinanceAdmin.tsx:319,handleExportPnLCsv,button click,NONE,true,local-only,n/a,n/a,n/a,n/a,yes,yes,NO,yes
 sales-operations,FinanceAdmin,src/admin/FinanceAdmin.tsx:343,handleExportExpensesCsv,button click,NONE,true,local-only,n/a,n/a,n/a,n/a,yes,yes,NO,yes
 sales-operations,FraudRiskDashboard,src/admin/FraudRiskDashboard.tsx:48,useEffect@48,effect(mount/dep),NONE,true,local-only,n/a,n/a,n/a,n/a,yes,yes,NO,yes
-sales-operations,FraudRiskDashboard,src/admin/FraudRiskDashboard.tsx:84,fetchData,button click,GET /api/fraud/stats | GET /api/orders,true,yes,OPEN-READ,n/a,SILENT-CATCH,yes,yes,yes,NO,yes
+sales-operations,FraudRiskDashboard,src/admin/FraudRiskDashboard.tsx:84,fetchData,button click,GET /api/fraud/stats | GET /api/orders,true,yes,OPEN-READ,n/a,yes,yes,yes,yes,NO,yes
 sales-operations,FraudRiskDashboard,src/admin/FraudRiskDashboard.tsx:110,useEffect@110,effect(mount/dep),NONE,true,local-only,n/a,n/a,n/a,n/a,yes,yes,NO,yes
 sales-operations,FraudRiskDashboard,src/admin/FraudRiskDashboard.tsx:114,useEffect@114,effect(mount/dep),NONE,true,local-only,n/a,n/a,n/a,n/a,yes,yes,NO,yes
-sales-operations,FraudRiskDashboard,src/admin/FraudRiskDashboard.tsx:126,handleAddBlacklist,form submit,POST /api/fraud/blacklists,true,yes,STAFF,yes,SILENT-CATCH,NO,yes,yes,NO,yes
-sales-operations,FraudRiskDashboard,src/admin/FraudRiskDashboard.tsx:161,handleToggleBlacklist,button click,POST /api/fraud/blacklists/:x/toggle,true,yes,STAFF,yes,SILENT-CATCH,NO,yes,yes,NO,yes
-sales-operations,FraudRiskDashboard,src/admin/FraudRiskDashboard.tsx:175,handleDeleteBlacklist,button click,DELETE /api/fraud/blacklists/:x,true,yes,STAFF,yes,SILENT-CATCH,NO,yes,yes,NO,yes
-sales-operations,FraudRiskDashboard,src/admin/FraudRiskDashboard.tsx:190,handleSaveSettings,button click,POST /api/fraud/settings,true,yes,STAFF,yes,SILENT-CATCH,NO,yes,yes,NO,yes
+sales-operations,FraudRiskDashboard,src/admin/FraudRiskDashboard.tsx:126,handleAddBlacklist,form submit,POST /api/fraud/blacklists,true,yes,STAFF,yes,yes,NO,yes,yes,NO,yes
+sales-operations,FraudRiskDashboard,src/admin/FraudRiskDashboard.tsx:161,handleToggleBlacklist,button click,POST /api/fraud/blacklists/:x/toggle,true,yes,STAFF,yes,yes,NO,yes,yes,NO,yes
+sales-operations,FraudRiskDashboard,src/admin/FraudRiskDashboard.tsx:175,handleDeleteBlacklist,button click,DELETE /api/fraud/blacklists/:x,true,yes,STAFF,yes,yes,NO,yes,yes,NO,yes
+sales-operations,FraudRiskDashboard,src/admin/FraudRiskDashboard.tsx:190,handleSaveSettings,button click,POST /api/fraud/settings,true,yes,STAFF,yes,yes,NO,yes,yes,NO,yes
 sales-operations,FraudRiskDashboard,src/admin/FraudRiskDashboard.tsx:212,handleExecuteAction,button click,POST /api/fraud/verify-order,true,yes,STAFF,yes,yes,NO,yes,yes,NO,yes
 sales-operations,FraudRiskDashboard,src/admin/FraudRiskDashboard.tsx:253,handleQuickVerifyPhone,button click,POST /api/fraud/verify-order,true,yes,STAFF,yes,yes,NO,yes,yes,NO,yes
-sales-operations,FraudRiskDashboard,src/admin/FraudRiskDashboard.tsx:281,handleRunSandbox,form submit,POST /api/fraud/evaluate,true,yes,STAFF,yes,SILENT-CATCH,NO,yes,yes,NO,yes
+sales-operations,FraudRiskDashboard,src/admin/FraudRiskDashboard.tsx:281,handleRunSandbox,form submit,POST /api/fraud/evaluate,true,yes,STAFF,yes,yes,NO,yes,yes,NO,yes
 sales-operations,FraudRiskDashboard,src/admin/FraudRiskDashboard.tsx:308,handleRunSandboxPreset,button click,NONE,true,local-only,n/a,n/a,n/a,n/a,yes,yes,NO,yes
 sales-operations,FulfillmentAdmin,src/admin/FulfillmentAdmin.tsx:92,handleOpenHubModal,button click,NONE,true,local-only,n/a,n/a,n/a,n/a,yes,yes,NO,yes
 sales-operations,FulfillmentAdmin,src/admin/FulfillmentAdmin.tsx:117,handleSaveHub,form submit,NONE,true,local-only,n/a,n/a,n/a,n/a,yes,yes,NO,yes
@@ -110,7 +110,7 @@ shared-component,MarketingCommandCenter,src/admin/MarketingCommandCenter.tsx:509
 shared-component,MarketingCommandCenter,src/admin/MarketingCommandCenter.tsx:529,openSpendModal,button click,NONE,true,local-only,n/a,n/a,n/a,n/a,yes,yes,yes,yes
 shared-component,MarketingCommandCenter,src/admin/MarketingCommandCenter.tsx:553,openChannelModal,button click,NONE,true,local-only,n/a,n/a,n/a,n/a,yes,yes,yes,yes
 shared-component,MarketingCommandCenter,src/admin/MarketingCommandCenter.tsx:571,downloadCsv,button click,NONE,true,local-only,n/a,n/a,n/a,n/a,yes,yes,yes,yes
-unrouted,OperationsAdmin,src/admin/OperationsAdmin.tsx:87,fetchOperationsData,button click,GET /api/operations/jobs,true,yes,OPEN-READ,n/a,SILENT-CATCH,yes,yes,yes,NO,yes
+unrouted,OperationsAdmin,src/admin/OperationsAdmin.tsx:87,fetchOperationsData,button click,GET /api/operations/jobs,true,yes,OPEN-READ,n/a,yes,yes,yes,yes,NO,yes
 unrouted,OperationsAdmin,src/admin/OperationsAdmin.tsx:128,useEffect@128,effect(mount/dep),NONE,true,local-only,n/a,n/a,n/a,n/a,yes,yes,NO,yes
 unrouted,OperationsAdmin,src/admin/OperationsAdmin.tsx:133,handleSmsInputChange,input change,POST /api/notifications/calculate-sms,true,yes,STAFF,yes,SILENT-CATCH,NO,yes,yes,NO,yes
 unrouted,OperationsAdmin,src/admin/OperationsAdmin.tsx:151,handleDirectDispatch,form submit,POST /api/notifications/dispatch | GET /api/notifications/logs,true,yes,OPEN-READ,yes,yes,NO,yes,yes,NO,yes
@@ -128,12 +128,12 @@ sales-operations,OrdersAdmin,src/admin/OrdersAdmin.tsx:53,useEffect@53,effect(mo
 sales-operations,OrdersAdmin,src/admin/OrdersAdmin.tsx:84,openWhatsAppForOrder,button click,NONE,true,local-only,n/a,n/a,n/a,n/a,yes,yes,NO,yes
 sales-operations,OrdersAdmin,src/admin/OrdersAdmin.tsx:139,handleExportExcel,prop:onExportExcel (child component),NONE,true,local-only,n/a,n/a,n/a,n/a,yes,yes,NO,yes
 sales-operations,OrdersAdmin,src/admin/OrdersAdmin.tsx:149,handleExportCsv,prop:onExportCsv (child component),NONE,true,local-only,n/a,n/a,n/a,n/a,yes,yes,NO,yes
-sales-operations,PaymentsAdmin,src/admin/PaymentsAdmin.tsx:33,fetchTransactions,button click,GET /api/payments/transactions,true,yes,STAFF,n/a,SILENT-CATCH,NO,NO,yes,NO,yes
+sales-operations,PaymentsAdmin,src/admin/PaymentsAdmin.tsx:33,fetchTransactions,button click,GET /api/payments/transactions,true,yes,STAFF,n/a,yes,NO,NO,yes,NO,yes
 sales-operations,PaymentsAdmin,src/admin/PaymentsAdmin.tsx:50,useEffect@50,effect(mount/dep),NONE,true,local-only,n/a,n/a,n/a,n/a,NO,yes,NO,yes
 sales-operations,PaymentsAdmin,src/admin/PaymentsAdmin.tsx:55,useEffect@55,effect(mount/dep),POST /api/orders/fraud-check,true,yes,STAFF,yes,NO-CATCH,n/a,NO,yes,NO,yes
 sales-operations,PaymentsAdmin,src/admin/PaymentsAdmin.tsx:114,handleTriggerIpn,form submit,POST /api/payments/test-ipn,true,yes,STAFF,yes,yes,NO,NO,yes,NO,yes
 sales-operations,PaymentsAdmin,src/admin/PaymentsAdmin.tsx:145,handleProcessRefund,form submit,POST /api/payments/refund,true,yes,STAFF,yes,yes,NO,NO,yes,NO,yes
-catalog-inventory,ProductsAdmin,src/admin/ProductsAdmin.tsx:66,useEffect@66,effect(mount/dep),GET /api/suppliers,true,yes,OPEN-READ,n/a,SILENT-CATCH,n/a,yes,yes,yes,yes
+catalog-inventory,ProductsAdmin,src/admin/ProductsAdmin.tsx:66,useEffect@66,effect(mount/dep),GET /api/suppliers,true,yes,OPEN-READ,n/a,yes,n/a,yes,yes,yes,yes
 catalog-inventory,ProductsAdmin,src/admin/ProductsAdmin.tsx:157,handleSelectAll,button click,NONE,true,local-only,n/a,n/a,n/a,n/a,yes,yes,yes,yes
 catalog-inventory,ProductsAdmin,src/admin/ProductsAdmin.tsx:165,handleToggleSelect,button click,NONE,true,local-only,n/a,n/a,n/a,n/a,yes,yes,yes,yes
 catalog-inventory,ProductsAdmin,src/admin/ProductsAdmin.tsx:172,handleAdjustStock,button click,NONE,true,local-only,n/a,n/a,n/a,n/a,yes,yes,yes,yes
@@ -143,7 +143,7 @@ catalog-inventory,ProductsAdmin,src/admin/ProductsAdmin.tsx:216,handleCreateProd
 catalog-inventory,ProductsAdmin,src/admin/ProductsAdmin.tsx:276,handleBulkDeleteConfirm,prop:onConfirm (child component),NONE,true,local-only,n/a,n/a,n/a,n/a,yes,yes,yes,yes
 catalog-inventory,ProductsAdmin,src/admin/ProductsAdmin.tsx:287,handleBulkReadyToShip,button click,NONE,true,local-only,n/a,n/a,n/a,n/a,yes,yes,yes,yes
 catalog-inventory,ProductsAdmin,src/admin/ProductsAdmin.tsx:298,handleExportCSV,button click,NONE,true,local-only,n/a,n/a,n/a,n/a,yes,yes,yes,yes
-shared-component,PromotionsAdmin,src/admin/PromotionsAdmin.tsx:71,fetchPromotionData,button click,GET /api/promotions/coupons,true,yes,OPEN-READ,n/a,SILENT-CATCH,yes,yes,yes,NO,yes
+shared-component,PromotionsAdmin,src/admin/PromotionsAdmin.tsx:71,fetchPromotionData,button click,GET /api/promotions/coupons,true,yes,OPEN-READ,n/a,yes,yes,yes,yes,NO,yes
 shared-component,PromotionsAdmin,src/admin/PromotionsAdmin.tsx:96,useEffect@96,effect(mount/dep),NONE,true,local-only,n/a,n/a,n/a,n/a,yes,yes,NO,yes
 shared-component,PromotionsAdmin,src/admin/PromotionsAdmin.tsx:101,handleCopyCode,button click,NONE,true,local-only,n/a,n/a,n/a,n/a,yes,yes,NO,yes
 shared-component,PromotionsAdmin,src/admin/PromotionsAdmin.tsx:109,handleToggleStatus,button click,PUT /api/promotions/coupons/:x,true,yes,STAFF,yes,yes,NO,yes,yes,NO,yes
@@ -152,7 +152,7 @@ shared-component,PromotionsAdmin,src/admin/PromotionsAdmin.tsx:147,handleSaveCou
 shared-component,PromotionsAdmin,src/admin/PromotionsAdmin.tsx:194,openEditModal,button click,NONE,true,local-only,n/a,n/a,n/a,n/a,yes,yes,NO,yes
 shared-component,PromotionsAdmin,src/admin/PromotionsAdmin.tsx:219,openCreateModal,button click,NONE,true,local-only,n/a,n/a,n/a,n/a,yes,yes,NO,yes
 shared-component,PromotionsAdmin,src/admin/PromotionsAdmin.tsx:244,handleAdjustPointsSubmit,form submit,POST /api/promotions/loyalty/adjust,true,yes,STAFF,yes,yes,NO,yes,yes,NO,yes
-shared-component,PromotionsAdmin,src/admin/PromotionsAdmin.tsx:276,runSimulator,button click,POST /api/promotions/validate,true,yes,PUBLIC,yes,SILENT-CATCH,NO,yes,yes,NO,yes
+shared-component,PromotionsAdmin,src/admin/PromotionsAdmin.tsx:276,runSimulator,button click,POST /api/promotions/validate,true,yes,PUBLIC,yes,yes,NO,yes,yes,NO,yes
 system-administration,ReportsAdmin,src/admin/ReportsAdmin.tsx:101,fetchReport,button click,NONE,true,local-only,n/a,n/a,n/a,n/a,yes,yes,NO,yes
 system-administration,ReportsAdmin,src/admin/ReportsAdmin.tsx:132,useEffect@132,effect(mount/dep),NONE,true,local-only,n/a,n/a,n/a,n/a,yes,yes,NO,yes
 system-administration,ReportsAdmin,src/admin/ReportsAdmin.tsx:137,openDoc,button click,NONE,true,local-only,n/a,n/a,n/a,n/a,yes,yes,NO,yes
@@ -169,18 +169,18 @@ sales-operations,ShipmentsAdmin,src/admin/ShipmentsAdmin.tsx:85,handleOpenAddCou
 sales-operations,ShipmentsAdmin,src/admin/ShipmentsAdmin.tsx:103,handleOpenEditCourier,button click,NONE,true,local-only,n/a,n/a,n/a,n/a,yes,yes,NO,yes
 sales-operations,ShipmentsAdmin,src/admin/ShipmentsAdmin.tsx:123,handleSaveCourier,form submit,NONE,true,local-only,n/a,n/a,n/a,n/a,yes,yes,NO,yes
 sales-operations,ShipmentsAdmin,src/admin/ShipmentsAdmin.tsx:150,handleOpenDispatchModal,button click,NONE,true,local-only,n/a,n/a,n/a,n/a,yes,yes,NO,yes
-sales-operations,ShipmentsAdmin,src/admin/ShipmentsAdmin.tsx:157,handleExecuteDispatch,form submit,POST /api/courier/book,true,yes,STAFF,yes,SILENT-CATCH,NO,yes,yes,NO,yes
+sales-operations,ShipmentsAdmin,src/admin/ShipmentsAdmin.tsx:157,handleExecuteDispatch,form submit,POST /api/courier/book,true,yes,STAFF,yes,yes,NO,yes,yes,NO,yes
 sales-operations,ShipmentsAdmin,src/admin/ShipmentsAdmin.tsx:192,handleSimulateWebhook,form submit,POST /api/courier/webhook,true,yes,PUBLIC,yes,yes,NO,yes,yes,NO,yes
-catalog-inventory,SuppliersAdmin,src/admin/SuppliersAdmin.tsx:113,loadSupplierData,button click,GET /api/suppliers,true,yes,OPEN-READ,n/a,SILENT-CATCH,yes,yes,yes,NO,yes
-catalog-inventory,SuppliersAdmin,src/admin/SuppliersAdmin.tsx:131,loadPurchaseOrders,called internally,GET /api/suppliers/purchase-orders/all,true,yes,OPEN-READ,n/a,SILENT-CATCH,NO,yes,yes,NO,yes
+catalog-inventory,SuppliersAdmin,src/admin/SuppliersAdmin.tsx:113,loadSupplierData,button click,GET /api/suppliers,true,yes,OPEN-READ,n/a,yes,yes,yes,yes,NO,yes
+catalog-inventory,SuppliersAdmin,src/admin/SuppliersAdmin.tsx:131,loadPurchaseOrders,called internally,GET /api/suppliers/purchase-orders/all,true,yes,OPEN-READ,n/a,yes,NO,yes,yes,NO,yes
 catalog-inventory,SuppliersAdmin,src/admin/SuppliersAdmin.tsx:141,useEffect@141,effect(mount/dep),NONE,true,local-only,n/a,n/a,n/a,n/a,yes,yes,NO,yes
-catalog-inventory,SuppliersAdmin,src/admin/SuppliersAdmin.tsx:147,openSupplierDetail,button click,GET /api/suppliers/:x,true,yes,OPEN-READ,n/a,SILENT-CATCH,yes,yes,yes,NO,yes
-catalog-inventory,SuppliersAdmin,src/admin/SuppliersAdmin.tsx:168,handleCreateSupplier,form submit,POST /api/suppliers,true,yes,STAFF,yes,SILENT-CATCH,NO,yes,yes,NO,yes
-catalog-inventory,SuppliersAdmin,src/admin/SuppliersAdmin.tsx:219,handleCreatePo,form submit,POST /api/suppliers/:x/purchase-orders,true,yes,STAFF,yes,SILENT-CATCH,NO,yes,yes,NO,yes
-catalog-inventory,SuppliersAdmin,src/admin/SuppliersAdmin.tsx:266,handleMarkPoReceived,prop:onMarkPoReceived (child component),POST /api/suppliers/:x/pos/:x/delivery,true,yes,STAFF,yes,SILENT-CATCH,NO,yes,yes,NO,yes
+catalog-inventory,SuppliersAdmin,src/admin/SuppliersAdmin.tsx:147,openSupplierDetail,button click,GET /api/suppliers/:x,true,yes,OPEN-READ,n/a,yes,yes,yes,yes,NO,yes
+catalog-inventory,SuppliersAdmin,src/admin/SuppliersAdmin.tsx:168,handleCreateSupplier,form submit,POST /api/suppliers,true,yes,STAFF,yes,yes,NO,yes,yes,NO,yes
+catalog-inventory,SuppliersAdmin,src/admin/SuppliersAdmin.tsx:219,handleCreatePo,form submit,POST /api/suppliers/:x/purchase-orders,true,yes,STAFF,yes,yes,NO,yes,yes,NO,yes
+catalog-inventory,SuppliersAdmin,src/admin/SuppliersAdmin.tsx:266,handleMarkPoReceived,prop:onMarkPoReceived (child component),POST /api/suppliers/:x/pos/:x/delivery,true,yes,STAFF,yes,yes,NO,yes,yes,NO,yes
 catalog-inventory,SuppliersAdmin,src/admin/SuppliersAdmin.tsx:291,handleRecordPayment,form submit,NONE,true,local-only,n/a,n/a,n/a,n/a,yes,yes,NO,yes
 catalog-inventory,SuppliersAdmin,src/admin/SuppliersAdmin.tsx:347,handleConfirmMfaPayment,form submit,NONE,true,local-only,n/a,n/a,n/a,n/a,yes,yes,NO,yes
-catalog-inventory,SuppliersAdmin,src/admin/SuppliersAdmin.tsx:357,handleTogglePortal,button click,POST /api/suppliers/:x/toggle-portal,true,yes,STAFF,yes,SILENT-CATCH,NO,yes,yes,NO,yes
+catalog-inventory,SuppliersAdmin,src/admin/SuppliersAdmin.tsx:357,handleTogglePortal,button click,POST /api/suppliers/:x/toggle-portal,true,yes,STAFF,yes,yes,NO,yes,yes,NO,yes
 system-administration,UsersAdmin,src/admin/UsersAdmin.tsx:65,loadSecurityData,button click,GET /api/security/users | GET /api/security/rate-limit/banned-ips,true,yes,STAFF,n/a,yes,yes,yes,yes,yes,yes
 system-administration,UsersAdmin,src/admin/UsersAdmin.tsx:89,useEffect@89,effect(mount/dep),NONE,true,local-only,n/a,n/a,n/a,n/a,yes,yes,yes,yes
 system-administration,UsersAdmin,src/admin/UsersAdmin.tsx:94,handleCreateStaff,form submit,POST /api/security/users/create,true,yes,STAFF,yes,yes,NO,yes,yes,yes,yes
@@ -224,7 +224,7 @@ shared-component,ManualOrderModal,src/components/admin/ManualOrderModal.tsx:200,
 shared-component,ManualOrderModal,src/components/admin/ManualOrderModal.tsx:205,handleUpdateQty,button click,NONE,true,local-only,n/a,n/a,n/a,n/a,yes,yes,NO,n/a
 shared-component,ManualOrderModal,src/components/admin/ManualOrderModal.tsx:211,handleUpdateCustomPrice,input change,NONE,true,local-only,n/a,n/a,n/a,n/a,yes,yes,NO,n/a
 shared-component,ManualOrderModal,src/components/admin/ManualOrderModal.tsx:260,handleCreateOrder,button click,POST /api/orders/create,true,yes,PUBLIC,yes,yes,NO,yes,yes,NO,n/a
-shared-component,OrderCourierDispatchModal,src/components/admin/OrderCourierDispatchModal.tsx:63,useEffect@63,effect(mount/dep),GET /api/courier/config,true,yes,OPEN-READ,n/a,SILENT-CATCH,n/a,yes,yes,NO,n/a
+shared-component,OrderCourierDispatchModal,src/components/admin/OrderCourierDispatchModal.tsx:63,useEffect@63,effect(mount/dep),GET /api/courier/config,true,yes,OPEN-READ,n/a,yes,n/a,yes,yes,NO,n/a
 shared-component,OrderCourierDispatchModal,src/components/admin/OrderCourierDispatchModal.tsx:75,useEffect@75,effect(mount/dep),NONE,true,local-only,n/a,n/a,n/a,n/a,yes,yes,NO,n/a
 shared-component,OrderCourierDispatchModal,src/components/admin/OrderCourierDispatchModal.tsx:116,handleTriggerDispatch,form submit,POST /api/courier/book,true,yes,STAFF,yes,yes,NO,yes,yes,NO,n/a
 shared-component,OrderCourierDispatchModal,src/components/admin/OrderCourierDispatchModal.tsx:163,handleCopyTracking,button click,NONE,true,local-only,n/a,n/a,n/a,n/a,yes,yes,NO,n/a

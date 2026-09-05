@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { OfflineDataBanner } from '../components/admin/OfflineDataBanner';
 import { Link, useSearchParams } from 'react-router-dom';
 import {
   Users,
@@ -64,6 +65,7 @@ export function CustomersAdmin() {
   const [summaries, setSummaries] = useState<RfmSegmentSummary[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [refreshing, setRefreshing] = useState<boolean>(false);
+  const [usingFallback, setUsingFallback] = useState<boolean>(false);
 
   // Filters & Controls
   const [search, setSearch] = useState(searchParams.get('search') || '');
@@ -105,12 +107,17 @@ export function CustomersAdmin() {
         const data = await res.json();
         setCustomersList(data.customers || []);
         if (data.summaries) setSummaries(data.summaries);
+        setUsingFallback(false);
       } else {
         fallbackToContextData();
+        setUsingFallback(true);
       }
     } catch (e) {
+      // Fallback is intentional, but the operator must know these figures are
+      // local and possibly stale rather than live server data (F-305).
       console.warn('Backend customer API offline, using local context:', e);
       fallbackToContextData();
+      setUsingFallback(true);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -337,6 +344,14 @@ export function CustomersAdmin() {
 
   return (
     <div id="customers-admin-container" className="space-y-6 max-w-7xl mx-auto pb-12">
+      <OfflineDataBanner
+        visible={usingFallback}
+        resource="customer directory"
+        resourceBn="কাস্টমার তালিকা"
+        onRetry={() => fetchCustomers()}
+        retrying={refreshing}
+      />
+
       {/* Top Header & Overview Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
