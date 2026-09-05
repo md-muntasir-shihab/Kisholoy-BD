@@ -225,7 +225,7 @@ export function AdminLayout() {
   }
 
   return (
-    <div id="admin-root-layout" className="h-screen overflow-hidden flex flex-col bg-stone-100/90 dark:bg-slate-950 text-stone-900 dark:text-slate-100 font-sans selection:bg-teal-900 selection:text-white transition-colors duration-200">
+    <div id="admin-root-layout" className="h-screen overflow-hidden flex flex-col bg-stone-100/90 dark:bg-slate-950 text-stone-900 dark:text-slate-100 font-sans selection:bg-teal-900 selection:text-white">
       {/* Top Operational Header */}
       <header id="admin-top-header" className="sticky top-0 z-30 bg-white/95 text-stone-900 border-b border-stone-200/90 dark:bg-stone-950/95 dark:text-white dark:border-stone-800/80 h-16 flex items-center justify-between px-4 sm:px-6 shadow-xs backdrop-blur-md transition-colors">
         <div className="flex items-center gap-3">
@@ -335,7 +335,7 @@ export function AdminLayout() {
       {/* Real-time Urgent Operational Marquee/Banner (High Fraud Risk / Pending Settlements) */}
       <AdminUrgentAlertBanner />
 
-      <div className="flex-1 flex min-h-0 overflow-hidden relative">
+      <div className="flex-1 flex min-h-0 overflow-hidden">
         {/* Mobile / Tablet Backdrop Overlay */}
         {sidebarOpen && (
           <div
@@ -348,8 +348,10 @@ export function AdminLayout() {
         {/* Sidebar Navigation */}
         <aside
           id="admin-sidebar"
-          className={`fixed inset-y-0 left-0 z-20 w-72 bg-white dark:bg-stone-950 text-stone-800 dark:text-stone-300 border-r border-stone-200/90 dark:border-stone-800/80 transform transition-transform duration-200 ease-in-out lg:translate-x-0 lg:static lg:inset-0 pt-16 lg:pt-0 min-h-0 flex flex-col ${
-            sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+          className={`fixed inset-y-0 left-0 z-20 w-72 bg-white dark:bg-stone-950 text-stone-800 dark:text-stone-300 border-r border-stone-200/90 dark:border-stone-800/80 transition-transform duration-200 ease-in-out lg:translate-x-0 lg:static lg:inset-0 pt-16 lg:pt-0 min-h-0 flex flex-col ${
+            sidebarOpen
+              ? 'translate-x-0 shadow-2xl lg:shadow-none'
+              : '-translate-x-full pointer-events-none lg:pointer-events-auto'
           }`}
         >
           {/* Identity & Scope Indicator */}

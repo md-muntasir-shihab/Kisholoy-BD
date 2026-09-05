@@ -101,6 +101,38 @@ for (const file of files) {
   }
 }
 
+/**
+ * A `position: fixed` drawer resolves against the viewport ONLY if no ancestor
+ * establishes a containing block. `transform`, a non-none `transition`,
+ * `filter`, `perspective` and `will-change` all do. When one sneaks onto a
+ * real ancestor, the drawer silently anchors to that element instead: it stops
+ * sliding off-screen and covers the workspace, swallowing every click on the
+ * page with no console error. That is how the admin sidebar broke.
+ *
+ * Scope: only the handful of full-height app shells (`h-screen`/`min-h-screen`
+ * wrappers) that actually contain a fixed drawer. Checking every element with
+ * a transition produced 45 hits, all noise — a transition on a button or on a
+ * modal's own panel is fine and normal.
+ */
+function checkFixedContainingBlock(file, src) {
+  const CB = /\b(transform|transition-(colors|transform|all)|filter|perspective|will-change)\b/;
+  const lines = src.split('\n');
+  const hasFixedDrawer = lines.some(
+    (l) => /className=[^\n]*\bfixed\b/.test(l) && /\binset-y-0\b/.test(l) && /-translate-x-full/.test(src)
+  );
+  if (!hasFixedDrawer) return;
+  lines.forEach((line, i) => {
+    if (!/\b(h-screen|min-h-screen)\b/.test(line)) return;
+    if (!CB.test(line)) return;
+    add(file, 'fixed-containing-block',
+      `line ${i + 1}: app shell has ${CB.exec(line)[0]}, which makes it the containing block for the fixed drawer`);
+  });
+}
+
+for (const file of files) {
+  checkFixedContainingBlock(file, fs.readFileSync(file, 'utf8'));
+}
+
 const asJson = process.argv.includes('--json');
 if (asJson) {
   console.log(JSON.stringify(issues, null, 2));
@@ -108,7 +140,7 @@ if (asJson) {
   const byRule = {};
   for (const i of issues) (byRule[i.rule] ??= []).push(i);
   console.log(`responsive audit — ${files.length} files scanned\n`);
-  for (const rule of ['form-grid-no-stack', 'table-no-scroll', 'small-tap-target', 'fixed-width']) {
+  for (const rule of ['form-grid-no-stack', 'table-no-scroll', 'small-tap-target', 'fixed-width', 'fixed-containing-block']) {
     const list = byRule[rule] ?? [];
     console.log(`  ${rule.padEnd(20)} ${list.length}`);
     for (const i of list.slice(0, 6)) console.log(`      ${i.file}: ${i.detail}`);

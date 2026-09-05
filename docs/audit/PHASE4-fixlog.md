@@ -675,3 +675,39 @@ still emits `.min-w-11`, `.sm\:grid-cols-2`, `.overflow-x-auto`.
 
 Standing limitation: still no real-browser check. The three restructured
 table containers above are the highest-value manual spot-checks.
+
+## Batch 11 — the sidebar swallowed every click
+
+Reported as "side panel does nothing; clicking a menu item does nothing, the
+URL does not even change" on a desktop-width preview, with a clean console.
+
+**Cause: a CSS containing block, not JavaScript.** A `position: fixed`
+element resolves against the viewport *only* if no ancestor establishes a
+containing block — `transform`, a non-`none` `transition`, `filter`,
+`perspective` and `will-change` all establish one. Three things conspired
+here:
+
+- the root `#admin-root-layout` carried `transition-colors duration-200`,
+- the flex row wrapping the drawer carried `relative`,
+- the `<aside>` itself carried the bare `transform` class (redundant —
+  `translate-x-*` already applies one).
+
+So `fixed inset-y-0 left-0` anchored to the wrapper rather than the viewport.
+Below `lg` the drawer stopped sliding away and instead sat *on top of* the
+workspace column, invisible against the white background but fully
+hit-testable. Every click landed on the drawer's dead space, so no link
+fired, no route changed, and nothing was logged.
+
+Fixes: dropped the redundant `transform`, dropped `relative` from the row
+(nothing was positioned against it), dropped the root's `transition-colors`,
+and made the closed drawer `pointer-events-none` below `lg` as a belt-and-
+braces guard so it can never intercept a click while translated off-screen.
+
+**New auditor rule `fixed-containing-block`.** A first attempt flagged 45
+sites — every button and modal panel with a transition — which is noise. It
+is now scoped to full-height app shells (`h-screen`/`min-h-screen`) in files
+that actually contain a fixed drawer. Verified as a real guard, not a
+decoration: re-adding `transition-colors` to the root makes it fire with the
+exact line, and removing it returns the audit to 0.
+
+Gates: tsc 0 · build green · smoke 99/9 · auditor 0/0/0/0/0.
