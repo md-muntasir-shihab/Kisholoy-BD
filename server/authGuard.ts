@@ -129,6 +129,8 @@ const PROTECTED_READ_PATTERNS: RegExp[] = [
   /^\/api\/fraud\//,                  // blacklists & risk config
   /^\/api\/marketing\/(?!command\/attributions)/, // CRM & spend data
   /^\/api\/payments\/transactions/,   // payment ledger
+  // RMA cases carry customer name, phone, district and refund amounts.
+  /^\/api\/admin\/(rma|returns|refunds)(\/|$)/,
 ];
 
 const isPublicMutation = (path: string) => PUBLIC_MUTATION_PATTERNS.some((re) => re.test(path));

@@ -1403,6 +1403,47 @@ async function startServer() {
   // -------------------------------------------------------------
   // 9. Returns & Refunds Engine
   // -------------------------------------------------------------
+  // S2-3: authoritative RMA case store. These records used to live in the
+  // operator's own browser, so a return raised at one desk was invisible to
+  // everyone else and survived nothing more than a cache clear.
+  app.get('/api/admin/rma', (req, res) => {
+    res.json({ success: true, records: serverDb.rmaRecords });
+  });
+
+  app.post('/api/admin/rma', (req, res) => {
+    const body = req.body || {};
+    if (!body.orderId) return res.status(400).json({ error: 'orderId is required' });
+    const order = serverDb.getOrderById(body.orderId);
+    if (!order) return res.status(404).json({ error: 'Order not found' });
+    const record = serverDb.createRma({
+      orderId: order.id,
+      orderNumber: order.orderNumber,
+      customerName: body.customerName || order.customer.name,
+      customerPhone: body.customerPhone || order.customer.phone,
+      district: body.district || order.shippingAddress?.district || 'Dhaka',
+      requestDate: new Date().toISOString(),
+      reason: body.reason || 'CHANGED_MIND',
+      reasonDetails: body.reasonDetails || '',
+      productTitle: body.productTitle || order.items?.[0]?.title || 'Ordered Items',
+      sku: body.sku || order.items?.[0]?.sku || '',
+      quantity: body.quantity ?? order.items?.[0]?.quantity ?? 1,
+      itemPrice: body.itemPrice ?? order.items?.[0]?.price ?? order.total,
+      // Never trust a client-sent refund amount: it decides how much money
+      // leaves the business. Derive it from the order.
+      totalRefundAmount: order.total,
+      originalPaymentMethod: order.paymentMethod,
+      originalPaymentStatus: order.paymentStatus,
+      stage: 'REQUESTED'
+    });
+    res.json({ success: true, record });
+  });
+
+  app.patch('/api/admin/rma/:id', (req, res) => {
+    const record = serverDb.updateRma(req.params.id, req.body || {});
+    if (!record) return res.status(404).json({ error: 'RMA not found' });
+    res.json({ success: true, record });
+  });
+
   app.get('/api/admin/returns', (req, res) => {
     const returns = serverDb.orders.filter(o => o.orderStatus === 'RETURN_REQUESTED' || o.orderStatus === 'RETURNED');
     res.json({ success: true, returns });

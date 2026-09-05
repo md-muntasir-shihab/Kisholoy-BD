@@ -2483,3 +2483,46 @@ export interface MarketingFinanceReconciliation {
   note: string;
   noteBn: string;
 }
+
+/**
+ * Admin-side Return Merchandise Authorisation case.
+ *
+ * S2-3: these used to live only in the operator's browser (localStorage
+ * `kisholoy_rma_records`), so a return raised at one desk was invisible to
+ * every other member of staff. The server now owns them.
+ */
+export interface RmaRecord {
+  id: string;
+  rmaNumber: string;
+  orderId: string;
+  orderNumber: string;
+  customerName: string;
+  customerPhone: string;
+  district: string;
+  requestDate: string;
+  reason: 'WRONG_SIZE' | 'DEFECTIVE_PRODUCT' | 'WRONG_ITEM_SENT' | 'COLOR_MISMATCH' | 'CHANGED_MIND' | 'COURIER_RETURNED';
+  reasonDetails: string;
+  productTitle: string;
+  sku: string;
+  quantity: number;
+  itemPrice: number;
+  totalRefundAmount: number;
+  originalPaymentMethod: string;
+  originalPaymentStatus: string;
+  stage: 'REQUESTED' | 'PARCEL_RECEIVED' | 'INSPECTED' | 'RESTOCKED' | 'REFUND_QUEUED' | 'REFUND_DISBURSED' | 'REJECTED';
+  inspectionResult?: {
+    condition: 'PRISTINE_NEW' | 'OPENED_RESELLABLE' | 'DAMAGED_SCRAP';
+    inspectedBy: string;
+    inspectedAt: string;
+    notes: string;
+    restocked: boolean;
+  };
+  refundExecution?: {
+    method: 'bKash' | 'Nagad' | 'SSLCOMMERZ_REVERSAL' | 'BANK_EFT' | 'STORE_CREDIT';
+    accountNumber: string;
+    trxId: string;
+    disbursedAt: string;
+    disbursedAmount: number;
+    disbursedBy: string;
+  };
+}

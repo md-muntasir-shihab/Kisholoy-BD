@@ -229,6 +229,7 @@ class BackupEngine {
     'pickLists', 'dispatchManifests',
     'coupons', 'flashDeals', 'loyaltyWallets', 'promotionStats',
     'customerAddresses', 'wishlists', 'customerReturns', 'customerProfiles',
+    'rmaRecords',
     'printSettings'
   ];
 

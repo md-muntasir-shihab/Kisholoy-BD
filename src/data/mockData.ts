@@ -9,7 +9,7 @@ import {
   PickList, DispatchManifest,
   CouponRule, FlashDeal, CustomerLoyaltyWallet, PromotionSystemStats,
   CustomerAddress, WishlistItem, CustomerReturnRequest, CustomerProfile,
-  CustomerNotification
+  CustomerNotification, RmaRecord
 } from '../types';
 
 export const INITIAL_CATEGORIES: Category[] = [
@@ -2850,8 +2850,122 @@ export const INITIAL_CUSTOMER_PROFILES: CustomerProfile[] = [
   }
 ];
 
-
-
-
-
-
+// S2-3: seed RMA cases, previously hardcoded inside ReturnsRefundsAdmin.tsx
+export const INITIAL_RMA_RECORDS: RmaRecord[] = [
+  {
+    id: 'rma-101',
+    rmaNumber: 'RMA-2026-0891',
+    orderId: 'ord-001',
+    orderNumber: 'KSH-2026-0891',
+    customerName: 'Tanzil Ahmed',
+    customerPhone: '+880 1712345678',
+    district: 'Dhaka',
+    requestDate: '2026-08-30T10:15:00Z',
+    reason: 'WRONG_SIZE',
+    reasonDetails: 'Ordered XL, customer requested replacement or refund for size L',
+    productTitle: 'Handcrafted Silk Panjabi',
+    sku: 'PJ-SLK-01',
+    quantity: 1,
+    itemPrice: 3800,
+    totalRefundAmount: 3800,
+    originalPaymentMethod: 'SSLCOMMERZ (Visa)',
+    originalPaymentStatus: 'PAID',
+    stage: 'PARCEL_RECEIVED',
+    inspectionResult: {
+      condition: 'PRISTINE_NEW',
+      inspectedBy: 'Warehouse Inspector #2',
+      inspectedAt: '2026-08-31T14:30:00Z',
+      notes: 'Item tags intact and packaging undamaged. Eligible for full restock and refund reversal.',
+      restocked: true
+    }
+  },
+  {
+    id: 'rma-102',
+    rmaNumber: 'RMA-2026-0892',
+    orderId: 'ord-002',
+    orderNumber: 'KSH-2026-0892',
+    customerName: 'Nusrat Jahan',
+    customerPhone: '+880 1819876543',
+    district: 'Chittagong',
+    requestDate: '2026-08-29T16:45:00Z',
+    reason: 'DEFECTIVE_PRODUCT',
+    reasonDetails: 'Loose embroidery stitch on collar seam reported upon unboxing',
+    productTitle: 'Embroidered Cotton Kurti',
+    sku: 'KT-COT-02',
+    quantity: 1,
+    itemPrice: 2200,
+    totalRefundAmount: 2200,
+    originalPaymentMethod: 'bKash',
+    originalPaymentStatus: 'PAID',
+    stage: 'REFUND_QUEUED',
+    inspectionResult: {
+      condition: 'DAMAGED_SCRAP',
+      inspectedBy: 'Quality Lead Rafiq',
+      inspectedAt: '2026-08-30T11:00:00Z',
+      notes: 'Factory stitching defect verified. Written off to Supplier Claim. Authorized 100% bKash refund.',
+      restocked: false
+    }
+  },
+  {
+    id: 'rma-103',
+    rmaNumber: 'RMA-2026-0870',
+    orderId: 'ord-003',
+    orderNumber: 'KSH-2026-0870',
+    customerName: 'Farhan Kabir',
+    customerPhone: '+880 1912445566',
+    district: 'Sylhet',
+    requestDate: '2026-08-25T09:20:00Z',
+    reason: 'COURIER_RETURNED',
+    reasonDetails: 'Customer was unavailable after 3 delivery attempts by Steadfast courier',
+    productTitle: 'Premium Festive Jamdani Sharee',
+    sku: 'SH-JAM-03',
+    quantity: 1,
+    itemPrice: 7500,
+    totalRefundAmount: 7500,
+    originalPaymentMethod: 'COD',
+    originalPaymentStatus: 'UNPAID',
+    stage: 'RESTOCKED',
+    inspectionResult: {
+      condition: 'PRISTINE_NEW',
+      inspectedBy: 'Hub Dispatcher Alam',
+      inspectedAt: '2026-08-26T12:00:00Z',
+      notes: 'Courier return parcel intact. Restocked to Dhaka Central Hub inventory. No cash refund required (COD order).',
+      restocked: true
+    }
+  },
+  {
+    id: 'rma-104',
+    rmaNumber: 'RMA-2026-0855',
+    orderId: 'ord-004',
+    orderNumber: 'KSH-2026-0855',
+    customerName: 'Samira Huq',
+    customerPhone: '+880 1611223344',
+    district: 'Rajshahi',
+    requestDate: '2026-08-22T13:10:00Z',
+    reason: 'COLOR_MISMATCH',
+    reasonDetails: 'Fabric shade appeared slightly different in room lighting compared to website photos',
+    productTitle: 'Linen Casual Shirt',
+    sku: 'SH-LIN-04',
+    quantity: 1,
+    itemPrice: 1650,
+    totalRefundAmount: 1650,
+    originalPaymentMethod: 'Nagad',
+    originalPaymentStatus: 'PAID',
+    stage: 'REFUND_DISBURSED',
+    inspectionResult: {
+      condition: 'OPENED_RESELLABLE',
+      inspectedBy: 'Inspector Mahin',
+      inspectedAt: '2026-08-23T10:00:00Z',
+      notes: 'Clean condition, steam-pressed and repackaged for inventory sale.',
+      restocked: true
+    },
+    refundExecution: {
+      method: 'Nagad',
+      accountNumber: '01611223344',
+      trxId: 'NGD982310892',
+      disbursedAt: '2026-08-24T15:20:00Z',
+      disbursedAmount: 1650,
+      disbursedBy: 'Finance Lead (Kisholoy)'
+    }
+  }
+];

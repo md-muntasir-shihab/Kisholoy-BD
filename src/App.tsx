@@ -42,6 +42,7 @@ import { BackupAdmin } from './admin/BackupAdmin';
 import { FraudRiskDashboard } from './admin/FraudRiskDashboard';
 import { FulfillmentAdmin } from './admin/FulfillmentAdmin';
 import { MarketingAdmin } from './admin/MarketingAdmin';
+import { PromotionsAdmin } from './admin/PromotionsAdmin';
 import { SupplierLoginPage } from './pages/supplier/SupplierLoginPage';
 import { SupplierPortalPage } from './pages/supplier/SupplierPortalPage';
 import { Navigate } from 'react-router-dom';
@@ -120,7 +121,10 @@ export default function App() {
             <Route path="content" element={<ContentAdmin />} />
             <Route path="settings" element={<SettingsAdmin />} />
             <Route path="users" element={<UsersAdmin />} />
-            <Route path="promotions" element={<Navigate to="/admin" replace />} />
+            {/* S2-2: this was redirected to the dashboard, stranding 1,323
+                lines of coupon / flash-deal / loyalty UI whose API endpoints
+                all exist and are unreachable any other way. */}
+            <Route path="promotions" element={<PromotionsAdmin />} />
             <Route path="marketing" element={<MarketingAdmin />} />
             <Route path="marketing/command" element={<Navigate to="/admin/marketing?tab=command" replace />} />
             <Route path="fraud" element={<FraudRiskDashboard />} />

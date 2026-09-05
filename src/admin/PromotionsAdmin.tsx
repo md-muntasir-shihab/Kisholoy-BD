@@ -174,7 +174,7 @@ export function PromotionsAdmin() {
           setShowCouponModal(false);
           setEditingCoupon(null);
         } else {
-          alert(data.error || 'Failed to update coupon');
+          showToast(data.error || 'Failed to update coupon', 'info');
         }
       } else {
         // Create
@@ -192,11 +192,11 @@ export function PromotionsAdmin() {
           showToast(`Coupon "${formData.code}" created successfully!`);
           setShowCouponModal(false);
         } else {
-          alert(data.error || 'Failed to create coupon');
+          showToast(data.error || 'Failed to create coupon', 'info');
         }
       }
     } catch (err: any) {
-      alert(err.message || 'Network error saving coupon');
+      showToast(err.message || 'Network error saving coupon', 'info');
     }
     });
   };
@@ -279,10 +279,10 @@ export function PromotionsAdmin() {
         setShowAdjustPointsModal(false);
         setAdjustNote('');
       } else {
-        alert(data.error || 'Failed to adjust loyalty points');
+        showToast(data.error || 'Failed to adjust loyalty points', 'info');
       }
     } catch (e: any) {
-      alert(e.message || 'Error communicating with server');
+      showToast(e.message || 'Error communicating with server', 'info');
     }
     });
   };

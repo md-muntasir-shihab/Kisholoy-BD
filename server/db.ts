@@ -14,7 +14,7 @@ import {
   PickList, DispatchManifest,
   CouponRule, FlashDeal, CustomerLoyaltyWallet, PromotionSystemStats, LoyaltyPointsTransaction,
   CustomerAddress, WishlistItem, CustomerReturnRequest, CustomerProfile, CustomerNotification,
-  AuditSeverity, AuditCategory, PrintSettings
+  AuditSeverity, AuditCategory, PrintSettings, RmaRecord
 } from '../src/types';
 import { securityEngine } from './securityEngine';
 import { normalizeBdMobilePhone } from '../src/lib/phone';
@@ -31,7 +31,7 @@ import {
   INITIAL_PICK_LISTS, INITIAL_DISPATCH_MANIFESTS,
   INITIAL_COUPONS, INITIAL_FLASH_DEALS, INITIAL_LOYALTY_WALLETS, INITIAL_PROMOTION_STATS,
   INITIAL_CUSTOMER_ADDRESSES, INITIAL_WISHLISTS, INITIAL_CUSTOMER_RETURNS, INITIAL_CUSTOMER_PROFILES,
-  INITIAL_CUSTOMER_NOTIFICATIONS
+  INITIAL_CUSTOMER_NOTIFICATIONS, INITIAL_RMA_RECORDS
 } from '../src/data/mockData';
 
 class ServerDatabase {
@@ -43,6 +43,7 @@ class ServerDatabase {
   contentRevisions: ContentRevision[] = JSON.parse(JSON.stringify(INITIAL_CONTENT_REVISIONS));
   auditLogs: AuditLog[] = JSON.parse(JSON.stringify(INITIAL_AUDIT_LOGS));
   expenses: ExpenseRecord[] = JSON.parse(JSON.stringify(INITIAL_EXPENSES));
+  rmaRecords: RmaRecord[] = JSON.parse(JSON.stringify(INITIAL_RMA_RECORDS));
   settlements: SettlementRecord[] = JSON.parse(JSON.stringify(INITIAL_SETTLEMENTS));
   automationJobs: AutomationJob[] = JSON.parse(JSON.stringify(INITIAL_AUTOMATION_JOBS));
   paymentTransactions: PaymentTransaction[] = JSON.parse(JSON.stringify(INITIAL_PAYMENT_TRANSACTIONS));
@@ -487,6 +488,35 @@ class ServerDatabase {
       },
       evaluatedAt: new Date().toISOString()
     };
+  }
+
+  // ---------------------------------------------------------------
+  // RMA methods (S2-3)
+  //
+  // Returns used to be per-browser localStorage state, so two operators saw
+  // two different worlds and the server's restock/refund logic was never
+  // reachable from the admin UI. These records are now authoritative.
+  // ---------------------------------------------------------------
+  createRma(input: Omit<RmaRecord, 'id' | 'rmaNumber'> & { rmaNumber?: string }): RmaRecord {
+    const year = new Date().getFullYear();
+    const record: RmaRecord = {
+      ...input,
+      id: `rma-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+      rmaNumber: input.rmaNumber || `RMA-${year}-${String(this.rmaRecords.length + 1).padStart(4, '0')}`
+    };
+    this.rmaRecords.unshift(record);
+    this.addAuditLog('CREATE_RMA', 'Order', record.rmaNumber, `Created return authorization for ${record.orderNumber}`);
+    return record;
+  }
+
+  updateRma(id: string, patch: Partial<RmaRecord>): RmaRecord | null {
+    const record = this.rmaRecords.find(r => r.id === id);
+    if (!record) return null;
+    // id and rmaNumber are the case's identity; a patch must never move them.
+    const { id: _ignoredId, rmaNumber: _ignoredNumber, ...safe } = patch;
+    Object.assign(record, safe);
+    this.addAuditLog('UPDATE_RMA', 'Order', record.rmaNumber, `Return case moved to ${record.stage}`);
+    return record;
   }
 
   // Expense methods

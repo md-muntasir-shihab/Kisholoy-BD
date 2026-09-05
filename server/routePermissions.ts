@@ -94,6 +94,14 @@ export const ROUTE_PERMISSIONS: RoutePermissionRule[] = [
   { methods: WRITE, pattern: /^\/api\/suppliers/, permission: 'SUPPLIER_MANAGE' },
   { methods: READ, pattern: /^\/api\/suppliers/, permission: 'SUPPLIER_VIEW' },
 
+  // ---- Returns / RMA (S2-3) ------------------------------------------------
+  // Disbursing money is a finance authority; moving a case through inspection
+  // is ordinary order work. Keep them apart so a warehouse inspector cannot
+  // pay a refund out.
+  { methods: WRITE, pattern: /^\/api\/admin\/refunds/, permission: 'REFUND_PROCESS', note: 'issuing money back' },
+  { methods: WRITE, pattern: /^\/api\/admin\/(rma|returns)/, permission: 'ORDER_UPDATE', note: 'return case workflow' },
+  { methods: READ, pattern: /^\/api\/admin\/(rma|returns|refunds)/, permission: 'ORDER_VIEW' },
+
   // ---- Customers -----------------------------------------------------------
   { methods: WRITE, pattern: /^\/api\/customers/, permission: 'CUSTOMER_UPDATE' },
   { methods: READ, pattern: /^\/api\/customers/, permission: 'CUSTOMER_VIEW' },
