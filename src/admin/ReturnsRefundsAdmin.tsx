@@ -35,6 +35,7 @@ import { useApp } from '../context/AppContext';
 import { Order, OrderStatus } from '../types';
 import { ReturnRefundPrintModal } from '../components/print/ReturnRefundPrintModal';
 import { AdminModalShell } from '../components/admin/AdminModalShell';
+import { usePendingAction } from '../hooks/usePendingAction';
 
 export interface RmaRecord {
   id: string;
@@ -195,6 +196,9 @@ export function ReturnsRefundsAdmin() {
   const { orders, products, updateOrderStatus, logAudit, showToast, language } = useApp();
   const isBn = language === 'BN';
 
+  // F-306: blocks duplicate submits while a mutation is in flight.
+  const { run, isPending, isBusy } = usePendingAction();
+
   // Persistence for RMA records
   const [rmaList, setRmaList] = useState<RmaRecord[]>(() => {
     try {
@@ -289,7 +293,7 @@ export function ReturnsRefundsAdmin() {
   };
 
   // Submit Inspection
-  const handleSaveInspection = () => {
+  const handleSaveInspection = async () =>  run('handleSaveInspection', async () => {
     if (!inspectModalRma) return;
 
     const nextStage = inspectModalRma.originalPaymentStatus === 'PAID' ? 'REFUND_QUEUED' : 'RESTOCKED';
@@ -312,11 +316,40 @@ export function ReturnsRefundsAdmin() {
     });
 
     saveRmaList(updated);
-    updateOrderStatus(inspectModalRma.orderId, 'RETURNED', `RMA Inspected (${inspectCondition}). Restock: ${inspectRestock ? 'YES' : 'NO'}`);
+    // F-204: the server owns the return workflow (once-only stock restore,
+    // supplier settlement adjustment, customer notification). This screen used
+    // to mutate localStorage and call updateOrderStatus only, so none of that
+    // ever ran and the audited restock fix was unreachable from the UI.
+    //
+    // Only approve server-side when the goods actually go back on sale; a
+    // damaged parcel must not restock inventory.
+    if (inspectRestock) {
+      const res = await fetch('/api/admin/returns/approve', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderId: inspectModalRma.orderId })
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok || !data?.success) {
+        showToast(
+          isBn
+            ? 'সার্ভারে রিটার্ন অনুমোদন ব্যর্থ হয়েছে: ' + (data?.error || res.status)
+            : 'Return approval failed on server: ' + (data?.error || res.status),
+          'info'
+        );
+        return;
+      }
+    } else {
+      updateOrderStatus(
+        inspectModalRma.orderId,
+        'RETURNED',
+        `RMA Inspected (${inspectCondition}). Restock: NO`
+      );
+    }
     logAudit('INSPECT_RMA', 'Return', inspectModalRma.rmaNumber, `Inspected parcel condition: ${inspectCondition}. Restocked: ${inspectRestock}`);
     showToast(isBn ? 'রিটার্ন পার্সেল ইন্সপেকশন সফলভাবে সম্পন্ন ও স্টক আপডেট হয়েছে।' : 'RMA inspection completed and inventory updated!');
     setInspectModalRma(null);
-  };
+    });
 
   // Open Refund Modal
   const handleOpenRefund = (rma: RmaRecord) => {
@@ -328,7 +361,7 @@ export function ReturnsRefundsAdmin() {
   };
 
   // Execute Refund
-  const handleExecuteRefund = () => {
+  const handleExecuteRefund = async () =>  run('handleExecuteRefund', async () => {
     if (!refundModalRma) return;
 
     const updated = rmaList.map(item => {
@@ -349,6 +382,27 @@ export function ReturnsRefundsAdmin() {
       return item;
     });
 
+    // F-204: route disbursement through the server so the duplicate-refund
+    // guard, the gateway call, the stock restore and the customer notification
+    // all fire. Previously this only wrote localStorage, so a refund
+    // "succeeded" in the UI while no money moved, and the same order could be
+    // refunded again and again.
+    const res = await fetch('/api/admin/refunds/process', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ orderId: refundModalRma.orderId })
+    });
+    const data = await res.json().catch(() => null);
+    if (!res.ok || !data?.success) {
+      showToast(
+        isBn
+          ? 'রিফান্ড ব্যর্থ হয়েছে: ' + (data?.error || res.status)
+          : 'Refund failed: ' + (data?.error || res.status),
+        'info'
+      );
+      return;
+    }
+
     saveRmaList(updated);
     logAudit('EXECUTE_REFUND', 'Finance', refundModalRma.rmaNumber, `Disbursed refund ৳${refundAmount} via ${refundMethod} (TrxID: ${refundTrxId})`);
     
@@ -360,7 +414,7 @@ export function ReturnsRefundsAdmin() {
     }
 
     setRefundModalRma(null);
-  };
+    });
 
   // Create New RMA
   const handleCreateRma = (e: React.FormEvent) => {

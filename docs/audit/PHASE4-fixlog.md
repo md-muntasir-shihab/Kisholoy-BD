@@ -415,3 +415,80 @@ real supplier a temporary password from the admin panel. Existing records
 carrying the old plaintext field have no `passwordHash` and therefore cannot log
 in until reset — deliberate, since the alternative is honouring a password that
 is public knowledge.
+
+---
+
+## Batch 7 — F-204 (RMA → server) and S2-5 (context hydration)
+
+### F-204 · S2 — the admin RMA screen never reached the server
+
+`ReturnsRefundsAdmin` was a self-contained localStorage app. Both terminal
+actions — inspection and refund disbursement — wrote
+`kisholoy_rma_records` and called `updateOrderStatus`, and stopped there.
+
+The server already had the correct workflow at
+`POST /api/admin/returns/approve` and `POST /api/admin/refunds/process`:
+once-only stock restore, supplier settlement adjustment, gateway refund with a
+duplicate guard, and customer notification. None of it was reachable, which
+means the once-only restock fix recorded in `AUDIT_REPORT.md` §2.4 had never
+actually run in production. Two consequences:
+
+- **Returned stock was never restored.** Approving a return in the admin UI
+  restocked nothing, so inventory drifted low against physical stock on every
+  return.
+- **Refunds moved no money.** The UI reported "Refund of ৳X disbursed", wrote a
+  transaction id it made up locally, and never called the gateway. Because
+  nothing was recorded server-side, the duplicate-refund guard could not fire
+  and the same order could be "refunded" repeatedly.
+
+Both handlers now `await` the server and abort on failure instead of writing a
+success record regardless. `handleSaveInspection` only approves server-side
+when `inspectRestock` is set — a damaged parcel is recorded as returned without
+restocking, which is why the call is conditional rather than unconditional.
+Both are wrapped in `usePendingAction` (F-306), since a double-click on
+"disburse refund" is exactly the mistake worth preventing.
+
+**Live verification** (fresh server, `ord-101` / `prod-1`, qty 1):
+
+| step | result |
+|---|---|
+| stock before | 12 |
+| approve #1 | HTTP 200, stock → **13** |
+| approve #2 | HTTP 200, stock **still 13** (once-only guard holds) |
+| refund #1 | `success: true`, `REF-1788585544654-486` |
+| refund #2 | `Refund already processed — duplicate prevented.` |
+
+### S2-5 · S2 — finance and audit collections never hydrated
+
+`AppContext` seeded `expenses`, `settlements` and `auditLogs` from `INITIAL_*`
+mock data and never fetched them. FinanceAdmin **renders** from context but
+**writes** to the server, so the P&L, expense ledger and settlement views
+showed the mock seed plus whatever the current session happened to add —
+invisible to another operator, and reset on refresh.
+
+The seed totals coincidentally matched the server's, which is what hid this.
+Demonstrated before the fix by posting one expense: server ৳133,299 vs. UI
+৳33,300.
+
+Now hydrated in the existing mount effect. Two details worth noting:
+
+- These are staff-only endpoints, so the block is gated on `getStaffToken()`.
+  All three return 401 to anonymous callers (verified), and an unguarded
+  hydrate would fire three guaranteed 401s on every storefront page load.
+- `/api/security/audit-chain/ledger` returns its array under **`ledger`**, not
+  `entries` — checked against the live response rather than assumed.
+
+The remaining S2-5 collections (`automationJobs`, `routingRules`,
+`customerLoyalty`) are deliberately left alone: no screen reads them from
+context, so hydrating them would add API calls with no consumer.
+
+### Codemod fix
+
+`apply-pending-guard.mjs` placed the hook inside a lazy `useState(() => {…})`
+initialiser when that was the component's first `useState` (hit in
+MarketingAdmin, then ReturnsRefundsAdmin). The anchor now matches only
+single-line `useState` declarations.
+
+**Gates:** `tsc --noEmit` clean · build green (849.8 kB) · smoke 98/9 ·
+PHASE 3 aggregate unchanged (i18n/responsive/aria all 0) ·
+`/admin/returns`, `/admin/finance`, `/admin/audit` all 200.

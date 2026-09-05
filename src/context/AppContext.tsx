@@ -11,7 +11,7 @@ import {
   CustomerNotification, CustomCourierConfig
 } from '../types';
 import { logAuthEvent } from '../utils/telemetryLogger';
-import { apiFetch, apiFetchJson, setCustomerToken } from '../lib/apiClient';
+import { apiFetch, apiFetchJson, setCustomerToken, getStaffToken } from '../lib/apiClient';
 import { 
   INITIAL_PRODUCTS, INITIAL_CATEGORIES, INITIAL_ORDERS, 
   INITIAL_CUSTOMERS, INITIAL_CONTENT, INITIAL_AUDIT_LOGS, 
@@ -311,6 +311,35 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setCustomers(data.customers);
       }
     });
+
+    // S2-5: finance + audit collections. These are staff-only endpoints, so
+    // hydrate them only when a staff session exists — an anonymous shopper
+    // would otherwise fire three guaranteed 401s on every page load.
+    //
+    // Without this the screens rendered INITIAL_* mock seeds forever: the P&L
+    // and expense ledger silently ignored every expense recorded on the server
+    // (or by another operator), showing a stale total that happened to match
+    // the seed only until the first real write.
+    if (getStaffToken()) {
+      safeFetchJson('/api/finance/expenses').then(data => {
+        if (data?.success && Array.isArray(data.expenses)) {
+          setExpenses(data.expenses);
+        }
+      });
+
+      safeFetchJson('/api/finance/settlements').then(data => {
+        if (data?.success && Array.isArray(data.settlements)) {
+          setSettlements(data.settlements);
+        }
+      });
+
+      // Note: this endpoint returns the array under `ledger`, not `entries`.
+      safeFetchJson('/api/security/audit-chain/ledger?limit=150').then(data => {
+        if (data?.success && Array.isArray(data.ledger)) {
+          setAuditLogs(data.ledger);
+        }
+      });
+    }
 
     // Sync STOs
     safeFetchJson('/api/fulfillment/transfers').then(data => {

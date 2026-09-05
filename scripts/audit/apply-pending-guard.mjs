@@ -80,7 +80,9 @@ for (const [rel, fns] of byFile) {
   }
   if (!/const \{[^}]*\brun\b/.test(src)) {
     // Insert after the first hook call inside the component.
-    const anchor = /\n(\s*)const \[[^\]]+\] = useState[\s\S]*?;\n/.exec(src);
+    // Must be a single-line useState declaration: a lazy initialiser
+    // (`useState(() => {`) spans lines and the hook would land inside it.
+    const anchor = /\n(\s*)const \[[^\]]+\] = useState[^\n]*\);\n/.exec(src);
     if (anchor) {
       const ind = anchor[1];
       const at = anchor.index + anchor[0].length;
