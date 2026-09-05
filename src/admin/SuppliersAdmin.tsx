@@ -171,8 +171,11 @@ export function SuppliersAdmin() {
   };
 
   // Create Supplier Handler
-  const handleCreateSupplier = async (e: React.FormEvent) =>  run('handleCreateSupplier', async () => {
+    const handleCreateSupplier = async (e: React.FormEvent) => {
+    // Must fire synchronously. Inside run() it would land in a microtask and
+    // the browser would submit the form and reload the page first.
     e.preventDefault();
+    return run('handleCreateSupplier', async () => {
 
     const rawSupplier = {
       companyName: newCompanyName.trim(),
@@ -220,10 +223,14 @@ export function SuppliersAdmin() {
       notify(err.message);
     }
     });
+  };
 
   // Issue Purchase Order Handler
-  const handleCreatePo = async (e: React.FormEvent) =>  run('handleCreatePo', async () => {
+    const handleCreatePo = async (e: React.FormEvent) => {
+    // Must fire synchronously. Inside run() it would land in a microtask and
+    // the browser would submit the form and reload the page first.
     e.preventDefault();
+    return run('handleCreatePo', async () => {
 
     const rawPo = {
       supplierId: poSupplierId,
@@ -267,6 +274,7 @@ export function SuppliersAdmin() {
       notify(err.message);
     }
     });
+  };
 
   // Mark PO Received (Triggers automated stock increment)
   const handleMarkPoReceived = async (supplierId: string, poId: string) =>  run('handleMarkPoReceived', async () => {
@@ -1147,8 +1155,10 @@ export function SuppliersAdmin() {
       {/* Modal: Create Supplier */}
       <AdminModalShell
         open={!!createSupplierOpen}
-        onClose={() => setCreateSupplierOpen(null)}
+        onClose={() => setCreateSupplierOpen(false)}
         label="Modal Create Supplier"
+        // Contains a form: a stray backdrop click must not discard entered data.
+        closeOnBackdrop={false}
         overlayClassName="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4"
       >
           <div className="bg-white rounded-xl max-w-lg w-full p-6 shadow-2xl space-y-4">
@@ -1268,8 +1278,10 @@ export function SuppliersAdmin() {
       {/* Modal: Issue Purchase Order */}
       <AdminModalShell
         open={!!createPoOpen}
-        onClose={() => setCreatePoOpen(null)}
+        onClose={() => setCreatePoOpen(false)}
         label="Modal Issue Purchase Order"
+        // Contains a form: a stray backdrop click must not discard entered data.
+        closeOnBackdrop={false}
         overlayClassName="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4"
       >
           <div className="bg-white rounded-xl max-w-xl w-full p-6 shadow-2xl space-y-4">
@@ -1394,8 +1406,10 @@ export function SuppliersAdmin() {
       {/* Modal: Record Payment Disbursement */}
       <AdminModalShell
         open={!!recordPaymentOpen}
-        onClose={() => setRecordPaymentOpen(null)}
+        onClose={() => setRecordPaymentOpen(false)}
         label="Modal Record Payment Disbursement"
+        // Contains a form: a stray backdrop click must not discard entered data.
+        closeOnBackdrop={false}
         overlayClassName="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4"
       >
           <div className="bg-white rounded-xl max-w-md w-full p-6 shadow-2xl space-y-4">
@@ -1500,7 +1514,7 @@ export function SuppliersAdmin() {
       {/* Step-Up MFA Confirmation Modal */}
       <AdminModalShell
         open={!!(mfaModalOpen && pendingPaymentPayload)}
-        onClose={() => setMfaModalOpen(null)}
+        onClose={() => setMfaModalOpen(false)}
         label="Step-Up MFA Confirmation Modal"
         closeOnEscape={false}
         closeOnBackdrop={false}

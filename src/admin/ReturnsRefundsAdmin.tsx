@@ -836,6 +836,8 @@ export function ReturnsRefundsAdmin() {
         open={!!inspectModalRma}
         onClose={() => setInspectModalRma(null)}
         label="MODAL 1 RMA Physical Inspection & QC"
+        // Contains a form: a stray backdrop click must not discard entered data.
+        closeOnBackdrop={false}
         overlayClassName="fixed inset-0 z-50 bg-stone-900/60 backdrop-blur-xs flex items-center justify-center p-4"
       >
           <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-stone-200 space-y-5 animate-in fade-in zoom-in-95 duration-150">
@@ -971,6 +973,8 @@ export function ReturnsRefundsAdmin() {
         open={!!refundModalRma}
         onClose={() => setRefundModalRma(null)}
         label="MODAL 2 Execute Refund Disbursement"
+        // Contains a form: a stray backdrop click must not discard entered data.
+        closeOnBackdrop={false}
         overlayClassName="fixed inset-0 z-50 bg-stone-900/60 backdrop-blur-xs flex items-center justify-center p-4"
       >
           <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-stone-200 space-y-5 animate-in fade-in zoom-in-95 duration-150">
@@ -1113,8 +1117,10 @@ export function ReturnsRefundsAdmin() {
       {/* MODAL 3: Create New RMA Case */}
       <AdminModalShell
         open={!!createModalOpen}
-        onClose={() => setCreateModalOpen(null)}
+        onClose={() => setCreateModalOpen(false)}
         label="MODAL 3 Create New RMA Case"
+        // Contains a form: a stray backdrop click must not discard entered data.
+        closeOnBackdrop={false}
         overlayClassName="fixed inset-0 z-50 bg-stone-900/60 backdrop-blur-xs flex items-center justify-center p-4"
       >
           <form onSubmit={handleCreateRma} className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-stone-200 space-y-4 animate-in fade-in zoom-in-95 duration-150">

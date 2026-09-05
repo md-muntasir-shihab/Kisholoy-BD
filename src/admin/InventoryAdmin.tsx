@@ -1103,6 +1103,8 @@ export function InventoryAdmin() {
         open={!!adjustModalProduct}
         onClose={() => setAdjustModalProduct(null)}
         label="Single Product Stock Adjust Modal"
+        // Contains a form: a stray backdrop click must not discard entered data.
+        closeOnBackdrop={false}
         overlayClassName="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4"
       >
           <div className="bg-white rounded-2xl max-w-lg w-full p-6 space-y-5 shadow-2xl animate-in fade-in zoom-in duration-150">

@@ -1052,6 +1052,8 @@ export function ProductsAdmin() {
         open={!!showAddModal}
         onClose={() => setShowAddModal(false)}
         label="Add New Product Modal"
+        // Contains a form: a stray backdrop click must not discard entered data.
+        closeOnBackdrop={false}
         overlayClassName="fixed inset-0 z-50 bg-stone-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-in fade-in duration-150"
       >
           <div className="bg-white rounded-2xl max-w-3xl w-full max-h-[92vh] flex flex-col shadow-2xl overflow-hidden my-auto border border-stone-100">

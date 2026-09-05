@@ -151,8 +151,11 @@ export function PromotionsAdmin() {
     });
 
   // Save Coupon (Create or Edit)
-  const handleSaveCoupon = async (e: React.FormEvent) =>  run('handleSaveCoupon', async () => {
+    const handleSaveCoupon = async (e: React.FormEvent) => {
+    // Must fire synchronously. Inside run() it would land in a microtask and
+    // the browser would submit the form and reload the page first.
     e.preventDefault();
+    return run('handleSaveCoupon', async () => {
     try {
       if (editingCoupon) {
         // Update
@@ -196,6 +199,7 @@ export function PromotionsAdmin() {
       alert(err.message || 'Network error saving coupon');
     }
     });
+  };
 
   // Open Edit Modal
   const openEditModal = (coupon: CouponRule) => {
@@ -248,8 +252,11 @@ export function PromotionsAdmin() {
   };
 
   // Adjust Points Submit
-  const handleAdjustPointsSubmit = async (e: React.FormEvent) =>  run('handleAdjustPointsSubmit', async () => {
+    const handleAdjustPointsSubmit = async (e: React.FormEvent) => {
+    // Must fire synchronously. Inside run() it would land in a microtask and
+    // the browser would submit the form and reload the page first.
     e.preventDefault();
+    return run('handleAdjustPointsSubmit', async () => {
     try {
       const res = await fetch('/api/promotions/loyalty/adjust', {
         method: 'POST',
@@ -278,6 +285,7 @@ export function PromotionsAdmin() {
       alert(e.message || 'Error communicating with server');
     }
     });
+  };
 
   // Run Simulator
   const runSimulator = async () => {
@@ -991,6 +999,8 @@ export function PromotionsAdmin() {
         open={!!showCouponModal}
         onClose={() => setShowCouponModal(false)}
         label="CREATE EDIT COUPON MODAL"
+        // Contains a form: a stray backdrop click must not discard entered data.
+        closeOnBackdrop={false}
         overlayClassName="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4 backdrop-blur-xs"
       >
           <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-stone-200 shadow-2xl p-6 space-y-4">
@@ -1187,6 +1197,8 @@ export function PromotionsAdmin() {
         open={!!showAdjustPointsModal}
         onClose={() => setShowAdjustPointsModal(false)}
         label="LOYALTY POINTS ADJUSTMENT MODAL"
+        // Contains a form: a stray backdrop click must not discard entered data.
+        closeOnBackdrop={false}
         overlayClassName="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4 backdrop-blur-xs"
       >
           <div className="bg-white rounded-2xl max-w-md w-full border border-stone-200 shadow-2xl p-6 space-y-4">

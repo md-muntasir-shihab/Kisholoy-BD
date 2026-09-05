@@ -1156,6 +1156,8 @@ export const FulfillmentAdmin: React.FC = () => {
         open={!!(isHubModalOpen && editingHub)}
         onClose={() => setIsHubModalOpen(false)}
         label=""
+        // Contains a form: a stray backdrop click must not discard entered data.
+        closeOnBackdrop={false}
         overlayClassName="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm animate-in fade-in duration-200"
       >
           <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-stone-200 p-6 space-y-4">
@@ -1331,6 +1333,8 @@ export const FulfillmentAdmin: React.FC = () => {
         open={!!editingBinStock}
         onClose={() => setEditingBinStock(null)}
         label=""
+        // Contains a form: a stray backdrop click must not discard entered data.
+        closeOnBackdrop={false}
         overlayClassName="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm animate-in fade-in duration-200"
       >
           <div className="bg-white rounded-xl shadow-2xl max-w-md w-full border border-stone-200 p-6 space-y-4">
@@ -1431,6 +1435,8 @@ export const FulfillmentAdmin: React.FC = () => {
         open={!!isStoModalOpen}
         onClose={() => setIsStoModalOpen(false)}
         label=""
+        // Contains a form: a stray backdrop click must not discard entered data.
+        closeOnBackdrop={false}
         overlayClassName="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm animate-in fade-in duration-200"
       >
           <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-stone-200 p-6 space-y-4">
@@ -1596,6 +1602,8 @@ export const FulfillmentAdmin: React.FC = () => {
         open={!!isPickModalOpen}
         onClose={() => setIsPickModalOpen(false)}
         label=""
+        // Contains a form: a stray backdrop click must not discard entered data.
+        closeOnBackdrop={false}
         overlayClassName="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm animate-in fade-in duration-200"
       >
           <div className="bg-white rounded-xl shadow-2xl max-w-xl w-full border border-stone-200 p-6 space-y-4">
@@ -1771,6 +1779,8 @@ export const FulfillmentAdmin: React.FC = () => {
         open={!!isManifestModalOpen}
         onClose={() => setIsManifestModalOpen(false)}
         label=""
+        // Contains a form: a stray backdrop click must not discard entered data.
+        closeOnBackdrop={false}
         overlayClassName="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm animate-in fade-in duration-200"
       >
           <div className="bg-white rounded-xl shadow-2xl max-w-xl w-full border border-stone-200 p-6 space-y-4">

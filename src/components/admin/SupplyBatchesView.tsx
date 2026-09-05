@@ -91,8 +91,11 @@ export const SupplyBatchesView: React.FC<SupplyBatchesViewProps> = ({
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) =>  run('handleSubmit', async () => {
+    const handleSubmit = async (e: React.FormEvent) => {
+    // Must fire synchronously. Inside run() it would land in a microtask and
+    // the browser would submit the form and reload the page first.
     e.preventDefault();
+    return run('handleSubmit', async () => {
     if (!supplierId || !productId || receivedQuantity <= 0) {
       showToast?.('Please specify supplier, product and a positive quantity.');
       return;
@@ -132,6 +135,7 @@ export const SupplyBatchesView: React.FC<SupplyBatchesViewProps> = ({
     }
   
   });
+  };
 
   const filteredBatches = batches.filter(b => {
     const matchesSupplier = selectedSupplierFilter === 'ALL' || b.supplierId === selectedSupplierFilter;
@@ -334,8 +338,10 @@ export const SupplyBatchesView: React.FC<SupplyBatchesViewProps> = ({
       {/* Intake Batch Modal */}
       <AdminModalShell
         open={!!createModalOpen}
-        onClose={() => setCreateModalOpen(null)}
+        onClose={() => setCreateModalOpen(false)}
         label="Intake Batch Modal"
+        // Contains a form: a stray backdrop click must not discard entered data.
+        closeOnBackdrop={false}
         overlayClassName="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-900/60 backdrop-blur-xs animate-in fade-in duration-150"
       >
           <div className="bg-white w-full max-w-lg rounded-2xl shadow-2xl border border-stone-200 overflow-hidden flex flex-col max-h-[90vh]">

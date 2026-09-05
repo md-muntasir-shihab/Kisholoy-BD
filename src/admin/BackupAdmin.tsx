@@ -1964,7 +1964,7 @@ export function BackupAdmin() {
       {/* ========================================================================= */}
       <AdminModalShell
         open={!!(restoreModalOpen && selectedSnapshotForRestore)}
-        onClose={() => setRestoreModalOpen(null)}
+        onClose={() => setRestoreModalOpen(false)}
         label=""
         closeOnEscape={false}
         closeOnBackdrop={false}

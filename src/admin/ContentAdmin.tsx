@@ -2005,7 +2005,7 @@ export function ContentAdmin() {
       {/* ========================================================================= */}
       <AdminModalShell
         open={!!publishModalOpen}
-        onClose={() => setPublishModalOpen(null)}
+        onClose={() => setPublishModalOpen(false)}
         label="Publish content"
         overlayClassName="fixed inset-0 z-50 bg-stone-950/70 backdrop-blur-xs flex items-center justify-center p-4"
       >

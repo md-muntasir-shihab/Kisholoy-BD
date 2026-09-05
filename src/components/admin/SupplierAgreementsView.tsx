@@ -362,8 +362,10 @@ export const SupplierAgreementsView: React.FC<SupplierAgreementsViewProps> = ({
       {/* Create / Edit Agreement Modal */}
       <AdminModalShell
         open={!!createModalOpen}
-        onClose={() => setCreateModalOpen(null)}
+        onClose={() => setCreateModalOpen(false)}
         label="Create Edit Agreement Modal"
+        // Contains a form: a stray backdrop click must not discard entered data.
+        closeOnBackdrop={false}
         overlayClassName="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-900/60 backdrop-blur-xs animate-in fade-in duration-150"
       >
           <div className="bg-white w-full max-w-lg rounded-2xl shadow-2xl border border-stone-200 overflow-hidden flex flex-col max-h-[90vh]">

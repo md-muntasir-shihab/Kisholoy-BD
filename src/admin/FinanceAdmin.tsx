@@ -186,8 +186,11 @@ export function FinanceAdmin() {
   const totalFilteredExpensesAmount = filteredExpenses.reduce((sum, e) => sum + e.amount, 0);
 
   // Expense Handlers
-  const handleCreateExpense = async (e: React.FormEvent) =>  run('handleCreateExpense', async () => {
+    const handleCreateExpense = async (e: React.FormEvent) => {
+    // Must fire synchronously. Inside run() it would land in a microtask and
+    // the browser would submit the form and reload the page first.
     e.preventDefault();
+    return run('handleCreateExpense', async () => {
     const amountNum = parseFloat(newExpense.amount);
     if (!newExpense.vendor || isNaN(amountNum) || amountNum <= 0 || !newExpense.reference) {
       showToast('Please fill all required expense fields with a valid amount');
@@ -229,6 +232,7 @@ export function FinanceAdmin() {
       showToast('Failed to record expense', 'info');
     }
     });
+  };
 
   const handleDeleteExpense = async (id: string) =>  run('handleDeleteExpense', async () => {
     if (!window.confirm('Are you sure you want to delete this expense record?')) return;
@@ -243,8 +247,11 @@ export function FinanceAdmin() {
   });
 
   // Settlement Handlers
-  const handleCreateSettlement = async (e: React.FormEvent) =>  run('handleCreateSettlement', async () => {
+    const handleCreateSettlement = async (e: React.FormEvent) => {
+    // Must fire synchronously. Inside run() it would land in a microtask and
+    // the browser would submit the form and reload the page first.
     e.preventDefault();
+    return run('handleCreateSettlement', async () => {
     const grossNum = parseFloat(newSettlement.grossAmount);
     const feeNum = parseFloat(newSettlement.gatewayFee) || (grossNum * 0.02);
     if (!newSettlement.batchNumber || isNaN(grossNum) || grossNum <= 0) {
@@ -296,6 +303,7 @@ export function FinanceAdmin() {
       showToast('Failed to create settlement batch', 'info');
     }
     });
+  };
 
   const handleConfirmPayout = async () =>  run('handleConfirmPayout', async () => {
     if (!settlingRecord) return;
@@ -988,6 +996,8 @@ export function FinanceAdmin() {
         open={!!showExpenseModal}
         onClose={() => setShowExpenseModal(false)}
         label="Modal Record Expense"
+        // Contains a form: a stray backdrop click must not discard entered data.
+        closeOnBackdrop={false}
         overlayClassName="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
       >
           <div className="bg-white rounded-xl max-w-md w-full p-6 space-y-4 shadow-xl border border-stone-200">
@@ -1083,6 +1093,8 @@ export function FinanceAdmin() {
         open={!!showSettlementModal}
         onClose={() => setShowSettlementModal(false)}
         label="Modal New Settlement Batch"
+        // Contains a form: a stray backdrop click must not discard entered data.
+        closeOnBackdrop={false}
         overlayClassName="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
       >
           <div className="bg-white rounded-xl max-w-md w-full p-6 space-y-4 shadow-xl border border-stone-200">

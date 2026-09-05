@@ -255,8 +255,11 @@ export function MarketingAdmin() {
     });
 
   // Create Campaign
-  const handleCreateCampaign = async (e: React.FormEvent) =>  run('handleCreateCampaign', async () => {
+    const handleCreateCampaign = async (e: React.FormEvent) => {
+    // Must fire synchronously. Inside run() it would land in a microtask and
+    // the browser would submit the form and reload the page first.
     e.preventDefault();
+    return run('handleCreateCampaign', async () => {
     if (!campaignForm.campaignName || !campaignForm.contentEn) {
       showToast('Please fill all required campaign fields');
       return;
@@ -280,6 +283,7 @@ export function MarketingAdmin() {
       showToast('Network error creating campaign');
     }
     });
+  };
 
   // Dispatch Campaign
   const handleDispatchCampaign = async (campaignId: string) =>  run('handleDispatchCampaign', async () => {
@@ -320,8 +324,11 @@ export function MarketingAdmin() {
     });
 
   // Update Referral Config
-  const handleUpdateConfig = async (e: React.FormEvent) =>  run('handleUpdateConfig', async () => {
+    const handleUpdateConfig = async (e: React.FormEvent) => {
+    // Must fire synchronously. Inside run() it would land in a microtask and
+    // the browser would submit the form and reload the page first.
     e.preventDefault();
+    return run('handleUpdateConfig', async () => {
     if (!referralConfig) return;
     try {
       const res = await fetch('/api/marketing/referrals/config', {
@@ -339,6 +346,7 @@ export function MarketingAdmin() {
       showToast('Error updating configuration');
     }
     });
+  };
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto pb-12 font-sans">
@@ -1145,6 +1153,8 @@ export function MarketingAdmin() {
         open={!!selectedCustomerCrm}
         onClose={() => setSelectedCustomerCrm(null)}
         label=""
+        // Contains a form: a stray backdrop click must not discard entered data.
+        closeOnBackdrop={false}
         overlayClassName="fixed inset-0 z-50 bg-stone-900/60 backdrop-blur-xs flex items-center justify-end"
       >
           <div className="bg-white w-full max-w-2xl h-full shadow-2xl p-6 overflow-y-auto space-y-6">
@@ -1289,8 +1299,10 @@ export function MarketingAdmin() {
       {/* ===================================================================== */}
       <AdminModalShell
         open={!!showCartNudgeModal}
-        onClose={() => setShowCartNudgeModal(false)}
+        onClose={() => setShowCartNudgeModal(null)}
         label=""
+        // Contains a form: a stray backdrop click must not discard entered data.
+        closeOnBackdrop={false}
         overlayClassName="fixed inset-0 z-50 bg-stone-900/60 backdrop-blur-xs flex items-center justify-center p-4"
       >
           <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl space-y-4">
@@ -1381,6 +1393,8 @@ export function MarketingAdmin() {
         open={!!showCampaignModal}
         onClose={() => setShowCampaignModal(false)}
         label=""
+        // Contains a form: a stray backdrop click must not discard entered data.
+        closeOnBackdrop={false}
         overlayClassName="fixed inset-0 z-50 bg-stone-900/60 backdrop-blur-xs flex items-center justify-center p-4"
       >
           <form onSubmit={handleCreateCampaign} className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-xl space-y-4">
@@ -1519,6 +1533,8 @@ export function MarketingAdmin() {
         open={!!(showConfigModal && referralConfig)}
         onClose={() => setShowConfigModal(false)}
         label=""
+        // Contains a form: a stray backdrop click must not discard entered data.
+        closeOnBackdrop={false}
         overlayClassName="fixed inset-0 z-50 bg-stone-900/60 backdrop-blur-xs flex items-center justify-center p-4"
       >
           <form onSubmit={handleUpdateConfig} className="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl space-y-4">

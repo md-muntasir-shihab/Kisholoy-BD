@@ -95,8 +95,11 @@ export function UsersAdmin() {
   }, []);
 
   // Staff creation handler
-  const handleCreateStaff = async (e: React.FormEvent) =>  run('handleCreateStaff', async () => {
+    const handleCreateStaff = async (e: React.FormEvent) => {
+    // Must fire synchronously. Inside run() it would land in a microtask and
+    // the browser would submit the form and reload the page first.
     e.preventDefault();
+    return run('handleCreateStaff', async () => {
     if (!newStaffName || !newStaffEmail || !newStaffPhone) {
       showToast('error', 'Please fill in all required fields.');
       return;
@@ -129,6 +132,7 @@ export function UsersAdmin() {
       showToast('error', err.message);
     }
     });
+  };
 
   // Update staff role handler
   const handleUpdateRole = async () =>  run('handleUpdateRole', async () => {
@@ -228,8 +232,11 @@ export function UsersAdmin() {
     });
 
   // Manual Ban IP handler
-  const handleManualBan = async (e: React.FormEvent) =>  run('handleManualBan', async () => {
+    const handleManualBan = async (e: React.FormEvent) => {
+    // Must fire synchronously. Inside run() it would land in a microtask and
+    // the browser would submit the form and reload the page first.
     e.preventDefault();
+    return run('handleManualBan', async () => {
     if (!banIpAddress || !banReason) {
       showToast('error', 'IP Address and reason are required.');
       return;
@@ -259,6 +266,7 @@ export function UsersAdmin() {
       showToast('error', err.message);
     }
     });
+  };
 
   const domainList = [
     { domain: 'Orders', label: 'Order Processing & Dispatch', desc: 'View, accept, allocate inventory, book couriers' },
@@ -787,8 +795,10 @@ export function UsersAdmin() {
       {/* MODAL: Add Staff Member */}
       <AdminModalShell
         open={!!addStaffOpen}
-        onClose={() => setAddStaffOpen(null)}
+        onClose={() => setAddStaffOpen(false)}
         label="Add Staff Member"
+        // Contains a form: a stray backdrop click must not discard entered data.
+        closeOnBackdrop={false}
         overlayClassName="fixed inset-0 bg-stone-900/50 backdrop-blur-xs z-50 flex items-center justify-center p-4"
       >
           <div className="bg-white rounded-xl max-w-md w-full p-6 shadow-xl border border-stone-200 animate-in fade-in zoom-in-95 duration-150">
@@ -1099,7 +1109,7 @@ export function UsersAdmin() {
       {/* MODAL: Manual Quarantine IP */}
       <AdminModalShell
         open={!!manualBanOpen}
-        onClose={() => setManualBanOpen(null)}
+        onClose={() => setManualBanOpen(false)}
         label="Manual Quarantine IP"
         closeOnEscape={false}
         closeOnBackdrop={false}

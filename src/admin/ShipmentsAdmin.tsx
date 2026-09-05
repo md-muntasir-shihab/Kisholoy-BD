@@ -158,8 +158,11 @@ export function ShipmentsAdmin() {
   };
 
   // Execute Consignment Booking
-  const handleExecuteDispatch = async (e: React.FormEvent) =>  run('handleExecuteDispatch', async () => {
+    const handleExecuteDispatch = async (e: React.FormEvent) => {
+    // Must fire synchronously. Inside run() it would land in a microtask and
+    // the browser would submit the form and reload the page first.
     e.preventDefault();
+    return run('handleExecuteDispatch', async () => {
     if (!dispatchModalOrder) return;
 
     setIsDispatching(dispatchModalOrder.id);
@@ -204,6 +207,7 @@ export function ShipmentsAdmin() {
       setIsDispatching(null);
     }
     });
+  };
 
   // Webhook simulator
   const handleSimulateWebhook = async (e: React.FormEvent) => {
@@ -686,6 +690,8 @@ export function ShipmentsAdmin() {
         open={!!isCourierModalOpen}
         onClose={() => setIsCourierModalOpen(false)}
         label="MODAL 1 ADD EDIT COURIER PARTNER"
+        // Contains a form: a stray backdrop click must not discard entered data.
+        closeOnBackdrop={false}
         overlayClassName="fixed inset-0 z-50 bg-stone-900/60 backdrop-blur-xs flex items-center justify-center p-4"
       >
           <form onSubmit={handleSaveCourier} className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-stone-200 space-y-4 animate-in fade-in zoom-in-95 duration-150">
@@ -858,6 +864,8 @@ export function ShipmentsAdmin() {
         open={!!dispatchModalOrder}
         onClose={() => setDispatchModalOrder(null)}
         label="MODAL 2 DISPATCH PARCEL MODAL"
+        // Contains a form: a stray backdrop click must not discard entered data.
+        closeOnBackdrop={false}
         overlayClassName="fixed inset-0 z-50 bg-stone-900/60 backdrop-blur-xs flex items-center justify-center p-4"
       >
           <form onSubmit={handleExecuteDispatch} className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-stone-200 space-y-4 animate-in fade-in zoom-in-95 duration-150">

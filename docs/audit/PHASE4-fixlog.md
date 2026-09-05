@@ -492,3 +492,76 @@ single-line `useState` declarations.
 **Gates:** `tsc --noEmit` clean · build green (849.8 kB) · smoke 98/9 ·
 PHASE 3 aggregate unchanged (i18n/responsive/aria all 0) ·
 `/admin/returns`, `/admin/finance`, `/admin/audit` all 200.
+
+---
+
+## Batch 8 — self-review of batches 5–7
+
+Re-reviewed the 61-file, ~2,200-line machine-applied diff. The gates had all
+been green, but green gates only prove the code compiles and the server answers
+— not that the UI still behaves. Three regressions introduced by my own
+codemods, one of them serious.
+
+### 1. Forms reloaded the page on submit (introduced by F-306)
+
+`usePendingAction` wrapping turned
+
+```js
+const handleCreateExpense = async (e) => run('...', async () => {
+  e.preventDefault();
+```
+
+which is broken: `run()` is async, so `preventDefault()` executes in a
+microtask **after** the browser has already begun the native form submit. Every
+affected modal would navigate away and lose the entered data on save.
+
+18 `onSubmit`-bound handlers were affected, across FinanceAdmin,
+FraudRiskDashboard, MarketingAdmin, OperationsAdmin, PromotionsAdmin,
+ShipmentsAdmin, SuppliersAdmin, UsersAdmin, SupplierSettlementsView and
+SupplyBatchesView. `preventDefault()` is now hoisted out of the callback so it
+runs synchronously, with `run()` returned after it.
+
+This is the one that mattered: it would have hit an operator on the first save
+of every one of those forms, and no gate I had was capable of seeing it.
+
+### 2. Backdrop clicks discarded half-filled forms (introduced by F-307)
+
+`AdminModalShell` added backdrop-to-close to 22 files that previously had no
+backdrop handler at all. For confirmation dialogs that is an improvement; for
+data entry it means one stray click outside a 21-field product form throws the
+work away.
+
+31 modals containing two or more inputs now set `closeOnBackdrop={false}`.
+Escape still closes them (except the destructive ones, which opted out in batch
+5). Behaviour for the remaining 27 non-form modals is unchanged.
+
+### 3. Close handlers passed the wrong falsy value
+
+The inline-modal codemod derived `setX(null)` vs `setX(false)` from the
+variable's *name*, not its type, so 16 boolean flags were being closed with
+`null` and one nullable object with `false`.
+
+`tsc` did not catch this: **the project has no `strict` / `strictNullChecks`**,
+verified with a probe file, so `setState(null)` on a `useState(false)` flag type
+checks fine. Corrected by reading each state's declared initial value. Worth
+recording, because it means the typecheck gate is weaker than it looks and
+null-safety mistakes will not surface on their own.
+
+### Checks that came back clean
+
+- Focus-trap hooks all called before the early return (0 rules-of-hooks
+  violations); no duplicated `role`/`aria-modal`/`className` from the codemod.
+- All 58 `onClose` setters clear the state their `open` condition reads; the 7
+  compound guards (`a && b`) kept both operands.
+- No caller consumes a wrapped handler's return value.
+- 4 further "preventDefault trapped in run()" reports were false positives —
+  the match had run past the function into a neighbour. Confirmed by reading
+  each body.
+
+### Re-verified after the repairs
+
+`tsc` clean · build green (849.8 kB) · smoke 98/9 · all 40 changed modules pass
+through Vite's transform · 10 admin routes 200 · expense create 3→4 ·
+supplier auth still rejects empty and old shared passwords · RMA restock
+12→13→13 (once-only guard holds) · PHASE 3 aggregate unchanged
+(i18n/responsive/aria all 0).

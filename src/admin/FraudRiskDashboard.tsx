@@ -144,8 +144,11 @@ export const FraudRiskDashboard: React.FC<FraudDashboardProps> = ({
   };
 
   // Add Blacklist Entry
-  const handleAddBlacklist = async (e: React.FormEvent) =>  run('handleAddBlacklist', async () => {
+    const handleAddBlacklist = async (e: React.FormEvent) => {
+    // Must fire synchronously. Inside run() it would land in a microtask and
+    // the browser would submit the form and reload the page first.
     e.preventDefault();
+    return run('handleAddBlacklist', async () => {
     if (!newBlValue.trim() || !newBlReason.trim()) {
       showNotification('error', 'Value and reason are required');
       return;
@@ -177,6 +180,7 @@ export const FraudRiskDashboard: React.FC<FraudDashboardProps> = ({
       showNotification('error', err.message);
     }
     });
+  };
 
   // Toggle Blacklist Active Status
   const handleToggleBlacklist = async (id: string) =>  run('handleToggleBlacklist', async () => {
@@ -299,8 +303,11 @@ export const FraudRiskDashboard: React.FC<FraudDashboardProps> = ({
     });
 
   // Run Sandbox Evaluation
-  const handleRunSandbox = async (e: React.FormEvent) =>  run('handleRunSandbox', async () => {
+    const handleRunSandbox = async (e: React.FormEvent) => {
+    // Must fire synchronously. Inside run() it would land in a microtask and
+    // the browser would submit the form and reload the page first.
     e.preventDefault();
+    return run('handleRunSandbox', async () => {
     setSandboxEvaluating(true);
     try {
       const res = await fetch('/api/fraud/evaluate', {
@@ -325,6 +332,7 @@ export const FraudRiskDashboard: React.FC<FraudDashboardProps> = ({
       setSandboxEvaluating(false);
     }
     });
+  };
 
   const handleRunSandboxPreset = async (preset: {
     phone: string;
@@ -1407,6 +1415,8 @@ export const FraudRiskDashboard: React.FC<FraudDashboardProps> = ({
         open={!!showAddBlacklistModal}
         onClose={() => setShowAddBlacklistModal(false)}
         label=""
+        // Contains a form: a stray backdrop click must not discard entered data.
+        closeOnBackdrop={false}
         overlayClassName="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
       >
           <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-5 animate-in fade-in zoom-in-95 duration-200">
@@ -1500,6 +1510,8 @@ export const FraudRiskDashboard: React.FC<FraudDashboardProps> = ({
         open={!!actionModalOrder}
         onClose={() => setActionModalOrder(null)}
         label=""
+        // Contains a form: a stray backdrop click must not discard entered data.
+        closeOnBackdrop={false}
         overlayClassName="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
       >
           <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-5 animate-in fade-in zoom-in-95 duration-200">

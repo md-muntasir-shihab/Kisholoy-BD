@@ -359,8 +359,11 @@ export function OperationsAdmin() {
     });
 
   // Create Webhook
-  const handleCreateWebhook = async (e: React.FormEvent) =>  run('handleCreateWebhook', async () => {
+    const handleCreateWebhook = async (e: React.FormEvent) => {
+    // Must fire synchronously. Inside run() it would land in a microtask and
+    // the browser would submit the form and reload the page first.
     e.preventDefault();
+    return run('handleCreateWebhook', async () => {
     try {
       const res = await fetch('/api/webhooks/endpoints', {
         method: 'POST',
@@ -378,6 +381,7 @@ export function OperationsAdmin() {
       showToast('Error registering webhook');
     }
     });
+  };
 
   // Delete Webhook
   const handleDeleteWebhook = async (id: string, name: string) =>  run('handleDeleteWebhook', async () => {
@@ -1637,6 +1641,8 @@ export function OperationsAdmin() {
         open={!!showAddWebhookModal}
         onClose={() => setShowAddWebhookModal(false)}
         label="Register Webhook Modal"
+        // Contains a form: a stray backdrop click must not discard entered data.
+        closeOnBackdrop={false}
         overlayClassName="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4 backdrop-blur-xs"
       >
           <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4">
