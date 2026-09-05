@@ -33,7 +33,6 @@ import {
 import { securityEngine } from './server/securityEngine';
 import { normalizeBdMobilePhone, phoneDigits } from './src/lib/phone';
 import { attachAuthContext, enforceStaffSurface, requireCustomerSelf, requireSupplierSelf, requireAddressOwner, requireNotificationOwner } from './server/authGuard';
-import { authRateLimit, generalApiRateLimit } from './server/rateLimit';
 import { issueSessionToken } from './server/sessionTokens';
 import { backupEngine } from './server/backupEngine';
 import { supplierEngine } from './server/supplierEngine';
@@ -77,7 +76,17 @@ async function startServer() {
     let tier: RateLimitTier = 'STOREFRONT';
     if (req.path.startsWith('/api/checkout') || req.path === '/api/orders/create') {
       tier = 'CHECKOUT';
-    } else if (req.path.startsWith('/api/auth') || req.path.startsWith('/api/security/auth')) {
+    } else if (
+      req.path.startsWith('/api/auth') ||
+      req.path.startsWith('/api/security/auth') ||
+      // These credential routes were previously classified as STOREFRONT, so
+      // password spraying against customer and vendor accounts ran at the
+      // permissive tier. CodeQL flagged the authorization surface as
+      // unthrottled and was right about these.
+      req.path.startsWith('/api/customer/auth/') ||
+      req.path === '/api/suppliers/portal/login' ||
+      /^\/api\/suppliers\/[^/]+\/(portal-token|set-portal-password)$/.test(req.path)
+    ) {
       tier = 'AUTH';
     } else if (req.path.startsWith('/api/admin') || req.path.startsWith('/api/security') || req.path.startsWith('/api/marketing/command')) {
       tier = 'ADMIN';
@@ -105,29 +114,6 @@ async function startServer() {
   });
 
   app.use(express.json());
-
-  // Throttle credential-checking endpoints per IP. This must run BEFORE any
-  // middleware that verifies a token or a password, so an attacker cannot
-  // spend CPU on scrypt/HMAC work by flooding the login route.
-  //
-  // `securityEngine` locks an individual staff account after 5 bad attempts,
-  // but that is per-account: spraying one password across many usernames
-  // never trips it, and the customer/supplier login routes had no protection
-  // at all (CodeQL: "route handler performs authorization, but is not
-  // rate-limited").
-  //
-  // Mounted as a pattern rather than per-route so a login endpoint added
-  // later is covered by default instead of being silently unprotected.
-  const AUTH_SURFACE = /^\/api\/(security\/auth\/|customer\/auth\/(login|register)|suppliers\/portal\/login|suppliers\/[^/]+\/(portal-token|set-portal-password))/;
-  app.use((req, res, next) => {
-    if (req.method !== 'POST' || !AUTH_SURFACE.test(req.path)) return next();
-    return authRateLimit(req, res, next);
-  });
-
-  // A conservative global ceiling on the whole API. Well above anything the
-  // admin panel does in normal use, but it bounds brute-force and scraping
-  // against every handler rather than only the ones enumerated above.
-  app.use('/api', generalApiRateLimit);
 
   // Phase 21: Server-side authentication & authorization.
   // `attachAuthContext` resolves the caller (staff / customer / supplier) into

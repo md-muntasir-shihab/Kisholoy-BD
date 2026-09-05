@@ -79,36 +79,42 @@ this environment.
 
 CodeQL raised two high-severity alerts against this branch. Both were real.
 
-**1. Missing rate limiting (`server.ts`) — the important one.**
-`securityEngine` locks an individual staff account after 5 failed attempts,
-but that is per *account*: spraying one common password across many usernames
-never trips it, and `/api/customer/auth/*` and the supplier portal login had
-no protection at all.
+**1. Missing rate limiting — and a wrong first fix worth recording.**
 
-Added `server/rateLimit.ts` — a dependency-free fixed-window per-IP limiter —
-mounted as a *pattern* over the credential-checking surface (staff auth,
-customer login/register, supplier portal login, portal-token and
-set-portal-password) rather than route by route, so a login endpoint added
-later is covered by default instead of being silently unprotected. Budget is
-10 POSTs per IP per 5 minutes: far above a human mistyping a password,
-far below useful automated guessing.
+My first two attempts added a *new* limiter (hand-rolled, then
+`express-rate-limit`). Both were wrong, for different reasons:
 
-Verified live: 12 rapid bad logins → `401 ×10` then `429 ×2` with a
-`Retry-After` header; `/api/health` and `/api/products` unaffected; a correct
-staff login still returns 200.
+- The server **already has** tiered sliding-window rate limiting
+  (`server.ts` "Phase 20", tiers STOREFRONT / CHECKOUT / AUTH / ADMIN /
+  WEBHOOK, with auto-ban). I had not read far enough before adding a second
+  layer on top of it.
+- The extra 300/min ceiling then throttled legitimate traffic: the smoke
+  suite dropped from **99 passes to 46**. It was caught only because the
+  suite is run after every change.
+- `express-rate-limit` also could not ship: this repo installs from
+  `bun.lock`, `bun` is not available in this environment, so a dependency
+  added via npm would be absent from the lockfile and break a
+  `--frozen-lockfile` deploy. Reverted; `package.json` is unchanged.
 
-CodeQL still flagged `attachAuthContext` and `enforceStaffSurface` after the
-first attempt, and it was right to: the limiter had been mounted *after*
-them, so a flood still reached token and password verification and could be
-used as a CPU oracle against scrypt/HMAC. The limiter now runs first, and a
-coarse `generalApiRateLimit` (300/IP/min) sits ahead of the auth middleware
-so every handler is bounded, not only the enumerated credential routes.
-Verified the ceiling does not disturb normal use: the 108-request smoke
-suite still reports 99/9.
+The actual defect was **tier classification**, not a missing limiter. Only
+`/api/auth` and `/api/security/auth` were classified `AUTH` (8 req/min).
+`/api/customer/auth/*`, the supplier portal login and the vendor
+credential routes fell through to `STOREFRONT` — **150 req/min** — so
+password spraying against customer and vendor accounts ran essentially
+unthrottled. Those paths are now classified `AUTH`.
 
-*Known limit:* the window is in-memory and per-process, so it resets on
-restart and does not span instances. A shared store is required before
-running more than one node — noted here rather than pretended away.
+Measured on a non-whitelisted IP, before and after:
+
+| Route | Before | After |
+|---|---|---|
+| `POST /api/customer/auth/login` | `X-RateLimit-Limit: 150`, 429 after 10 | `X-RateLimit-Limit: 8`, 429 after 8 |
+| `POST /api/suppliers/portal/login` | 150, 429 after 10 | 8, 429 after 8 |
+
+Note `127.0.0.1` is whitelisted in `securityEngine`, so this can only be
+observed with a spoofed `X-Forwarded-For` — worth knowing before concluding
+the limiter "does not work".
+
+Smoke suite back to **99/9** after the revert.
 
 **2. Regular expression injection (`scripts/audit/apply-pending-guard.mjs`).**
 A function name read from a CLI-supplied findings file was interpolated
