@@ -423,7 +423,7 @@ export function AdminLayout() {
                             id={item.id}
                             to={item.path}
                             onClick={() => setSidebarOpen(false)}
-                            className={`relative flex items-center justify-between pl-4 pr-3 py-2 rounded-xl text-xs font-medium transition-all group ${
+                            className={`relative flex items-center justify-between gap-1 pl-3.5 pr-2.5 py-2 rounded-xl text-xs font-medium transition-all group ${
                               isActive
                                 ? 'bg-teal-50 dark:bg-teal-900/40 text-teal-900 dark:text-teal-200 font-semibold shadow-xs border border-teal-200/60 dark:border-teal-800/60'
                                 : 'text-stone-600 dark:text-stone-400 hover:bg-stone-100 dark:hover:bg-stone-900 hover:text-stone-900 dark:hover:text-stone-100'
@@ -432,26 +432,21 @@ export function AdminLayout() {
                             {isActive && (
                               <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 rounded-r-full bg-teal-600" />
                             )}
-                            <div className="flex items-center gap-2.5 truncate">
+                            <span className="flex items-center gap-2.5 min-w-0 flex-1">
                               <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-teal-700 dark:text-teal-300' : 'text-stone-400 dark:text-stone-500 group-hover:text-stone-600 dark:group-hover:text-stone-300'}`} />
-                              <span className="truncate font-medium">{isBn ? item.labelBn : item.label}</span>
-                            </div>
-
- arena/01a06c02-kisholoy-bd
-                            <div className="flex items-center gap-1.5 shrink-0">
-                              {badge && (
-                                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${badge.color}`}>
-                                  {isBn ? badge.labelBn : badge.label}
-                                </span>
-                              )}
-                            </div>
+                              <span className="truncate font-medium" title={isBn ? item.labelBn : item.label}>
+                                {isBn ? item.labelBn : item.label}
+                              </span>
+                            </span>
 
                             {badge && (
-                              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ml-2 ${badge.color}`}>
-                                {isBn ? badge.labelBn : badge.label}
+                              <span
+                                className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full shrink-0 ml-1.5 tabular-nums ${badge.color}`}
+                                title={isBn ? badge.labelBn : badge.label}
+                              >
+                                {badge.count ?? (isBn ? badge.labelBn : badge.label)}
                               </span>
                             )}
-main
                           </Link>
                         );
                       })}
