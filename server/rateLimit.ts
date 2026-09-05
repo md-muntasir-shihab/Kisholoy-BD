@@ -94,3 +94,12 @@ export const authRateLimit = rateLimit({ windowMs: 5 * 60 * 1000, max: 10, name:
 export function __resetRateLimits() {
   buckets.clear();
 }
+
+/**
+ * Coarse ceiling for the API as a whole, mounted ahead of the auth middleware
+ * so that token and password verification cannot be used as a CPU oracle.
+ * 300 requests per IP per minute is far above what the admin panel produces
+ * in normal use (a dashboard load is a few dozen calls) while still bounding
+ * automated abuse of handlers that are not on the credential surface.
+ */
+export const generalApiRateLimit = rateLimit({ windowMs: 60 * 1000, max: 300, name: 'api' });

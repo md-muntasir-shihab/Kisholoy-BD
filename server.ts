@@ -33,7 +33,7 @@ import {
 import { securityEngine } from './server/securityEngine';
 import { normalizeBdMobilePhone, phoneDigits } from './src/lib/phone';
 import { attachAuthContext, enforceStaffSurface, requireCustomerSelf, requireSupplierSelf, requireAddressOwner, requireNotificationOwner } from './server/authGuard';
-import { authRateLimit } from './server/rateLimit';
+import { authRateLimit, generalApiRateLimit } from './server/rateLimit';
 import { issueSessionToken } from './server/sessionTokens';
 import { backupEngine } from './server/backupEngine';
 import { supplierEngine } from './server/supplierEngine';
@@ -106,19 +106,15 @@ async function startServer() {
 
   app.use(express.json());
 
-  // Phase 21: Server-side authentication & authorization.
-  // `attachAuthContext` resolves the caller (staff / customer / supplier) into
-  // `req.auth`; `enforceStaffSurface` then requires a staff session for every
-  // /api write plus the sensitive reads. Client-side ROUTE_PERMISSIONS is now
-  // only a UX affordance — the server is the authority.
-  app.use(attachAuthContext);
-
-  // Throttle credential-checking endpoints per IP before anything verifies a
-  // password. `securityEngine` locks an individual staff account after 5 bad
-  // attempts, but that is per-account: password spraying across many
-  // usernames never trips it, and the customer/supplier login routes had no
-  // protection at all (CodeQL: "route handler performs authorization, but is
-  // not rate-limited").
+  // Throttle credential-checking endpoints per IP. This must run BEFORE any
+  // middleware that verifies a token or a password, so an attacker cannot
+  // spend CPU on scrypt/HMAC work by flooding the login route.
+  //
+  // `securityEngine` locks an individual staff account after 5 bad attempts,
+  // but that is per-account: spraying one password across many usernames
+  // never trips it, and the customer/supplier login routes had no protection
+  // at all (CodeQL: "route handler performs authorization, but is not
+  // rate-limited").
   //
   // Mounted as a pattern rather than per-route so a login endpoint added
   // later is covered by default instead of being silently unprotected.
@@ -128,6 +124,17 @@ async function startServer() {
     return authRateLimit(req, res, next);
   });
 
+  // A conservative global ceiling on the whole API. Well above anything the
+  // admin panel does in normal use, but it bounds brute-force and scraping
+  // against every handler rather than only the ones enumerated above.
+  app.use('/api', generalApiRateLimit);
+
+  // Phase 21: Server-side authentication & authorization.
+  // `attachAuthContext` resolves the caller (staff / customer / supplier) into
+  // `req.auth`; `enforceStaffSurface` then requires a staff session for every
+  // /api write plus the sensitive reads. Client-side ROUTE_PERMISSIONS is now
+  // only a UX affordance — the server is the authority.
+  app.use(attachAuthContext);
   app.use(enforceStaffSurface);
 
   // -------------------------------------------------------------

@@ -97,6 +97,15 @@ Verified live: 12 rapid bad logins → `401 ×10` then `429 ×2` with a
 `Retry-After` header; `/api/health` and `/api/products` unaffected; a correct
 staff login still returns 200.
 
+CodeQL still flagged `attachAuthContext` and `enforceStaffSurface` after the
+first attempt, and it was right to: the limiter had been mounted *after*
+them, so a flood still reached token and password verification and could be
+used as a CPU oracle against scrypt/HMAC. The limiter now runs first, and a
+coarse `generalApiRateLimit` (300/IP/min) sits ahead of the auth middleware
+so every handler is bounded, not only the enumerated credential routes.
+Verified the ceiling does not disturb normal use: the 108-request smoke
+suite still reports 99/9.
+
 *Known limit:* the window is in-memory and per-process, so it resets on
 restart and does not span instances. A shared store is required before
 running more than one node — noted here rather than pretended away.
