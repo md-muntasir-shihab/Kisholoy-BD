@@ -11,6 +11,7 @@ import {
   CustomerNotification, CustomCourierConfig
 } from '../types';
 import { logAuthEvent } from '../utils/telemetryLogger';
+import { apiFetch, apiFetchJson, setCustomerToken, getStaffToken } from '../lib/apiClient';
 import { 
   INITIAL_PRODUCTS, INITIAL_CATEGORIES, INITIAL_ORDERS, 
   INITIAL_CUSTOMERS, INITIAL_CONTENT, INITIAL_AUDIT_LOGS, 
@@ -42,9 +43,9 @@ interface AppContextType {
   addProduct: (product: Omit<Product, 'id'>) => void;
   updateProduct: (id: string, updates: Partial<Product>) => void;
   deleteProduct: (id: string) => void;
-  addCategory: (category: Omit<Category, 'id'>) => void;
+  addCategory: (category: Omit<Category, 'id'>) => Promise<boolean>;
   updateCategory: (id: string, updates: Partial<Category>) => void;
-  deleteCategory?: (id: string) => void;
+  deleteCategory: (id: string) => Promise<boolean>;
   
   // Cart
   cart: CartItem[];
@@ -99,7 +100,7 @@ interface AppContextType {
   
   // Finance & Expenses & Settlements
   expenses: ExpenseRecord[];
-  addExpense: (expense: Omit<ExpenseRecord, 'id'>) => void;
+  addExpense: (expense: Omit<ExpenseRecord, 'id'> | ExpenseRecord) => void;
   deleteExpense: (id: string) => void;
   settlements: SettlementRecord[];
   addSettlement: (settlement: Omit<SettlementRecord, 'id'>) => void;
@@ -142,7 +143,7 @@ interface AppContextType {
   // Customer Account Portal & Wishlists (Phase 15)
   currentCustomerId: string;
   setCurrentCustomerId: (id: string) => void;
-  loginCustomer: (customerId: string, profile?: CustomerProfile) => void;
+  loginCustomer: (customerId: string, profile?: CustomerProfile, sessionToken?: string | null) => void;
   logoutCustomer: () => void;
   customerProfile: CustomerProfile | null;
   savedAddresses: CustomerAddress[];
@@ -178,17 +179,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [theme, setThemeState] = useState<ThemePreference>(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('kisholoy-theme');
-arena/01a06c02-kisholoy-bd
       const valid: ThemePreference[] = ['light', 'dark', 'system'];
       if (saved && valid.includes(saved as ThemePreference)) return saved as ThemePreference;
       const legacy = localStorage.getItem('theme');
       if (legacy) return legacy === 'dark' ? 'dark' : 'light';
       return 'system';
-
-      if (saved === 'dark') return 'dark';
-      // Default is always Day (Light) theme for both Storefront and Admin
-      return 'light';
- main
     }
     return 'light';
   });
@@ -270,12 +265,6 @@ arena/01a06c02-kisholoy-bd
       }
     });
 
-    // Sync initial orders from server API
-    safeFetchJson('/api/orders').then(data => {
-      if (data?.success && Array.isArray(data.orders) && data.orders.length > 0) {
-        setOrders(data.orders);
-      }
-    });
 
     // Sync authoritative products catalog from server API
     safeFetchJson('/api/products').then(data => {
@@ -304,6 +293,53 @@ arena/01a06c02-kisholoy-bd
         setWarehouseStocks(data.matrix);
       }
     });
+
+    // Sync the authoritative inventory ledger. Without this the admin
+    // Inventory screen rendered the mock seed forever, so real stock movements
+    // (sales, restocks, adjustments) were invisible to operators.
+    safeFetchJson('/api/inventory/transactions').then(data => {
+      if (data?.success && Array.isArray(data.transactions)) {
+        setInventoryTransactions(data.transactions);
+      }
+    });
+
+    // Sync the CRM customer directory so every consumer of `customers`
+    // (dashboards, Customer 360 links, fraud/marketing cross-references)
+    // sees server truth rather than the seeded list.
+    safeFetchJson('/api/customers').then(data => {
+      if (data?.success && Array.isArray(data.customers)) {
+        setCustomers(data.customers);
+      }
+    });
+
+    // S2-5: finance + audit collections. These are staff-only endpoints, so
+    // hydrate them only when a staff session exists — an anonymous shopper
+    // would otherwise fire three guaranteed 401s on every page load.
+    //
+    // Without this the screens rendered INITIAL_* mock seeds forever: the P&L
+    // and expense ledger silently ignored every expense recorded on the server
+    // (or by another operator), showing a stale total that happened to match
+    // the seed only until the first real write.
+    if (getStaffToken()) {
+      safeFetchJson('/api/finance/expenses').then(data => {
+        if (data?.success && Array.isArray(data.expenses)) {
+          setExpenses(data.expenses);
+        }
+      });
+
+      safeFetchJson('/api/finance/settlements').then(data => {
+        if (data?.success && Array.isArray(data.settlements)) {
+          setSettlements(data.settlements);
+        }
+      });
+
+      // Note: this endpoint returns the array under `ledger`, not `entries`.
+      safeFetchJson('/api/security/audit-chain/ledger?limit=150').then(data => {
+        if (data?.success && Array.isArray(data.ledger)) {
+          setAuditLogs(data.ledger);
+        }
+      });
+    }
 
     // Sync STOs
     safeFetchJson('/api/fulfillment/transfers').then(data => {
@@ -668,21 +704,39 @@ arena/01a06c02-kisholoy-bd
   };
 
   // Categories CRUD
-  const addCategory = (catData: Omit<Category, 'id'>) => {
-    const newCat: Category = {
-      ...catData,
-      id: `cat-${Date.now()}`
-    };
-    setCategories(prev => [...prev, newCat]);
-    // Sync with backend API
-    fetch('/api/categories', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...newCat, operator: currentRole })
-    }).catch(err => console.warn('Failed to sync category to server:', err));
+  /**
+   * Create a category. The server is the source of truth: we adopt the record
+   * it returns (so the id is the persisted one) and roll back the optimistic
+   * row if the write fails, rather than leaving a phantom category on screen.
+   */
+  const addCategory = async (catData: Omit<Category, 'id'>): Promise<boolean> => {
+    const optimisticId = `cat-${Date.now()}`;
+    const optimistic: Category = { ...catData, id: optimisticId };
+    setCategories(prev => [...prev, optimistic]);
 
-    addAuditLog('CREATE_CATEGORY', 'Category', newCat.slug, `Added category "${newCat.name}"`);
-    showToast('Category created');
+    try {
+      const res = await fetch('/api/categories', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...optimistic, operator: currentRole })
+      });
+      const data = await res.json().catch(() => null);
+
+      if (!res.ok || !data?.success || !data.category) {
+        setCategories(prev => prev.filter(c => c.id !== optimisticId));
+        showToast(data?.error || 'Could not save the category. Please try again.');
+        return false;
+      }
+
+      setCategories(prev => prev.map(c => (c.id === optimisticId ? data.category : c)));
+      addAuditLog('CREATE_CATEGORY', 'Category', data.category.slug, `Added category "${data.category.name}"`);
+      showToast('Category created');
+      return true;
+    } catch {
+      setCategories(prev => prev.filter(c => c.id !== optimisticId));
+      showToast('Network error — the category was not saved.');
+      return false;
+    }
   };
 
   const updateCategory = (id: string, updates: Partial<Category>) => {
@@ -697,13 +751,26 @@ arena/01a06c02-kisholoy-bd
     showToast('Category updated');
   };
 
-  const deleteCategory = (id: string) => {
+  const deleteCategory = async (id: string): Promise<boolean> => {
     const target = categories.find(c => c.id === id);
+    const snapshot = categories;
     setCategories(prev => prev.filter(c => c.id !== id));
-    // Sync with backend API
-    fetch(`/api/categories/${id}?operator=${encodeURIComponent(currentRole)}`, {
-      method: 'DELETE'
-    }).catch(err => console.warn('Failed to sync category deletion to server:', err));
+
+    try {
+      const res = await fetch(`/api/categories/${id}?operator=${encodeURIComponent(currentRole)}`, {
+        method: 'DELETE'
+      });
+      if (!res.ok) {
+        setCategories(snapshot); // restore — the server still has it
+        const data = await res.json().catch(() => null);
+        showToast(data?.error || 'Could not delete the category.');
+        return false;
+      }
+    } catch {
+      setCategories(snapshot);
+      showToast('Network error — the category was not deleted.');
+      return false;
+    }
 
     addAuditLog('DELETE_CATEGORY', 'Category', target?.slug || id, `Deleted category "${target?.name}"`);
     showToast('Category removed');
@@ -782,6 +849,13 @@ arena/01a06c02-kisholoy-bd
           unitCost: options?.unitCost
         })
       });
+      // Re-read the authoritative ledger so the Inventory screen reflects the
+      // server's row (id, before/after quantities, flags) rather than only the
+      // optimistic local entry.
+      const ledger = await apiFetchJson('/api/inventory/transactions');
+      if (ledger?.success && Array.isArray(ledger.transactions)) {
+        setInventoryTransactions(ledger.transactions);
+      }
     } catch (e) {
       console.error('Failed to sync inventory adjustment with server:', e);
     }
@@ -937,7 +1011,7 @@ arena/01a06c02-kisholoy-bd
 
   const refreshOrders = async () => {
     try {
-      const res = await fetch('/api/orders');
+      const res = await apiFetch('/api/orders');
       const data = await res.json();
       if (data?.success && Array.isArray(data.orders)) {
         setOrders(data.orders);
@@ -1121,11 +1195,19 @@ arena/01a06c02-kisholoy-bd
     }
   };
 
-  const addExpense = (expense: Omit<ExpenseRecord, 'id'>) => {
-    const newExp: ExpenseRecord = {
-      ...expense,
-      id: `exp-${Date.now()}`
-    };
+  /**
+   * Record an expense in local state.
+   *
+   * Callers that already persisted the row must pass the SERVER record so both
+   * sides share one id. Previously FinanceAdmin POSTed and then called this
+   * with the raw form values, minting a second `exp-<Date.now()>` copy that
+   * never reconciled with the ledger — the P&L on screen silently drifted from
+   * the persisted one (F-302).
+   */
+  const addExpense = (expense: Omit<ExpenseRecord, 'id'> | ExpenseRecord) => {
+    const newExp: ExpenseRecord = 'id' in expense && expense.id
+      ? (expense as ExpenseRecord)
+      : { ...(expense as Omit<ExpenseRecord, 'id'>), id: `exp-${Date.now()}` };
     setExpenses(prev => [newExp, ...prev]);
     addAuditLog('ADD_EXPENSE', 'Finance', newExp.reference, `Added expense ৳${newExp.amount} for ${newExp.category}`);
     showToast('Expense recorded');
@@ -1524,7 +1606,7 @@ arena/01a06c02-kisholoy-bd
         if (data.manifest) {
           setDispatchManifests(prev => [data.manifest, ...prev]);
           // Refresh orders since their courier status was updated to SHIPPED
-          const oRes = await fetch('/api/orders');
+          const oRes = await apiFetch('/api/orders');
           if (oRes.ok) {
             const oData = await oRes.json();
             if (oData.orders) setOrders(oData.orders);
@@ -1634,8 +1716,26 @@ arena/01a06c02-kisholoy-bd
     }
   };
 
-  const loginCustomer = (customerId: string, profile?: CustomerProfile) => {
+  // Orders hydration. Runs on mount and whenever the customer session changes,
+  // always through apiFetch so the staff token (admin tabs) or the customer
+  // session token (storefront tabs) is attached — without a bearer the server
+  // can never return the scoped list.
+  useEffect(() => {
+    let cancelled = false;
+    apiFetchJson('/api/orders').then(data => {
+      if (cancelled) return;
+      if (data?.success && Array.isArray(data.orders) && data.orders.length > 0) {
+        setOrders(data.orders);
+      }
+    });
+    return () => { cancelled = true; };
+  }, [currentCustomerId]);
+
+  const loginCustomer = (customerId: string, profile?: CustomerProfile, sessionToken?: string | null) => {
     setCurrentCustomerId(customerId);
+    // Persist the customer session bearer so scoped endpoints (e.g. GET /api/orders)
+    // receive an identity even when no staff token exists in this tab.
+    if (sessionToken !== undefined) setCustomerToken(sessionToken || null);
     try {
       localStorage.setItem('kisholoy_customer_id', customerId);
     } catch {}
@@ -1682,6 +1782,7 @@ arena/01a06c02-kisholoy-bd
     setReturnRequests([]);
     setCustomerNotifications([]);
     setCustomerLoyalty(null);
+    setCustomerToken(null);
     try {
       localStorage.removeItem('kisholoy_customer_id');
     } catch {}

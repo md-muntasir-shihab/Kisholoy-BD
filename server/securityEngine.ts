@@ -373,7 +373,16 @@ class SecurityEngine {
       this.adminUsers.set(u.id, u);
     }
 
-    // Create a pre-authenticated session for the Super Admin
+    // Development convenience: a pre-authenticated Super Admin session so the
+    // demo seed and the audit smoke suite can call the API without a login
+    // round-trip. This is a publicly known constant, so it must never exist in
+    // a real deployment — set NODE_ENV=production (or KISHOLOY_DISABLE_ROOT_TOKEN)
+    // to skip it and require a genuine sign-in.
+    const rootTokenDisabled =
+      process.env.NODE_ENV === 'production' ||
+      process.env.KISHOLOY_DISABLE_ROOT_TOKEN === 'true';
+    if (rootTokenDisabled) return;
+
     const initialSessionToken = 'ksh-token-super-admin-root-session-2026';
     this.activeSessions.set(initialSessionToken, {
       sessionId: 'sess-000001',
@@ -537,7 +546,7 @@ class SecurityEngine {
   public verifySession(token: string, clientIp: string): { valid: boolean; session?: AdminSession; role?: Role } {
     if (!token) return { valid: false };
 
-    // Support fallback for root test token
+    // Dev-only root token fallback (absent in production — see initializeAdminUsers).
     if (token === 'ksh-token-super-admin-root-session-2026') {
       const rootSession = this.activeSessions.get(token);
       if (rootSession) {

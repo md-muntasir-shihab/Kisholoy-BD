@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { OfflineDataBanner } from '../components/admin/OfflineDataBanner';
 import { Link, useSearchParams } from 'react-router-dom';
 import {
   Users,
@@ -64,6 +65,7 @@ export function CustomersAdmin() {
   const [summaries, setSummaries] = useState<RfmSegmentSummary[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [refreshing, setRefreshing] = useState<boolean>(false);
+  const [usingFallback, setUsingFallback] = useState<boolean>(false);
 
   // Filters & Controls
   const [search, setSearch] = useState(searchParams.get('search') || '');
@@ -105,12 +107,17 @@ export function CustomersAdmin() {
         const data = await res.json();
         setCustomersList(data.customers || []);
         if (data.summaries) setSummaries(data.summaries);
+        setUsingFallback(false);
       } else {
         fallbackToContextData();
+        setUsingFallback(true);
       }
     } catch (e) {
+      // Fallback is intentional, but the operator must know these figures are
+      // local and possibly stale rather than live server data (F-305).
       console.warn('Backend customer API offline, using local context:', e);
       fallbackToContextData();
+      setUsingFallback(true);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -337,6 +344,14 @@ export function CustomersAdmin() {
 
   return (
     <div id="customers-admin-container" className="space-y-6 max-w-7xl mx-auto pb-12">
+      <OfflineDataBanner
+        visible={usingFallback}
+        resource="customer directory"
+        resourceBn="কাস্টমার তালিকা"
+        onRetry={() => fetchCustomers()}
+        retrying={refreshing}
+      />
+
       {/* Top Header & Overview Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -523,6 +538,7 @@ export function CustomersAdmin() {
             <Search className="w-4 h-4 text-stone-400 absolute left-3 top-2.5" />
             <input
               type="text"
+              aria-label={isBn ? 'গ্রাহক সার্চ' : 'Search customers'}
               placeholder={
                 isBn
                   ? 'নাম, মোবাইল নম্বর (+880), ইমেইল বা জেলা দিয়ে সার্চ করুন...'
@@ -547,6 +563,7 @@ export function CustomersAdmin() {
             {/* District Filter */}
             <select
               value={selectedDistrict}
+              aria-label="Filter by district"
               onChange={(e) => setSelectedDistrict(e.target.value)}
               className="text-xs px-2.5 py-1.5 border border-stone-300 rounded-lg bg-white focus:outline-none focus:border-teal-800"
             >
@@ -573,6 +590,7 @@ export function CustomersAdmin() {
             {/* Status Filter */}
             <select
               value={selectedStatus}
+              aria-label="Filter by status"
               onChange={(e) => setSelectedStatus(e.target.value)}
               className="text-xs px-2.5 py-1.5 border border-stone-300 rounded-lg bg-white focus:outline-none focus:border-teal-800"
             >
@@ -584,6 +602,7 @@ export function CustomersAdmin() {
             {/* Sorting Dropdown */}
             <select
               value={sortBy}
+              aria-label="Filter by sort by"
               onChange={(e) => setSortBy(e.target.value as any)}
               className="text-xs px-2.5 py-1.5 border border-stone-300 rounded-lg bg-white focus:outline-none focus:border-teal-800"
             >

@@ -14,9 +14,10 @@ import {
   PickList, DispatchManifest,
   CouponRule, FlashDeal, CustomerLoyaltyWallet, PromotionSystemStats, LoyaltyPointsTransaction,
   CustomerAddress, WishlistItem, CustomerReturnRequest, CustomerProfile, CustomerNotification,
-  AuditSeverity, AuditCategory, PrintSettings
+  AuditSeverity, AuditCategory, PrintSettings, RmaRecord
 } from '../src/types';
 import { securityEngine } from './securityEngine';
+import { normalizeBdMobilePhone } from '../src/lib/phone';
 import { defaultPrintSettings } from '../src/lib/printFormats';
 import { 
   INITIAL_PRODUCTS, INITIAL_CATEGORIES, INITIAL_ORDERS, 
@@ -30,7 +31,7 @@ import {
   INITIAL_PICK_LISTS, INITIAL_DISPATCH_MANIFESTS,
   INITIAL_COUPONS, INITIAL_FLASH_DEALS, INITIAL_LOYALTY_WALLETS, INITIAL_PROMOTION_STATS,
   INITIAL_CUSTOMER_ADDRESSES, INITIAL_WISHLISTS, INITIAL_CUSTOMER_RETURNS, INITIAL_CUSTOMER_PROFILES,
-  INITIAL_CUSTOMER_NOTIFICATIONS
+  INITIAL_CUSTOMER_NOTIFICATIONS, INITIAL_RMA_RECORDS
 } from '../src/data/mockData';
 
 class ServerDatabase {
@@ -42,6 +43,7 @@ class ServerDatabase {
   contentRevisions: ContentRevision[] = JSON.parse(JSON.stringify(INITIAL_CONTENT_REVISIONS));
   auditLogs: AuditLog[] = JSON.parse(JSON.stringify(INITIAL_AUDIT_LOGS));
   expenses: ExpenseRecord[] = JSON.parse(JSON.stringify(INITIAL_EXPENSES));
+  rmaRecords: RmaRecord[] = JSON.parse(JSON.stringify(INITIAL_RMA_RECORDS));
   settlements: SettlementRecord[] = JSON.parse(JSON.stringify(INITIAL_SETTLEMENTS));
   automationJobs: AutomationJob[] = JSON.parse(JSON.stringify(INITIAL_AUTOMATION_JOBS));
   paymentTransactions: PaymentTransaction[] = JSON.parse(JSON.stringify(INITIAL_PAYMENT_TRANSACTIONS));
@@ -138,12 +140,34 @@ class ServerDatabase {
     return true;
   }
 
-  updateProductStock(productId: string, quantityToDeduct: number): boolean {
-    const product = this.getProductById(productId);
+  /**
+   * Allocate (sell) stock for an order line.
+   *
+   * This MUST go through `adjustInventory` so that every outflow produces an
+   * `InventoryTransaction` row + audit entry, exactly like every inflow
+   * (restock / return / manual adjust) already does. Writing `product.stock`
+   * directly here used to make the ledger asymmetric: sales were invisible
+   * while restocks were recorded, so any reconciliation over-stated stock.
+   *
+   * The availability check stays *before* the mutation so over-selling is
+   * still rejected atomically by the caller's rollback logic.
+   */
+  updateProductStock(productId: string, quantityToDeduct: number, context?: { orderNumber?: string; operator?: string }): boolean {
+    const product = this.getProductById(productId) || this.getProductBySku(productId);
     if (!product) return false;
+    if (quantityToDeduct <= 0) return false;
     if (product.stock < quantityToDeduct) return false;
-    product.stock -= quantityToDeduct;
-    return true;
+
+    const result = this.adjustInventory({
+      productId: product.id,
+      quantityChange: -quantityToDeduct,
+      reason: context?.orderNumber
+        ? `Sale allocation for order ${context.orderNumber}`
+        : 'Sale allocation for customer order',
+      operator: context?.operator || 'ORDER_ENGINE'
+    });
+
+    return result.success;
   }
 
   // Inventory & Stock Ledger Methods
@@ -464,6 +488,35 @@ class ServerDatabase {
       },
       evaluatedAt: new Date().toISOString()
     };
+  }
+
+  // ---------------------------------------------------------------
+  // RMA methods (S2-3)
+  //
+  // Returns used to be per-browser localStorage state, so two operators saw
+  // two different worlds and the server's restock/refund logic was never
+  // reachable from the admin UI. These records are now authoritative.
+  // ---------------------------------------------------------------
+  createRma(input: Omit<RmaRecord, 'id' | 'rmaNumber'> & { rmaNumber?: string }): RmaRecord {
+    const year = new Date().getFullYear();
+    const record: RmaRecord = {
+      ...input,
+      id: `rma-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+      rmaNumber: input.rmaNumber || `RMA-${year}-${String(this.rmaRecords.length + 1).padStart(4, '0')}`
+    };
+    this.rmaRecords.unshift(record);
+    this.addAuditLog('CREATE_RMA', 'Order', record.rmaNumber, `Created return authorization for ${record.orderNumber}`);
+    return record;
+  }
+
+  updateRma(id: string, patch: Partial<RmaRecord>): RmaRecord | null {
+    const record = this.rmaRecords.find(r => r.id === id);
+    if (!record) return null;
+    // id and rmaNumber are the case's identity; a patch must never move them.
+    const { id: _ignoredId, rmaNumber: _ignoredNumber, ...safe } = patch;
+    Object.assign(record, safe);
+    this.addAuditLog('UPDATE_RMA', 'Order', record.rmaNumber, `Return case moved to ${record.stage}`);
+    return record;
   }
 
   // Expense methods
@@ -899,6 +952,101 @@ class ServerDatabase {
     );
 
     return wallet;
+  }
+
+  // ---------------------------------------------------------------
+  // Customer identity resolution (canonical-phone keyed)
+  // ---------------------------------------------------------------
+
+  /**
+   * Find a customer by phone number in ANY format. Matching is done on the
+   * canonical `+8801XXXXXXXXX` form so `01712345678`, `8801712345678`,
+   * `+880 1712-345678` and `+8801712345678` all resolve to the same person.
+   * Falls back to a digits-only comparison for legacy/non-BD records.
+   */
+  findCustomerByPhone(phone?: string | null): Customer | undefined {
+    if (!phone) return undefined;
+    const canonical = normalizeBdMobilePhone(phone);
+    if (canonical) {
+      const hit = this.customers.find(c => normalizeBdMobilePhone(c.phone) === canonical);
+      if (hit) return hit;
+    }
+    const digits = String(phone).replace(/\D/g, '');
+    if (digits.length < 10) return undefined;
+    return this.customers.find(c => {
+      const cd = String(c.phone || '').replace(/\D/g, '');
+      return cd.length >= 10 && (cd === digits || cd.endsWith(digits) || digits.endsWith(cd));
+    });
+  }
+
+  /**
+   * Resolve the CRM customer record for an incoming order, creating one when
+   * the buyer is new. Without this, guest checkouts minted a throwaway
+   * `cust-<timestamp>` id that matched nothing, so Customer 360, RFM/CRM
+   * segmentation and repeat-purchase metrics never saw guest buyers.
+   */
+  upsertCustomerFromOrder(params: {
+    name: string;
+    phone: string;
+    email?: string;
+    address?: string;
+    district?: string;
+    thana?: string;
+    source?: string;
+  }): Customer {
+    const canonical = normalizeBdMobilePhone(params.phone) || params.phone.trim();
+    const existing = this.findCustomerByPhone(params.phone);
+
+    if (existing) {
+      // Keep the CRM record fresh, but never overwrite good data with blanks.
+      if (canonical && normalizeBdMobilePhone(existing.phone) === normalizeBdMobilePhone(canonical)) {
+        existing.phone = canonical;
+      }
+      if (params.email && !existing.email.includes('@customer.kisholoy.com')) {
+        // keep the real email already on file
+      } else if (params.email) {
+        existing.email = params.email.trim();
+      }
+      if (params.district && !existing.district) existing.district = params.district;
+      if (params.thana && !existing.thana) existing.thana = params.thana;
+      if (params.address && (!existing.defaultAddress || existing.defaultAddress === 'Dhaka, Bangladesh')) {
+        existing.defaultAddress = params.address;
+      }
+      return existing;
+    }
+
+    const digits = canonical.replace(/\D/g, '');
+    const created: Customer = {
+      id: `cust-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+      name: params.name.trim(),
+      phone: canonical,
+      email: params.email?.trim() || `${digits}@customer.kisholoy.com`,
+      joinedDate: new Date().toISOString().split('T')[0],
+      totalOrders: 0,
+      totalSpent: 0,
+      defaultAddress: params.address?.trim() || 'Bangladesh',
+      status: 'ACTIVE',
+      district: params.district,
+      thana: params.thana,
+      source: params.source || 'ORDER'
+    };
+    this.customers.unshift(created);
+    this.addAuditLog(
+      'CREATE_CUSTOMER',
+      'Customer',
+      created.id,
+      `Auto-created CRM record for ${created.name} (${created.phone}) from a new order.`,
+      'ORDER_ENGINE'
+    );
+    return created;
+  }
+
+  /** Roll an order's value into the customer's lifetime CRM aggregates. */
+  recordCustomerOrderStats(customerId: string, orderTotal: number): void {
+    const customer = this.customers.find(c => c.id === customerId);
+    if (!customer) return;
+    customer.totalOrders = (customer.totalOrders || 0) + 1;
+    customer.totalSpent = (customer.totalSpent || 0) + (orderTotal || 0);
   }
 
   // Customer Portal Methods

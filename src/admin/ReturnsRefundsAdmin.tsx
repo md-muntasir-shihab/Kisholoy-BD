@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import {
   RotateCcw,
@@ -34,6 +34,10 @@ import {
 import { useApp } from '../context/AppContext';
 import { Order, OrderStatus } from '../types';
 import { ReturnRefundPrintModal } from '../components/print/ReturnRefundPrintModal';
+import { AdminModalShell } from '../components/admin/AdminModalShell';
+import { usePendingAction } from '../hooks/usePendingAction';
+import { apiFetchJson } from '../lib/apiClient';
+import { OfflineDataBanner } from '../components/admin/OfflineDataBanner';
 
 export interface RmaRecord {
   id: string;
@@ -71,146 +75,44 @@ export interface RmaRecord {
   };
 }
 
-const INITIAL_RMA_RECORDS: RmaRecord[] = [
-  {
-    id: 'rma-101',
-    rmaNumber: 'RMA-2026-0891',
-    orderId: 'ord-001',
-    orderNumber: 'KSH-2026-0891',
-    customerName: 'Tanzil Ahmed',
-    customerPhone: '+880 1712345678',
-    district: 'Dhaka',
-    requestDate: '2026-08-30T10:15:00Z',
-    reason: 'WRONG_SIZE',
-    reasonDetails: 'Ordered XL, customer requested replacement or refund for size L',
-    productTitle: 'Handcrafted Silk Panjabi',
-    sku: 'PJ-SLK-01',
-    quantity: 1,
-    itemPrice: 3800,
-    totalRefundAmount: 3800,
-    originalPaymentMethod: 'SSLCOMMERZ (Visa)',
-    originalPaymentStatus: 'PAID',
-    stage: 'PARCEL_RECEIVED',
-    inspectionResult: {
-      condition: 'PRISTINE_NEW',
-      inspectedBy: 'Warehouse Inspector #2',
-      inspectedAt: '2026-08-31T14:30:00Z',
-      notes: 'Item tags intact and packaging undamaged. Eligible for full restock and refund reversal.',
-      restocked: true
-    }
-  },
-  {
-    id: 'rma-102',
-    rmaNumber: 'RMA-2026-0892',
-    orderId: 'ord-002',
-    orderNumber: 'KSH-2026-0892',
-    customerName: 'Nusrat Jahan',
-    customerPhone: '+880 1819876543',
-    district: 'Chittagong',
-    requestDate: '2026-08-29T16:45:00Z',
-    reason: 'DEFECTIVE_PRODUCT',
-    reasonDetails: 'Loose embroidery stitch on collar seam reported upon unboxing',
-    productTitle: 'Embroidered Cotton Kurti',
-    sku: 'KT-COT-02',
-    quantity: 1,
-    itemPrice: 2200,
-    totalRefundAmount: 2200,
-    originalPaymentMethod: 'bKash',
-    originalPaymentStatus: 'PAID',
-    stage: 'REFUND_QUEUED',
-    inspectionResult: {
-      condition: 'DAMAGED_SCRAP',
-      inspectedBy: 'Quality Lead Rafiq',
-      inspectedAt: '2026-08-30T11:00:00Z',
-      notes: 'Factory stitching defect verified. Written off to Supplier Claim. Authorized 100% bKash refund.',
-      restocked: false
-    }
-  },
-  {
-    id: 'rma-103',
-    rmaNumber: 'RMA-2026-0870',
-    orderId: 'ord-003',
-    orderNumber: 'KSH-2026-0870',
-    customerName: 'Farhan Kabir',
-    customerPhone: '+880 1912445566',
-    district: 'Sylhet',
-    requestDate: '2026-08-25T09:20:00Z',
-    reason: 'COURIER_RETURNED',
-    reasonDetails: 'Customer was unavailable after 3 delivery attempts by Steadfast courier',
-    productTitle: 'Premium Festive Jamdani Sharee',
-    sku: 'SH-JAM-03',
-    quantity: 1,
-    itemPrice: 7500,
-    totalRefundAmount: 7500,
-    originalPaymentMethod: 'COD',
-    originalPaymentStatus: 'UNPAID',
-    stage: 'RESTOCKED',
-    inspectionResult: {
-      condition: 'PRISTINE_NEW',
-      inspectedBy: 'Hub Dispatcher Alam',
-      inspectedAt: '2026-08-26T12:00:00Z',
-      notes: 'Courier return parcel intact. Restocked to Dhaka Central Hub inventory. No cash refund required (COD order).',
-      restocked: true
-    }
-  },
-  {
-    id: 'rma-104',
-    rmaNumber: 'RMA-2026-0855',
-    orderId: 'ord-004',
-    orderNumber: 'KSH-2026-0855',
-    customerName: 'Samira Huq',
-    customerPhone: '+880 1611223344',
-    district: 'Rajshahi',
-    requestDate: '2026-08-22T13:10:00Z',
-    reason: 'COLOR_MISMATCH',
-    reasonDetails: 'Fabric shade appeared slightly different in room lighting compared to website photos',
-    productTitle: 'Linen Casual Shirt',
-    sku: 'SH-LIN-04',
-    quantity: 1,
-    itemPrice: 1650,
-    totalRefundAmount: 1650,
-    originalPaymentMethod: 'Nagad',
-    originalPaymentStatus: 'PAID',
-    stage: 'REFUND_DISBURSED',
-    inspectionResult: {
-      condition: 'OPENED_RESELLABLE',
-      inspectedBy: 'Inspector Mahin',
-      inspectedAt: '2026-08-23T10:00:00Z',
-      notes: 'Clean condition, steam-pressed and repackaged for inventory sale.',
-      restocked: true
-    },
-    refundExecution: {
-      method: 'Nagad',
-      accountNumber: '01611223344',
-      trxId: 'NGD982310892',
-      disbursedAt: '2026-08-24T15:20:00Z',
-      disbursedAmount: 1650,
-      disbursedBy: 'Finance Lead (Kisholoy)'
-    }
-  }
-];
 
 export function ReturnsRefundsAdmin() {
   const { orders, products, updateOrderStatus, logAudit, showToast, language } = useApp();
   const isBn = language === 'BN';
 
-  // Persistence for RMA records
-  const [rmaList, setRmaList] = useState<RmaRecord[]>(() => {
-    try {
-      const saved = localStorage.getItem('kisholoy_rma_records');
-      return saved ? JSON.parse(saved) : INITIAL_RMA_RECORDS;
-    } catch {
-      return INITIAL_RMA_RECORDS;
-    }
-  });
+  // F-306: blocks duplicate submits while a mutation is in flight.
+  const { run, isPending, isBusy } = usePendingAction();
 
-  const saveRmaList = (updated: RmaRecord[]) => {
-    setRmaList(updated);
+  // S2-3: RMA cases are server state. They used to live in this operator's
+  // localStorage, which meant a return raised at one desk was invisible to
+  // every other staff member and vanished with the browser cache.
+  const [rmaList, setRmaList] = useState<RmaRecord[]>([]);
+  const [rmaLoadError, setRmaLoadError] = useState<string | null>(null);
+
+  const loadRmaList = useCallback(async () => {
     try {
-      localStorage.setItem('kisholoy_rma_records', JSON.stringify(updated));
-    } catch (e) {
-      console.error(e);
+      const data = await apiFetchJson<{ records?: RmaRecord[] }>('/api/admin/rma');
+      setRmaList(data?.records || []);
+      setRmaLoadError(null);
+    } catch (err) {
+      // Show the operator that the list is not the truth, rather than an
+      // empty table that looks like "no returns".
+      setRmaLoadError(err instanceof Error ? err.message : String(err));
     }
+  }, []);
+
+  useEffect(() => { void loadRmaList(); }, [loadRmaList]);
+
+  /** Persist one case, then re-read the server's copy. */
+  const patchRma = async (id: string, patch: Partial<RmaRecord>) => {
+    const data = await apiFetchJson<{ record?: RmaRecord }>(`/api/admin/rma/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(patch)
+    });
+    if (data?.record) {
+      setRmaList(prev => prev.map(r => (r.id === id ? data.record! : r)));
+    }
+    return data?.record || null;
   };
 
   // Tab State
@@ -288,34 +190,57 @@ export function ReturnsRefundsAdmin() {
   };
 
   // Submit Inspection
-  const handleSaveInspection = () => {
+  const handleSaveInspection = async () =>  run('handleSaveInspection', async () => {
     if (!inspectModalRma) return;
 
     const nextStage = inspectModalRma.originalPaymentStatus === 'PAID' ? 'REFUND_QUEUED' : 'RESTOCKED';
 
-    const updated = rmaList.map(item => {
-      if (item.id === inspectModalRma.id) {
-        return {
-          ...item,
-          stage: nextStage,
-          inspectionResult: {
-            condition: inspectCondition,
-            inspectedBy: 'Warehouse Quality Team',
-            inspectedAt: new Date().toISOString(),
-            notes: inspectNotes,
-            restocked: inspectRestock
-          }
-        };
+    // F-204: the server owns the return workflow (once-only stock restore,
+    // supplier settlement adjustment, customer notification). This screen used
+    // to mutate localStorage and call updateOrderStatus only, so none of that
+    // ever ran and the audited restock fix was unreachable from the UI.
+    //
+    // Only approve server-side when the goods actually go back on sale; a
+    // damaged parcel must not restock inventory.
+    if (inspectRestock) {
+      const res = await fetch('/api/admin/returns/approve', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderId: inspectModalRma.orderId })
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok || !data?.success) {
+        showToast(
+          isBn
+            ? 'সার্ভারে রিটার্ন অনুমোদন ব্যর্থ হয়েছে: ' + (data?.error || res.status)
+            : 'Return approval failed on server: ' + (data?.error || res.status),
+          'info'
+        );
+        return;
       }
-      return item;
+    } else {
+      updateOrderStatus(
+        inspectModalRma.orderId,
+        'RETURNED',
+        `RMA Inspected (${inspectCondition}). Restock: NO`
+      );
+    }
+    // Only record the inspection once the server accepted the workflow step,
+    // so a failed approve cannot leave the case looking inspected.
+    await patchRma(inspectModalRma.id, {
+      stage: nextStage,
+      inspectionResult: {
+        condition: inspectCondition,
+        inspectedBy: 'Warehouse Quality Team',
+        inspectedAt: new Date().toISOString(),
+        notes: inspectNotes,
+        restocked: inspectRestock
+      }
     });
-
-    saveRmaList(updated);
-    updateOrderStatus(inspectModalRma.orderId, 'RETURNED', `RMA Inspected (${inspectCondition}). Restock: ${inspectRestock ? 'YES' : 'NO'}`);
     logAudit('INSPECT_RMA', 'Return', inspectModalRma.rmaNumber, `Inspected parcel condition: ${inspectCondition}. Restocked: ${inspectRestock}`);
     showToast(isBn ? 'রিটার্ন পার্সেল ইন্সপেকশন সফলভাবে সম্পন্ন ও স্টক আপডেট হয়েছে।' : 'RMA inspection completed and inventory updated!');
     setInspectModalRma(null);
-  };
+    });
 
   // Open Refund Modal
   const handleOpenRefund = (rma: RmaRecord) => {
@@ -327,28 +252,41 @@ export function ReturnsRefundsAdmin() {
   };
 
   // Execute Refund
-  const handleExecuteRefund = () => {
+  const handleExecuteRefund = async () =>  run('handleExecuteRefund', async () => {
     if (!refundModalRma) return;
 
-    const updated = rmaList.map(item => {
-      if (item.id === refundModalRma.id) {
-        return {
-          ...item,
-          stage: 'REFUND_DISBURSED' as const,
-          refundExecution: {
-            method: refundMethod,
-            accountNumber: refundAccount,
-            trxId: refundTrxId,
-            disbursedAt: new Date().toISOString(),
-            disbursedAmount: refundAmount,
-            disbursedBy: 'Finance Desk (Admin)'
-          }
-        };
-      }
-      return item;
+    // F-204: route disbursement through the server so the duplicate-refund
+    // guard, the gateway call, the stock restore and the customer notification
+    // all fire. Previously this only wrote localStorage, so a refund
+    // "succeeded" in the UI while no money moved, and the same order could be
+    // refunded again and again.
+    const res = await fetch('/api/admin/refunds/process', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ orderId: refundModalRma.orderId })
     });
+    const data = await res.json().catch(() => null);
+    if (!res.ok || !data?.success) {
+      showToast(
+        isBn
+          ? 'রিফান্ড ব্যর্থ হয়েছে: ' + (data?.error || res.status)
+          : 'Refund failed: ' + (data?.error || res.status),
+        'info'
+      );
+      return;
+    }
 
-    saveRmaList(updated);
+    await patchRma(refundModalRma.id, {
+      stage: 'REFUND_DISBURSED',
+      refundExecution: {
+        method: refundMethod,
+        accountNumber: refundAccount,
+        trxId: refundTrxId,
+        disbursedAt: new Date().toISOString(),
+        disbursedAmount: refundAmount,
+        disbursedBy: 'Finance Desk (Admin)'
+      }
+    });
     logAudit('EXECUTE_REFUND', 'Finance', refundModalRma.rmaNumber, `Disbursed refund ৳${refundAmount} via ${refundMethod} (TrxID: ${refundTrxId})`);
     
     // Simulate SMS notification
@@ -359,46 +297,47 @@ export function ReturnsRefundsAdmin() {
     }
 
     setRefundModalRma(null);
-  };
+    });
 
   // Create New RMA
-  const handleCreateRma = (e: React.FormEvent) => {
+  const handleCreateRma = async (e: React.FormEvent) => {
     e.preventDefault();
+    // Kept outside run() so the reload is cancelled even if the guard
+    // short-circuits a duplicate submit (batch 8 regression class).
     const order = orders.find(o => o.id === selectedOrderForRma || o.orderNumber === selectedOrderForRma);
     if (!order) {
       showToast(isBn ? 'অনুগ্রহ করে সঠিক অর্ডার নির্বাচন করুন।' : 'Please select a valid order.', 'info');
       return;
     }
-
-    const firstItem = order.items[0];
-    const newRecord: RmaRecord = {
-      id: `rma-${Date.now()}`,
-      rmaNumber: `RMA-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`,
-      orderId: order.id,
-      orderNumber: order.orderNumber,
-      customerName: order.customer.name,
-      customerPhone: order.customer.phone,
-      district: order.shippingAddress.district || 'Dhaka',
-      requestDate: new Date().toISOString(),
-      reason: newRmaReason,
-      reasonDetails: newRmaDetails || 'Customer initiated return claim via support desk.',
-      productTitle: firstItem ? firstItem.productTitle : 'Ordered Items',
-      sku: firstItem ? firstItem.sku : 'SKU-001',
-      quantity: firstItem ? firstItem.quantity : 1,
-      itemPrice: firstItem ? firstItem.price : order.total,
-      totalRefundAmount: order.total,
-      originalPaymentMethod: order.paymentMethod,
-      originalPaymentStatus: order.paymentStatus,
-      stage: 'REQUESTED'
-    };
-
-    saveRmaList([newRecord, ...rmaList]);
-    updateOrderStatus(order.id, 'RETURN_REQUESTED', `RMA initiated: ${newRecord.rmaNumber}`);
-    logAudit('CREATE_RMA', 'Order', newRecord.rmaNumber, `Created return authorization for ${order.orderNumber}`);
-    showToast(isBn ? 'নতুন রিটার্ন ও রিফান্ড কেস সফলভাবে নথিভুক্ত হয়েছে।' : `Created new return case: ${newRecord.rmaNumber}`);
-    setCreateModalOpen(false);
-    setSelectedOrderForRma('');
-    setNewRmaDetails('');
+    await run('handleCreateRma', async () => {
+      const firstItem = order.items[0];
+      // The server assigns id, rmaNumber and the refund amount; sending them
+      // from here would let a stale tab mint duplicate numbers.
+      const data = await apiFetchJson<{ record?: RmaRecord }>('/api/admin/rma', {
+        method: 'POST',
+        body: JSON.stringify({
+          orderId: order.id,
+          reason: newRmaReason,
+          reasonDetails: newRmaDetails || 'Customer initiated return claim via support desk.',
+          productTitle: firstItem ? firstItem.title : 'Ordered Items',
+          sku: firstItem ? firstItem.sku : '',
+          quantity: firstItem ? firstItem.quantity : 1,
+          itemPrice: firstItem ? firstItem.price : order.total
+        })
+      });
+      const record = data?.record;
+      if (!record) {
+        showToast(isBn ? 'রিটার্ন কেস তৈরি ব্যর্থ হয়েছে।' : 'Failed to create the return case.', 'info');
+        return;
+      }
+      setRmaList(prev => [record, ...prev]);
+      updateOrderStatus(order.id, 'RETURN_REQUESTED', `RMA initiated: ${record.rmaNumber}`);
+      logAudit('CREATE_RMA', 'Order', record.rmaNumber, `Created return authorization for ${order.orderNumber}`);
+      showToast(isBn ? 'নতুন রিটার্ন ও রিফান্ড কেস সফলভাবে নথিভুক্ত হয়েছে।' : `Created new return case: ${record.rmaNumber}`);
+      setCreateModalOpen(false);
+      setSelectedOrderForRma('');
+      setNewRmaDetails('');
+    });
   };
 
   // Export CSV
@@ -430,6 +369,14 @@ export function ReturnsRefundsAdmin() {
 
   return (
     <div id="returns-refunds-admin-container" className="space-y-6 max-w-7xl mx-auto pb-16 font-sans">
+      {/* An empty return list and a failed fetch look identical; say which. */}
+      <OfflineDataBanner
+        visible={!!rmaLoadError}
+        resource="return & refund cases"
+        resourceBn="রিটার্ন ও রিফান্ড কেস"
+        onRetry={() => { void loadRmaList(); }}
+      />
+
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-stone-200 shadow-xs">
         <div>
@@ -777,8 +724,14 @@ export function ReturnsRefundsAdmin() {
       </div>
 
       {/* MODAL 1: RMA Physical Inspection & QC */}
-      {inspectModalRma && (
-        <div className="fixed inset-0 z-50 bg-stone-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+      <AdminModalShell
+        open={!!inspectModalRma}
+        onClose={() => setInspectModalRma(null)}
+        label="MODAL 1 RMA Physical Inspection & QC"
+        // Contains a form: a stray backdrop click must not discard entered data.
+        closeOnBackdrop={false}
+        overlayClassName="fixed inset-0 z-50 bg-stone-900/60 backdrop-blur-xs flex items-center justify-center p-4"
+      >
           <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-stone-200 space-y-5 animate-in fade-in zoom-in-95 duration-150">
             <div className="flex items-center justify-between border-b border-stone-200 pb-3">
               <div>
@@ -905,12 +858,17 @@ export function ReturnsRefundsAdmin() {
               </button>
             </div>
           </div>
-        </div>
-      )}
+      </AdminModalShell>
 
       {/* MODAL 2: Execute Refund Disbursement */}
-      {refundModalRma && (
-        <div className="fixed inset-0 z-50 bg-stone-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+      <AdminModalShell
+        open={!!refundModalRma}
+        onClose={() => setRefundModalRma(null)}
+        label="MODAL 2 Execute Refund Disbursement"
+        // Contains a form: a stray backdrop click must not discard entered data.
+        closeOnBackdrop={false}
+        overlayClassName="fixed inset-0 z-50 bg-stone-900/60 backdrop-blur-xs flex items-center justify-center p-4"
+      >
           <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-stone-200 space-y-5 animate-in fade-in zoom-in-95 duration-150">
             <div className="flex items-center justify-between border-b border-stone-200 pb-3">
               <div>
@@ -1046,12 +1004,17 @@ export function ReturnsRefundsAdmin() {
               </button>
             </div>
           </div>
-        </div>
-      )}
+      </AdminModalShell>
 
       {/* MODAL 3: Create New RMA Case */}
-      {createModalOpen && (
-        <div className="fixed inset-0 z-50 bg-stone-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+      <AdminModalShell
+        open={!!createModalOpen}
+        onClose={() => setCreateModalOpen(false)}
+        label="MODAL 3 Create New RMA Case"
+        // Contains a form: a stray backdrop click must not discard entered data.
+        closeOnBackdrop={false}
+        overlayClassName="fixed inset-0 z-50 bg-stone-900/60 backdrop-blur-xs flex items-center justify-center p-4"
+      >
           <form onSubmit={handleCreateRma} className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-stone-200 space-y-4 animate-in fade-in zoom-in-95 duration-150">
             <div className="flex items-center justify-between border-b border-stone-200 pb-3">
               <h3 className="text-lg font-serif font-bold text-stone-900">
@@ -1134,8 +1097,7 @@ export function ReturnsRefundsAdmin() {
               </button>
             </div>
           </form>
-        </div>
-      )}
+      </AdminModalShell>
 
       {/* Unified Return / Refund Document Print Modal */}
       {printRma && (

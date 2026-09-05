@@ -223,6 +223,7 @@ export function Dashboard() {
   const [report, setReport] = useState<DashboardReport | null>(null);
   const [loading, setLoading] = useState(false);
   const [suppliers, setSuppliers] = useState<{ id: string; companyName: string; totalDue: number }[]>([]);
+  const [supplierLoadFailed, setSupplierLoadFailed] = useState(false);
   const [activeSectionFilter, setActiveSectionFilter] = useState<string>('all');
 
   // Fetch server analytics report (range-aware)
@@ -273,8 +274,13 @@ export function Dashboard() {
           totalDue: Number(s.totalDue) || 0,
         }));
         setSuppliers(list);
+        setSupplierLoadFailed(false);
       })
-      .catch(() => {});
+      .catch(() => {
+        // The supplier-dues tile would otherwise read a confident 0 when the
+        // request failed, understating what the business owes (F-305).
+        if (!cancelled) setSupplierLoadFailed(true);
+      });
     return () => {
       cancelled = true;
     };
@@ -402,7 +408,7 @@ export function Dashboard() {
 
   /* ---------------- Render ---------------- */
   return (
-    <div id="admin-dashboard-container" className="space-y-8 max-w-7xl mx-auto pb-12">
+    <div id="admin-dashboard-container" role="region" aria-label="Dashboard overview" className="space-y-8 max-w-7xl mx-auto pb-12">
       {/* Header Banner */}
       <div id="dashboard-header-banner" className="bg-white p-6 sm:p-8 rounded-3xl border border-stone-200/90 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="space-y-2">
@@ -491,8 +497,12 @@ export function Dashboard() {
             sub={<span className="text-stone-500">{topCategory ? fmtN(topCategory.unitsSold) + ' ' + (isBn ? 'একক' : 'units') : '—'}</span>} link="/admin/categories" />
           <KpiCard id="kpi-lowstock" label="Low Stock" labelBn="পুনঃক্রয় সতর্কতা" isBn={isBn} tone="rose" icon={<AlertTriangle className="w-4 h-4" />} value={fmtN(lowStock)}
             sub={<span className={lowStock > 0 ? 'text-amber-700 font-bold' : 'text-emerald-700 font-bold'}>{lowStock > 0 ? (isBn ? 'রি-অর্ডার প্রয়োজন' : 'Restock needed') : (isBn ? 'স্টক সুস্থ' : 'Stock healthy')}</span>} link="/admin/inventory" />
-          <KpiCard id="kpi-vendor-payable" label="Vendor Payable" labelBn="উদ্যোক্তাদের পাওনা" isBn={isBn} tone="rose" icon={<Banknote className="w-4 h-4" />} value={fmtMoney(suppliersDue)}
-            sub={<span className="text-stone-500">{isBn ? 'সাপ্লায়ার ডিউ' : 'Supplier outstanding'}</span>} link="/admin/suppliers" />
+          <KpiCard id="kpi-vendor-payable" label="Vendor Payable" labelBn="উদ্যোক্তাদের পাওনা" isBn={isBn} tone="rose" icon={<Banknote className="w-4 h-4" />} value={supplierLoadFailed ? '—' : fmtMoney(suppliersDue)}
+            sub={<span className={supplierLoadFailed ? 'text-amber-700' : 'text-stone-500'}>
+              {supplierLoadFailed
+                ? (isBn ? 'লোড করা যায়নি' : 'Could not load')
+                : (isBn ? 'সাপ্লায়ার ডিউ' : 'Supplier outstanding')}
+            </span>} link="/admin/suppliers" />
           <KpiCard id="kpi-return-rate" label="Return Rate" labelBn="ফেরতের হার" isBn={isBn} tone="rose" icon={<RotateCcw className="w-4 h-4" />} value={fmtPct(totalOrders > 0 ? (returnRequests.length / totalOrders) * 100 : 0)}
             sub={<span className="text-stone-500">{fmtN(returnRequests.length)} {isBn ? 'রিটার্ন' : 'returns'}</span>} link="/admin/returns" />
           <KpiCard id="kpi-coupon" label="Coupon Usage" labelBn="কুপনের ব্যবহার" isBn={isBn} tone="indigo" icon={<Ticket className="w-4 h-4" />} value={fmtN(couponOrders)}
@@ -609,7 +619,6 @@ export function Dashboard() {
           <div className="grid grid-cols-2 gap-3 text-xs mt-2">
             <Metric label={isBn ? 'নিজস্ব বিক্রয়' : 'In-house'} value={fmtMoney(inHouseVsPartner.inHouse)} />
             <Metric label={isBn ? 'পার্টনার বিক্রয়' : 'Partner'} value={fmtMoney(inHouseVsPartner.partner)} />
- arena/01a06c02-kisholoy-bd
           </div>
         </section>
       </div>
@@ -663,7 +672,6 @@ export function Dashboard() {
                 {isBn ? sec.titleBn : sec.title} ({sec.items.length})
               </button>
             ))}
-main
           </div>
         </div>
 

@@ -155,7 +155,7 @@ export function DateRangeFilterBar({
   };
 
   return (
-    <div className={`bg-stone-900 text-stone-100 rounded-2xl p-3 sm:p-4 border border-stone-800 shadow-md ${className}`}>
+    <div role="group" aria-label="Date range filters" className={`bg-stone-900 text-stone-100 rounded-2xl p-3 sm:p-4 border border-stone-800 shadow-md ${className}`}>
       {/* Top Header & Presets Row */}
       <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-3">
         
@@ -205,7 +205,7 @@ export function DateRangeFilterBar({
             <button
               type="button"
               onClick={handleReset}
-              className="p-1.5 rounded-xl bg-stone-800 hover:bg-stone-750 text-stone-400 hover:text-stone-200 border border-stone-700 transition-colors"
+              className="p-1.5 rounded-xl bg-stone-800 hover:bg-stone-750 text-stone-400 hover:text-stone-200 border border-stone-700 transition-colors min-w-11 min-h-11 sm:min-w-0 sm:min-h-0 inline-flex items-center justify-center"
               title={isBn ? 'ফিল্টার রিসেট করুন' : 'Reset Date Filter'}
             >
               <RotateCcw className="w-3.5 h-3.5" />

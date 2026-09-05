@@ -6,9 +6,11 @@ import {
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { PaymentTransaction, FraudRiskAssessment } from '../types';
+import { AdminModalShell } from '../components/admin/AdminModalShell';
 
 export function PaymentsAdmin() {
-  const { orders, showToast } = useApp();
+  const { orders, showToast, language } = useApp();
+  const isBn = language === 'BN';
   const [activeTab, setActiveTab] = useState<'ledger' | 'settlement' | 'fraud' | 'ipn_tester' | 'refunds'>('ledger');
   const [transactions, setTransactions] = useState<PaymentTransaction[]>([]);
   const [isLoadingTx, setIsLoadingTx] = useState(false);
@@ -42,6 +44,7 @@ export function PaymentsAdmin() {
       }
     } catch (e) {
       console.error(e);
+      showToast('Could not load payment transactions from the server.', 'info');
     } finally {
       setIsLoadingTx(false);
     }
@@ -74,23 +77,10 @@ export function PaymentsAdmin() {
             }
           }
         } catch {
-          // fallback assessment
-          map[ord.id] = {
-            riskScore: ord.paymentMethod === 'COD' && ord.total > 7000 ? 65 : 10,
-            riskRating: ord.paymentMethod === 'COD' && ord.total > 7000 ? 'HIGH' : 'LOW',
-            flags: ord.paymentMethod === 'COD' && ord.total > 7000 ? ['High-value COD Order'] : [],
-            reasons: ord.paymentMethod === 'COD' && ord.total > 7000 ? ['High-value COD order requiring verification'] : ['Baseline check normal'],
-            recommendation: ord.paymentMethod === 'COD' && ord.total > 7000 ? 'REQUIRE_ADVANCE_SHIPPING_FEE' : 'AUTO_APPROVE',
-            breakdown: {
-              phoneScore: 0,
-              addressScore: 0,
-              valueScore: ord.paymentMethod === 'COD' && ord.total > 7000 ? 50 : 0,
-              velocityScore: 0,
-              historyScore: 0,
-              emailScore: 0
-            },
-            evaluatedAt: new Date().toISOString()
-          };
+          // Do NOT invent a score here. A locally-guessed rating ignores the
+          // blacklist, velocity and history signals the engine applies, and
+          // showing it as if it came from the engine is worse than showing
+          // nothing. Leave the order unassessed and let the UI say so (F-303).
         }
       }
       setFraudAssessments(map);
@@ -178,7 +168,7 @@ export function PaymentsAdmin() {
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-serif font-bold text-stone-900">Payments & Gateway Settlements</h1>
+          <h1 className="text-2xl font-serif font-bold text-stone-900">{isBn ? 'পেমেন্ট ও গেটওয়ে সেটেলমেন্ট' : 'Payments & Gateway Settlements'}</h1>
           <p className="text-xs text-stone-500">
             Authoritative financial ledger, SSLCOMMERZ & bKash integrations, IPN verification webhooks, and fraud risk sentinel.
           </p>
@@ -190,7 +180,7 @@ export function PaymentsAdmin() {
           className="inline-flex items-center gap-1.5 px-3 py-2 bg-white border border-stone-300 rounded-lg text-xs font-semibold text-stone-700 hover:bg-stone-50 shadow-xs"
         >
           <RefreshCw className={`w-3.5 h-3.5 ${isLoadingTx ? 'animate-spin' : ''}`} />
-          <span>Sync Transactions</span>
+          <span>{isBn ? 'লেনদেন সিঙ্ক করুন' : 'Sync Transactions'}</span>
         </button>
       </div>
 
@@ -198,25 +188,25 @@ export function PaymentsAdmin() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-white p-5 rounded-xl border border-stone-200 shadow-xs">
           <div className="flex justify-between items-start">
-            <span className="text-xs font-bold text-stone-400 uppercase tracking-wider">Gross Settled</span>
+            <span className="text-xs font-bold text-stone-400 uppercase tracking-wider">{isBn ? 'মোট নিষ্পত্তি' : 'Gross Settled'}</span>
             <DollarSign className="w-4 h-4 text-emerald-600" />
           </div>
           <span className="text-2xl font-bold font-mono text-emerald-800 block mt-2">৳ {totalSettled.toLocaleString()}</span>
-          <span className="text-[11px] text-stone-500 block mt-1">Verified via bank/gateway transfer</span>
+          <span className="text-[11px] text-stone-500 block mt-1">{isBn ? 'ব্যাংক/গেটওয়ে ট্রান্সফারে যাচাইকৃত' : 'Verified via bank/gateway transfer'}</span>
         </div>
 
         <div className="bg-white p-5 rounded-xl border border-stone-200 shadow-xs">
           <div className="flex justify-between items-start">
-            <span className="text-xs font-bold text-stone-400 uppercase tracking-wider">Pending COD</span>
+            <span className="text-xs font-bold text-stone-400 uppercase tracking-wider">{isBn ? 'বকেয়া ক্যাশ অন ডেলিভারি' : 'Pending COD'}</span>
             <Clock className="w-4 h-4 text-amber-600" />
           </div>
           <span className="text-2xl font-bold font-mono text-amber-800 block mt-2">৳ {pendingCod.toLocaleString()}</span>
-          <span className="text-[11px] text-stone-500 block mt-1">Held by Steadfast / Pathao agents</span>
+          <span className="text-[11px] text-stone-500 block mt-1">{isBn ? 'স্টেডফাস্ট / পাঠাও এজেন্টের কাছে জমা' : 'Held by Steadfast / Pathao agents'}</span>
         </div>
 
         <div className="bg-white p-5 rounded-xl border border-stone-200 shadow-xs">
           <div className="flex justify-between items-start">
-            <span className="text-xs font-bold text-stone-400 uppercase tracking-wider">Gateway Fees</span>
+            <span className="text-xs font-bold text-stone-400 uppercase tracking-wider">{isBn ? 'গেটওয়ে ফি' : 'Gateway Fees'}</span>
             <TrendingDown className="w-4 h-4 text-rose-600" />
           </div>
           <span className="text-2xl font-bold font-mono text-rose-800 block mt-2">৳ {totalGatewayFees.toLocaleString()}</span>
@@ -225,7 +215,7 @@ export function PaymentsAdmin() {
 
         <div className="bg-white p-5 rounded-xl border border-stone-200 shadow-xs">
           <div className="flex justify-between items-start">
-            <span className="text-xs font-bold text-stone-400 uppercase tracking-wider">Net Disbursed</span>
+            <span className="text-xs font-bold text-stone-400 uppercase tracking-wider">{isBn ? 'নিট প্রদান' : 'Net Disbursed'}</span>
             <Wallet className="w-4 h-4 text-teal-600" />
           </div>
           <span className="text-2xl font-bold font-mono text-teal-900 block mt-2">৳ {totalNetDisbursed.toLocaleString()}</span>
@@ -265,7 +255,7 @@ export function PaymentsAdmin() {
       {activeTab === 'ledger' && (
         <div className="bg-white rounded-xl border border-stone-200 shadow-xs overflow-hidden">
           <div className="p-4 border-b border-stone-200 bg-stone-50 flex justify-between items-center text-xs font-bold text-stone-700">
-            <span>Authoritative Payment Gateways Ledger</span>
+            <span>{isBn ? 'পেমেন্ট গেটওয়ে লেজার' : 'Authoritative Payment Gateways Ledger'}</span>
             <span className="text-stone-500 font-normal">Showing {transactions.length} recorded events</span>
           </div>
 
@@ -273,13 +263,13 @@ export function PaymentsAdmin() {
             <table className="w-full text-left text-xs">
               <thead className="bg-stone-100 text-stone-600 font-bold uppercase tracking-wider border-b border-stone-200">
                 <tr>
-                  <th className="p-3.5">Order / Trx ID</th>
+                  <th className="p-3.5">{isBn ? 'অর্ডার / লেনদেন আইডি' : 'Order / Trx ID'}</th>
                   <th className="p-3.5">Gateway</th>
-                  <th className="p-3.5">Card / Channel</th>
-                  <th className="p-3.5">Gross Amount</th>
-                  <th className="p-3.5">Fee Deducted</th>
-                  <th className="p-3.5">Net Payout</th>
-                  <th className="p-3.5">Risk Rating</th>
+                  <th className="p-3.5">{isBn ? 'কার্ড / চ্যানেল' : 'Card / Channel'}</th>
+                  <th className="p-3.5">{isBn ? 'মোট পরিমাণ' : 'Gross Amount'}</th>
+                  <th className="p-3.5">{isBn ? 'কর্তিত ফি' : 'Fee Deducted'}</th>
+                  <th className="p-3.5">{isBn ? 'নিট পরিশোধ' : 'Net Payout'}</th>
+                  <th className="p-3.5">{isBn ? 'ঝুঁকির মাত্রা' : 'Risk Rating'}</th>
                   <th className="p-3.5">Status</th>
                   <th className="p-3.5 text-right">Audit</th>
                 </tr>
@@ -354,7 +344,7 @@ export function PaymentsAdmin() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 bg-white rounded-xl border border-stone-200 p-6 shadow-xs space-y-6">
             <div>
-              <h3 className="font-serif font-bold text-base text-stone-900">Gateway Fee Structure & Commission Rates</h3>
+              <h3 className="font-serif font-bold text-base text-stone-900">{isBn ? 'গেটওয়ে ফি কাঠামো ও কমিশন হার' : 'Gateway Fee Structure & Commission Rates'}</h3>
               <p className="text-xs text-stone-500 mt-1">Authoritative transaction fee splits applied to bank settlements.</p>
             </div>
 
@@ -373,7 +363,7 @@ export function PaymentsAdmin() {
               <div className="p-4 rounded-xl border border-pink-200 bg-pink-50/50 flex justify-between items-center text-xs">
                 <div>
                   <h4 className="font-bold text-pink-950">bKash Direct Merchant Tokenized</h4>
-                  <span className="text-pink-800 text-[11px]">Aggregator Direct Settlement</span>
+                  <span className="text-pink-800 text-[11px]">{isBn ? 'অ্যাগ্রিগেটর সরাসরি নিষ্পত্তি' : 'Aggregator Direct Settlement'}</span>
                 </div>
                 <div className="text-right">
                   <span className="text-lg font-bold font-mono text-pink-900">1.50%</span>
@@ -384,11 +374,11 @@ export function PaymentsAdmin() {
               <div className="p-4 rounded-xl border border-amber-200 bg-amber-50/50 flex justify-between items-center text-xs">
                 <div>
                   <h4 className="font-bold text-amber-950">Cash On Delivery (Steadfast / Pathao COD Handling)</h4>
-                  <span className="text-amber-800 text-[11px]">Field cash collection risk charge</span>
+                  <span className="text-amber-800 text-[11px]">{isBn ? 'মাঠপর্যায়ে নগদ সংগ্রহের ঝুঁকি চার্জ' : 'Field cash collection risk charge'}</span>
                 </div>
                 <div className="text-right">
                   <span className="text-lg font-bold font-mono text-amber-900">1.00%</span>
-                  <span className="block text-[10px] text-amber-700">Deducted at remittance</span>
+                  <span className="block text-[10px] text-amber-700">{isBn ? 'রেমিট্যান্সের সময় কর্তন' : 'Deducted at remittance'}</span>
                 </div>
               </div>
             </div>
@@ -401,22 +391,22 @@ export function PaymentsAdmin() {
 
           {/* Quick Bank Summary */}
           <div className="bg-stone-900 text-white rounded-xl p-6 shadow-xs space-y-4">
-            <h3 className="font-serif font-bold text-base text-stone-100">Merchant Bank Profile</h3>
+            <h3 className="font-serif font-bold text-base text-stone-100">{isBn ? 'মার্চেন্ট ব্যাংক প্রোফাইল' : 'Merchant Bank Profile'}</h3>
             <div className="space-y-3 text-xs text-stone-300">
               <div>
-                <span className="text-stone-500 block text-[10px] uppercase">Beneficiary Name</span>
+                <span className="text-stone-500 block text-[10px] uppercase">{isBn ? 'সুবিধাভোগীর নাম' : 'Beneficiary Name'}</span>
                 <span className="font-semibold text-white">KISHOLOY HERITAGE APPAREL LTD.</span>
               </div>
               <div>
-                <span className="text-stone-500 block text-[10px] uppercase">Bank & Branch</span>
+                <span className="text-stone-500 block text-[10px] uppercase">{isBn ? 'ব্যাংক ও শাখা' : 'Bank & Branch'}</span>
                 <span className="font-semibold text-white">City Bank Ltd. (Gulshan Branch)</span>
               </div>
               <div>
-                <span className="text-stone-500 block text-[10px] uppercase">Routing Number</span>
+                <span className="text-stone-500 block text-[10px] uppercase">{isBn ? 'রাউটিং নম্বর' : 'Routing Number'}</span>
                 <span className="font-mono text-white">225261789</span>
               </div>
               <div>
-                <span className="text-stone-500 block text-[10px] uppercase">Settlement Currency</span>
+                <span className="text-stone-500 block text-[10px] uppercase">{isBn ? 'নিষ্পত্তির মুদ্রা' : 'Settlement Currency'}</span>
                 <span className="font-mono text-emerald-400 font-bold">BDT (৳)</span>
               </div>
             </div>
@@ -437,7 +427,7 @@ export function PaymentsAdmin() {
           <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-3">
             <ShieldAlert className="w-5 h-5 text-amber-700 shrink-0 mt-0.5" />
             <div className="text-xs">
-              <h4 className="font-bold text-amber-900">Fraud & Remote Return Sentinel</h4>
+              <h4 className="font-bold text-amber-900">{isBn ? 'জালিয়াতি ও রিটার্ন পর্যবেক্ষণ' : 'Fraud & Remote Return Sentinel'}</h4>
               <p className="text-amber-800 mt-0.5">
                 Evaluates high-value COD orders, historical return velocities, and remote transit routes to prevent costly courier return charges.
               </p>
@@ -451,12 +441,10 @@ export function PaymentsAdmin() {
 
             <div className="divide-y divide-stone-200 text-xs">
               {orders.slice(0, 8).map((ord) => {
-                const assessment = fraudAssessments[ord.id] || {
-                  riskScore: 15,
-                  riskRating: 'LOW',
-                  flags: [],
-                  recommendation: 'AUTO_APPROVE'
-                };
+                // No fabricated default: an order the engine has not scored is
+                // reported as unavailable rather than silently shown as LOW.
+                const assessment = fraudAssessments[ord.id];
+                const unassessed = !assessment;
 
                 return (
                   <div key={ord.id} className="p-4 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:bg-stone-50">
@@ -471,7 +459,12 @@ export function PaymentsAdmin() {
                       <div className="text-stone-500 text-[11px]">
                         Destination: {ord.shippingAddress.thana}, {ord.shippingAddress.district}
                       </div>
-                      {assessment.flags.length > 0 && (
+                      {unassessed && (
+                        <div className="mt-1 text-[10px] text-stone-500 bg-stone-100 border border-stone-200 rounded px-1.5 py-0.5 inline-block">
+                          Risk score unavailable — engine unreachable
+                        </div>
+                      )}
+                      {assessment && assessment.flags.length > 0 && (
                         <div className="flex flex-wrap gap-1 mt-1">
                           {assessment.flags.map((flag, idx) => (
                             <span key={idx} className="bg-red-50 text-red-700 border border-red-200 px-1.5 py-0.5 rounded text-[10px]">
@@ -484,23 +477,25 @@ export function PaymentsAdmin() {
 
                     <div className="flex items-center gap-4 shrink-0">
                       <div className="text-right">
-                        <span className="text-[10px] text-stone-500 block uppercase">Risk Score</span>
+                        <span className="text-[10px] text-stone-500 block uppercase">{isBn ? 'ঝুঁকি স্কোর' : 'Risk Score'}</span>
                         <span className={`font-mono font-bold text-base ${
+                          unassessed ? 'text-stone-400' :
                           assessment.riskRating === 'HIGH' ? 'text-red-700' :
                           assessment.riskRating === 'MEDIUM' ? 'text-amber-700' :
                           'text-emerald-700'
                         }`}>
-                          {assessment.riskScore} / 100
+                          {unassessed ? '— / 100' : `${assessment.riskScore} / 100`}
                         </span>
                       </div>
 
                       <div className="text-right">
                         <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold block ${
+                          unassessed ? 'bg-stone-100 text-stone-500 border border-stone-300' :
                           assessment.recommendation === 'REQUIRE_ADVANCE_SHIPPING_FEE' ? 'bg-red-100 text-red-900 border border-red-300' :
                           assessment.recommendation === 'REQUIRE_PHONE_VERIFICATION' ? 'bg-amber-100 text-amber-900 border border-amber-300' :
                           'bg-emerald-100 text-emerald-900 border border-emerald-300'
                         }`}>
-                          {assessment.recommendation.replace(/_/g, ' ')}
+                          {unassessed ? 'NOT ASSESSED' : assessment.recommendation.replace(/_/g, ' ')}
                         </span>
                       </div>
                     </div>
@@ -517,7 +512,7 @@ export function PaymentsAdmin() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <div className="bg-white rounded-xl border border-stone-200 p-6 shadow-xs space-y-4">
             <div>
-              <h3 className="font-serif font-bold text-base text-stone-900">SSLCOMMERZ IPN Webhook Dispatcher</h3>
+              <h3 className="font-serif font-bold text-base text-stone-900">{isBn ? 'SSLCOMMERZ IPN ওয়েবহুক ডিসপ্যাচার' : 'SSLCOMMERZ IPN Webhook Dispatcher'}</h3>
               <p className="text-xs text-stone-500 mt-1">
                 Simulates real-world server-to-server Instant Payment Notification (IPN) from SSLCOMMERZ gateway.
               </p>
@@ -525,7 +520,7 @@ export function PaymentsAdmin() {
 
             <form onSubmit={handleTriggerIpn} className="space-y-4 text-xs">
               <div>
-                <label className="font-bold text-stone-700 block mb-1">Target Order Number</label>
+                <label className="font-bold text-stone-700 block mb-1">{isBn ? 'লক্ষ্য অর্ডার নম্বর' : 'Target Order Number'}</label>
                 <select
                   required
                   value={ipnOrderNum}
@@ -541,9 +536,9 @@ export function PaymentsAdmin() {
                 </select>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="font-bold text-stone-700 block mb-1">Webhook Status</label>
+                  <label className="font-bold text-stone-700 block mb-1">{isBn ? 'ওয়েবহুক স্ট্যাটাস' : 'Webhook Status'}</label>
                   <select
                     value={ipnStatus}
                     onChange={(e) => setIpnStatus(e.target.value as any)}
@@ -582,7 +577,7 @@ export function PaymentsAdmin() {
 
           <div className="bg-stone-900 text-stone-200 rounded-xl p-6 shadow-xs font-mono text-xs space-y-3">
             <div className="flex justify-between items-center text-stone-400 border-b border-stone-800 pb-2">
-              <span className="font-bold text-[11px] uppercase">IPN Server Logs / Response</span>
+              <span className="font-bold text-[11px] uppercase">{isBn ? 'IPN সার্ভার লগ / রেসপন্স' : 'IPN Server Logs / Response'}</span>
               <span className="text-[10px]">Endpoint: /api/payments/test-ipn</span>
             </div>
 
@@ -603,7 +598,7 @@ export function PaymentsAdmin() {
       {activeTab === 'refunds' && (
         <div className="max-w-xl mx-auto bg-white rounded-xl border border-stone-200 p-6 shadow-xs space-y-5">
           <div>
-            <h3 className="font-serif font-bold text-base text-stone-900">Initiate Gateway Direct Refund</h3>
+            <h3 className="font-serif font-bold text-base text-stone-900">{isBn ? 'গেটওয়ে সরাসরি রিফান্ড শুরু করুন' : 'Initiate Gateway Direct Refund'}</h3>
             <p className="text-xs text-stone-500 mt-1">
               Refunds the customer directly to their original payment source (SSLCOMMERZ / bKash).
             </p>
@@ -611,7 +606,7 @@ export function PaymentsAdmin() {
 
           <form onSubmit={handleProcessRefund} className="space-y-4 text-xs">
             <div>
-              <label className="font-bold text-stone-700 block mb-1">Target Paid Order</label>
+              <label className="font-bold text-stone-700 block mb-1">{isBn ? 'পরিশোধিত অর্ডার নির্বাচন' : 'Target Paid Order'}</label>
               <select
                 required
                 value={refundOrderId}
@@ -644,7 +639,7 @@ export function PaymentsAdmin() {
             </div>
 
             <div>
-              <label className="font-bold text-stone-700 block mb-1">Reason for Refund</label>
+              <label className="font-bold text-stone-700 block mb-1">{isBn ? 'রিফান্ডের কারণ' : 'Reason for Refund'}</label>
               <textarea
                 required
                 rows={3}
@@ -667,8 +662,12 @@ export function PaymentsAdmin() {
       )}
 
       {/* Raw Payload Modal */}
-      {selectedTxPayload && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-900/60 backdrop-blur-xs">
+      <AdminModalShell
+        open={!!selectedTxPayload}
+        onClose={() => setSelectedTxPayload(null)}
+        label="Raw Payload Modal"
+        overlayClassName="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-900/60 backdrop-blur-xs"
+      >
           <div className="bg-stone-900 text-white rounded-xl shadow-2xl border border-stone-800 w-full max-w-lg overflow-hidden animate-in fade-in">
             <div className="p-4 bg-stone-800 flex justify-between items-center text-xs font-bold">
               <span>Raw IPN Gateway Data ({selectedTxPayload.orderNumber})</span>
@@ -678,8 +677,7 @@ export function PaymentsAdmin() {
               <pre>{JSON.stringify(selectedTxPayload.rawIpnPayload, null, 2)}</pre>
             </div>
           </div>
-        </div>
-      )}
+      </AdminModalShell>
     </div>
   );
 }

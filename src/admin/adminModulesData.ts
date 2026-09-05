@@ -415,6 +415,37 @@ export const ADMIN_SECTIONS_DATA: AdminSectionGroup[] = [
         ]
       },
       {
+        // S2-2: the Promotions screen existed but had no sidebar entry and its
+        // route redirected to the dashboard, so coupons, flash deals and
+        // loyalty adjustments were unreachable despite a complete API.
+        id: 'admin-nav-promotions',
+        sectionId: 'customer-management',
+        label: 'Promotions & Loyalty',
+        labelBn: 'প্রোমোশন ও লয়্যালটি',
+        path: '/admin/promotions',
+        icon: Gift,
+        role: 'Admin, Marketing Lead',
+        roleBn: 'অ্যাডমিন, মার্কেটিং প্রধান',
+        tagline: 'Coupon rules, flash deals and customer loyalty point adjustments',
+        taglineBn: 'কুপন নিয়ম, ফ্ল্যাশ ডিল ও গ্রাহকের লয়্যালটি পয়েন্ট সমন্বয়',
+        description: 'Create and expire discount coupons with usage caps and minimum-spend rules, schedule flash deals against catalog products, validate a code the way checkout will, and credit or debit a customer loyalty wallet with an audited reason.',
+        descriptionBn: 'ব্যবহারের সীমা ও ন্যূনতম ক্রয়মূল্যের নিয়মসহ ডিসকাউন্ট কুপন তৈরি ও বাতিল, ক্যাটালগ পণ্যের বিপরীতে ফ্ল্যাশ ডিল নির্ধারণ, চেকআউট যেভাবে যাচাই করে সেভাবে কোড পরীক্ষা, এবং কারণ লিপিবদ্ধ করে গ্রাহকের লয়্যালটি ওয়ালেটে পয়েন্ট যোগ বা বিয়োগ।',
+        tasksEn: [
+          'Create, edit and deactivate coupon rules with usage and spend limits',
+          'Schedule and monitor flash deals on selected catalog products',
+          'Validate a coupon code exactly as the checkout would apply it',
+          'Adjust a customer loyalty wallet with a recorded, audited reason',
+          'Review promotion usage statistics across coupons and deals'
+        ],
+        tasksBn: [
+          'ব্যবহার ও ন্যূনতম খরচের সীমাসহ কুপন নিয়ম তৈরি, সম্পাদনা ও নিষ্ক্রিয়করণ',
+          'নির্বাচিত পণ্যে ফ্ল্যাশ ডিল নির্ধারণ ও পর্যবেক্ষণ',
+          'চেকআউট যেভাবে প্রয়োগ করবে ঠিক সেভাবে কুপন কোড যাচাই',
+          'কারণ লিপিবদ্ধ করে গ্রাহকের লয়্যালটি ওয়ালেট সমন্বয়',
+          'কুপন ও ডিলজুড়ে প্রোমোশন ব্যবহারের পরিসংখ্যান পর্যালোচনা'
+        ]
+      },
+      {
         id: 'admin-nav-marketing',
         sectionId: 'customer-management',
         label: 'Marketing Command Center',

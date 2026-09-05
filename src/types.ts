@@ -1687,19 +1687,26 @@ export interface BackupSnapshotManifest {
   appVersion: string;
   environment: string;
   totalRecords: number;
+  /**
+   * Record count per backed-up collection. Open-ended on purpose: the backup
+   * engine snapshots every `serverDb` collection, so this must not be pinned
+   * to a fixed subset (doing so previously hid 24 uncovered collections).
+   * The core keys below are always present.
+   */
   collectionCounts: {
-    products: number;
-    categories: number;
-    orders: number;
-    customers: number;
-    auditLogs: number;
-    expenses: number;
-    settlements: number;
-    inventoryTransactions: number;
-    coupons: number;
-    siteContent: number;
-    warehouses: number;
-    users: number;
+    products?: number;
+    categories?: number;
+    orders?: number;
+    customers?: number;
+    auditLogs?: number;
+    expenses?: number;
+    settlements?: number;
+    inventoryTransactions?: number;
+    coupons?: number;
+    siteContent?: number;
+    warehouses?: number;
+    users?: number;
+    [collection: string]: number | undefined;
   };
   sizeBytes: number;
   checksumSha256: string;
@@ -1953,7 +1960,14 @@ export interface Supplier {
     loginEmail?: string;
     lastLoginAt?: string;
     loginIsolated: boolean; // isolated from internal staff/customer DB
-    password?: string;
+    /**
+     * scrypt hash of the portal password (`scrypt$N$salt$key`). Never a
+     * plaintext password, and never serialised to any client.
+     */
+    passwordHash?: string;
+    passwordUpdatedAt?: string;
+    /** Set while the supplier is still on an admin-issued temporary password. */
+    mustChangePassword?: boolean;
   };
 
   purchaseOrdersCount?: number;
@@ -2468,4 +2482,47 @@ export interface MarketingFinanceReconciliation {
   commandRows: { id: string; dateFrom: string; dateTo: string; amount: number; financeExpenseRef?: string; entryType: MarketingSpendType }[];
   note: string;
   noteBn: string;
+}
+
+/**
+ * Admin-side Return Merchandise Authorisation case.
+ *
+ * S2-3: these used to live only in the operator's browser (localStorage
+ * `kisholoy_rma_records`), so a return raised at one desk was invisible to
+ * every other member of staff. The server now owns them.
+ */
+export interface RmaRecord {
+  id: string;
+  rmaNumber: string;
+  orderId: string;
+  orderNumber: string;
+  customerName: string;
+  customerPhone: string;
+  district: string;
+  requestDate: string;
+  reason: 'WRONG_SIZE' | 'DEFECTIVE_PRODUCT' | 'WRONG_ITEM_SENT' | 'COLOR_MISMATCH' | 'CHANGED_MIND' | 'COURIER_RETURNED';
+  reasonDetails: string;
+  productTitle: string;
+  sku: string;
+  quantity: number;
+  itemPrice: number;
+  totalRefundAmount: number;
+  originalPaymentMethod: string;
+  originalPaymentStatus: string;
+  stage: 'REQUESTED' | 'PARCEL_RECEIVED' | 'INSPECTED' | 'RESTOCKED' | 'REFUND_QUEUED' | 'REFUND_DISBURSED' | 'REJECTED';
+  inspectionResult?: {
+    condition: 'PRISTINE_NEW' | 'OPENED_RESELLABLE' | 'DAMAGED_SCRAP';
+    inspectedBy: string;
+    inspectedAt: string;
+    notes: string;
+    restocked: boolean;
+  };
+  refundExecution?: {
+    method: 'bKash' | 'Nagad' | 'SSLCOMMERZ_REVERSAL' | 'BANK_EFT' | 'STORE_CREDIT';
+    accountNumber: string;
+    trxId: string;
+    disbursedAt: string;
+    disbursedAmount: number;
+    disbursedBy: string;
+  };
 }

@@ -229,7 +229,7 @@ export function PrintSettingsPanel({ orders, siteContent }: Props) {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="text-xs font-bold text-stone-600 block mb-1">Language</label>
                     <select value={sampleDoc.language} onChange={(e) => setDoc(activeType, { language: e.target.value as DocLanguage })} className="w-full border border-stone-300 rounded-lg px-2 py-1.5 text-xs">
@@ -271,7 +271,7 @@ export function PrintSettingsPanel({ orders, siteContent }: Props) {
                     return (
                       <div key={cat} className="mb-2">
                         <div className="text-[10px] font-bold text-stone-400 uppercase tracking-wider mb-1">{CATEGORY_LABELS[cat]}</div>
-                        <div className="grid grid-cols-2 gap-1">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-1">
                           {defs.map((f) => {
                             const val = sampleDoc.fields[f.key] ?? false;
                             const locked = cat !== 'OPTIONAL';

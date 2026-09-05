@@ -6,6 +6,8 @@ import {
   TrendingUp, Award, ShoppingBag, Eye, RefreshCw, X, ChevronRight
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
+import { AdminModalShell } from '../components/admin/AdminModalShell';
+import { usePendingAction } from '../hooks/usePendingAction';
 import { 
   CouponRule, FlashDeal, CustomerLoyaltyWallet, 
   CouponDiscountType, CouponStatus, LoyaltyTier 
@@ -15,6 +17,10 @@ export function PromotionsAdmin() {
   const { products, categories, showToast, logAudit } = useApp();
 
   const [activeTab, setActiveTab] = useState<'COUPONS' | 'FLASH_DEALS' | 'LOYALTY' | 'SIMULATOR'>('COUPONS');
+
+  // F-306: blocks duplicate submits while a mutation is in flight.
+
+  const { run, isPending, isBusy } = usePendingAction();
   const [loading, setLoading] = useState(true);
 
   // Coupons State
@@ -88,6 +94,7 @@ export function PromotionsAdmin() {
       if (loyaltyData.success) setLoyaltyWallets(loyaltyData.wallets || []);
     } catch (err) {
       console.error('Failed to load promotions data:', err);
+      showToast('Could not load promotions from the server — the list may be out of date.');
     } finally {
       setLoading(false);
     }
@@ -106,7 +113,7 @@ export function PromotionsAdmin() {
   };
 
   // Toggle coupon status
-  const handleToggleStatus = async (coupon: CouponRule) => {
+  const handleToggleStatus = async (coupon: CouponRule) =>  run('handleToggleStatus', async () => {
     const newStatus: CouponStatus = coupon.status === 'ACTIVE' ? 'DISABLED' : 'ACTIVE';
     try {
       const res = await fetch(`/api/promotions/coupons/${coupon.id}`, {
@@ -122,10 +129,10 @@ export function PromotionsAdmin() {
     } catch (e) {
       showToast('Failed to update coupon status.');
     }
-  };
+    });
 
   // Delete coupon
-  const handleDeleteCoupon = async (id: string, code: string) => {
+  const handleDeleteCoupon = async (id: string, code: string) =>  run('handleDeleteCoupon', async () => {
     if (!confirm(`Are you sure you want to delete coupon "${code}"?`)) return;
     try {
       const res = await fetch(`/api/promotions/coupons/${id}`, {
@@ -141,11 +148,14 @@ export function PromotionsAdmin() {
     } catch (e) {
       showToast('Failed to delete coupon.');
     }
-  };
+    });
 
   // Save Coupon (Create or Edit)
-  const handleSaveCoupon = async (e: React.FormEvent) => {
+    const handleSaveCoupon = async (e: React.FormEvent) => {
+    // Must fire synchronously. Inside run() it would land in a microtask and
+    // the browser would submit the form and reload the page first.
     e.preventDefault();
+    return run('handleSaveCoupon', async () => {
     try {
       if (editingCoupon) {
         // Update
@@ -164,7 +174,7 @@ export function PromotionsAdmin() {
           setShowCouponModal(false);
           setEditingCoupon(null);
         } else {
-          alert(data.error || 'Failed to update coupon');
+          showToast(data.error || 'Failed to update coupon', 'info');
         }
       } else {
         // Create
@@ -182,12 +192,13 @@ export function PromotionsAdmin() {
           showToast(`Coupon "${formData.code}" created successfully!`);
           setShowCouponModal(false);
         } else {
-          alert(data.error || 'Failed to create coupon');
+          showToast(data.error || 'Failed to create coupon', 'info');
         }
       }
     } catch (err: any) {
-      alert(err.message || 'Network error saving coupon');
+      showToast(err.message || 'Network error saving coupon', 'info');
     }
+    });
   };
 
   // Open Edit Modal
@@ -241,8 +252,11 @@ export function PromotionsAdmin() {
   };
 
   // Adjust Points Submit
-  const handleAdjustPointsSubmit = async (e: React.FormEvent) => {
+    const handleAdjustPointsSubmit = async (e: React.FormEvent) => {
+    // Must fire synchronously. Inside run() it would land in a microtask and
+    // the browser would submit the form and reload the page first.
     e.preventDefault();
+    return run('handleAdjustPointsSubmit', async () => {
     try {
       const res = await fetch('/api/promotions/loyalty/adjust', {
         method: 'POST',
@@ -265,11 +279,12 @@ export function PromotionsAdmin() {
         setShowAdjustPointsModal(false);
         setAdjustNote('');
       } else {
-        alert(data.error || 'Failed to adjust loyalty points');
+        showToast(data.error || 'Failed to adjust loyalty points', 'info');
       }
     } catch (e: any) {
-      alert(e.message || 'Error communicating with server');
+      showToast(e.message || 'Error communicating with server', 'info');
     }
+    });
   };
 
   // Run Simulator
@@ -294,9 +309,15 @@ export function PromotionsAdmin() {
       const data = await res.json();
       if (data.success) {
         setSimResult(data.evaluation);
+      } else {
+        setSimResult(null);
+        showToast(data.error || 'Coupon simulation failed. Please try again.');
       }
     } catch (e) {
-      console.error(e);
+      // A blank result panel used to be the only sign of failure, which reads
+      // as "this coupon is invalid" rather than "the check never ran" (F-305).
+      setSimResult(null);
+      showToast('Could not reach the promotions engine — simulation did not run.');
     } finally {
       setSimulating(false);
     }
@@ -340,7 +361,7 @@ export function PromotionsAdmin() {
         <div className="flex items-center gap-2">
           <button
             onClick={fetchPromotionData}
-            className="p-2 text-stone-500 hover:text-stone-900 hover:bg-stone-100 rounded-xl transition-colors"
+            className="p-2 text-stone-500 hover:text-stone-900 hover:bg-stone-100 rounded-xl transition-colors min-w-11 min-h-11 sm:min-w-0 sm:min-h-0 inline-flex items-center justify-center"
             title="Refresh Data"
           >
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
@@ -850,7 +871,7 @@ export function PromotionsAdmin() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-semibold text-stone-700 mb-1">Cart Subtotal (৳)</label>
                   <input
@@ -974,8 +995,14 @@ export function PromotionsAdmin() {
       )}
 
       {/* CREATE / EDIT COUPON MODAL */}
-      {showCouponModal && (
-        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4 backdrop-blur-xs">
+      <AdminModalShell
+        open={!!showCouponModal}
+        onClose={() => setShowCouponModal(false)}
+        label="CREATE EDIT COUPON MODAL"
+        // Contains a form: a stray backdrop click must not discard entered data.
+        closeOnBackdrop={false}
+        overlayClassName="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4 backdrop-blur-xs"
+      >
           <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-stone-200 shadow-2xl p-6 space-y-4">
             <div className="flex justify-between items-center border-b border-stone-100 pb-3">
               <div>
@@ -993,7 +1020,7 @@ export function PromotionsAdmin() {
             </div>
 
             <form onSubmit={handleSaveCoupon} className="space-y-4 text-xs">
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block font-semibold text-stone-700 mb-1">Coupon Code (Uppercase)</label>
                   <input
@@ -1021,7 +1048,7 @@ export function PromotionsAdmin() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block font-semibold text-stone-700 mb-1">Campaign Title (English)</label>
                   <input
@@ -1045,7 +1072,7 @@ export function PromotionsAdmin() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
                   <label className="block font-semibold text-stone-700 mb-1">
                     {formData.discountType === 'PERCENTAGE' ? 'Discount Percentage (%)' : 'Discount Amount (৳)'}
@@ -1083,7 +1110,7 @@ export function PromotionsAdmin() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block font-semibold text-stone-700 mb-1">Valid From</label>
                   <input
@@ -1106,7 +1133,7 @@ export function PromotionsAdmin() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block font-semibold text-stone-700 mb-1">Total Usage Limit (Quota)</label>
                   <input
@@ -1163,12 +1190,17 @@ export function PromotionsAdmin() {
               </div>
             </form>
           </div>
-        </div>
-      )}
+      </AdminModalShell>
 
       {/* LOYALTY POINTS ADJUSTMENT MODAL */}
-      {showAdjustPointsModal && (
-        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4 backdrop-blur-xs">
+      <AdminModalShell
+        open={!!showAdjustPointsModal}
+        onClose={() => setShowAdjustPointsModal(false)}
+        label="LOYALTY POINTS ADJUSTMENT MODAL"
+        // Contains a form: a stray backdrop click must not discard entered data.
+        closeOnBackdrop={false}
+        overlayClassName="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4 backdrop-blur-xs"
+      >
           <div className="bg-white rounded-2xl max-w-md w-full border border-stone-200 shadow-2xl p-6 space-y-4">
             <div className="flex justify-between items-center border-b border-stone-100 pb-3">
               <div>
@@ -1196,7 +1228,7 @@ export function PromotionsAdmin() {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block font-semibold text-stone-700 mb-1">Points Delta (+ or -)</label>
                   <input
@@ -1250,12 +1282,15 @@ export function PromotionsAdmin() {
               </div>
             </form>
           </div>
-        </div>
-      )}
+      </AdminModalShell>
 
       {/* WALLET HISTORY DRAWER */}
-      {selectedWallet && (
-        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4 backdrop-blur-xs">
+      <AdminModalShell
+        open={!!selectedWallet}
+        onClose={() => setSelectedWallet(null)}
+        label="WALLET HISTORY DRAWER"
+        overlayClassName="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4 backdrop-blur-xs"
+      >
           <div className="bg-white rounded-2xl max-w-xl w-full max-h-[85vh] overflow-y-auto border border-stone-200 shadow-2xl p-6 space-y-4">
             <div className="flex justify-between items-center border-b border-stone-100 pb-3">
               <div>
@@ -1316,8 +1351,7 @@ export function PromotionsAdmin() {
               </button>
             </div>
           </div>
-        </div>
-      )}
+      </AdminModalShell>
     </div>
   );
 }

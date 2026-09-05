@@ -260,7 +260,7 @@ export function ReportsAdmin() {
             <button
               onClick={fetchReport}
               disabled={loadingAnalytics}
-              className="p-2 border border-stone-200 rounded-lg text-stone-600 hover:bg-stone-100 transition-colors"
+              className="p-2 border border-stone-200 rounded-lg text-stone-600 hover:bg-stone-100 transition-colors min-w-11 min-h-11 sm:min-w-0 sm:min-h-0 inline-flex items-center justify-center"
               title="Refresh Analytics"
             >
               <RefreshCw className={`w-4 h-4 ${loadingAnalytics ? 'animate-spin text-teal-700' : ''}`} />
@@ -1059,6 +1059,7 @@ export function ReportsAdmin() {
                 <span className="text-xs text-stone-500">{lang === 'BN' ? 'অর্ডার:' : 'Order:'}</span>
                 <select
                   value={selectedOrderForDoc}
+                  aria-label="order for doc"
                   onChange={(e) => setSelectedOrderForDoc(e.target.value)}
                   className="px-2 py-1.5 border border-stone-200 rounded-lg text-xs font-mono bg-stone-50"
                 >

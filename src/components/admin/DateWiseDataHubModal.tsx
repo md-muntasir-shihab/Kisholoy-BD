@@ -37,6 +37,7 @@ import {
   AVAILABLE_YEARS
 } from '../../utils/dateFilterUtils';
 import { DateRangeFilterBar } from './DateRangeFilterBar';
+import { useModalA11y } from '../../hooks/useModalA11y';
 
 interface DateWiseDataHubModalProps {
   isOpen: boolean;
@@ -49,6 +50,13 @@ export function DateWiseDataHubModal({
   onClose,
   initialDomain = 'ORDERS'
 }: DateWiseDataHubModalProps) {
+  // F-307: Escape to close, focus trap, focus restore and ARIA dialog roles.
+  const { containerRef, dialogProps } = useModalA11y({
+    open: isOpen,
+    onClose,
+    label: 'Date Wise Data Hub',
+  });
+
   const { 
     orders, 
     settlements, 
@@ -328,7 +336,7 @@ export function DateWiseDataHubModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-stone-950/80 backdrop-blur-xs overflow-y-auto animate-in fade-in duration-150">
+    <div ref={containerRef} {...dialogProps} className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-stone-950/80 backdrop-blur-xs overflow-y-auto animate-in fade-in duration-150">
       <div className="bg-stone-900 border border-stone-750 text-stone-100 rounded-3xl w-full max-w-6xl max-h-[92vh] flex flex-col shadow-2xl overflow-hidden">
         
         {/* Modal Header */}

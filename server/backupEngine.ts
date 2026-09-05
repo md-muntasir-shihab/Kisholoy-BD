@@ -208,38 +208,53 @@ class BackupEngine {
   /**
    * Extracts clean deep-copy state of all database collections
    */
+  /**
+   * Every persistable `serverDb` collection, in one place.
+   *
+   * This list is the contract for BOTH snapshot and restore. It previously
+   * covered only 11 of the 35 collections, so a "successful" restore silently
+   * wiped payment transactions, fraud blacklists, loyalty wallets, customer
+   * addresses, gateway config and more. Keep it exhaustive: anything added to
+   * `ServerDatabase` must be added here too.
+   */
+  static readonly BACKED_UP_COLLECTIONS: readonly string[] = [
+    'products', 'categories', 'orders', 'customers',
+    'siteContent', 'contentRevisions', 'auditLogs',
+    'expenses', 'settlements', 'automationJobs',
+    'paymentTransactions', 'inventoryTransactions',
+    'webhookEndpoints', 'webhookLogs',
+    'notificationTemplates', 'notificationLogs', 'gatewayConfig',
+    'customerNotifications', 'blacklists', 'fraudSettings',
+    'warehouses', 'warehouseStock', 'stos', 'routingRules',
+    'pickLists', 'dispatchManifests',
+    'coupons', 'flashDeals', 'loyaltyWallets', 'promotionStats',
+    'customerAddresses', 'wishlists', 'customerReturns', 'customerProfiles',
+    'rmaRecords',
+    'printSettings'
+  ];
+
   private extractDatabaseSnapshotPayload(): any {
-    return {
-      products: JSON.parse(JSON.stringify(serverDb.products || [])),
-      categories: JSON.parse(JSON.stringify(serverDb.categories || [])),
-      orders: JSON.parse(JSON.stringify(serverDb.orders || [])),
-      customers: JSON.parse(JSON.stringify(serverDb.customers || [])),
-      auditLogs: JSON.parse(JSON.stringify(serverDb.auditLogs || [])),
-      expenses: JSON.parse(JSON.stringify(serverDb.expenses || [])),
-      settlements: JSON.parse(JSON.stringify(serverDb.settlements || [])),
-      inventoryTransactions: JSON.parse(JSON.stringify(serverDb.inventoryTransactions || [])),
-      coupons: JSON.parse(JSON.stringify(serverDb.coupons || [])),
-      siteContent: JSON.parse(JSON.stringify(serverDb.siteContent || {})),
-      warehouses: JSON.parse(JSON.stringify(serverDb.warehouses || [])),
-      users: securityEngine.getAdminUsers()
-    };
+    const payload: Record<string, any> = {};
+    for (const key of BackupEngine.BACKED_UP_COLLECTIONS) {
+      const value = (serverDb as any)[key];
+      payload[key] = value === undefined
+        ? (null)
+        : JSON.parse(JSON.stringify(value));
+    }
+    // Staff/RBAC state lives in securityEngine, not serverDb.
+    payload.users = securityEngine.getAdminUsers();
+    return payload;
   }
 
   private getCollectionCounts(payload: any) {
-    return {
-      products: Array.isArray(payload.products) ? payload.products.length : 0,
-      categories: Array.isArray(payload.categories) ? payload.categories.length : 0,
-      orders: Array.isArray(payload.orders) ? payload.orders.length : 0,
-      customers: Array.isArray(payload.customers) ? payload.customers.length : 0,
-      auditLogs: Array.isArray(payload.auditLogs) ? payload.auditLogs.length : 0,
-      expenses: Array.isArray(payload.expenses) ? payload.expenses.length : 0,
-      settlements: Array.isArray(payload.settlements) ? payload.settlements.length : 0,
-      inventoryTransactions: Array.isArray(payload.inventoryTransactions) ? payload.inventoryTransactions.length : 0,
-      coupons: Array.isArray(payload.coupons) ? payload.coupons.length : 0,
-      siteContent: payload.siteContent ? 1 : 0,
-      warehouses: Array.isArray(payload.warehouses) ? payload.warehouses.length : 0,
-      users: Array.isArray(payload.users) ? payload.users.length : 0
-    };
+    // Count every collection actually present in the payload so the manifest
+    // reflects true backup coverage instead of a hard-coded subset.
+    const counts: Record<string, number> = {};
+    for (const key of [...BackupEngine.BACKED_UP_COLLECTIONS, 'users']) {
+      const value = (payload as any)[key];
+      counts[key] = Array.isArray(value) ? value.length : (value ? 1 : 0);
+    }
+    return counts;
   }
 
   private countTotalRecords(payload: any): number {
@@ -459,45 +474,20 @@ class BackupEngine {
 
     const shouldRestore = (col: string) => !selectiveCollections || selectiveCollections.includes(col);
 
-    if (shouldRestore('products') && Array.isArray(payload.products)) {
-      serverDb.products = JSON.parse(JSON.stringify(payload.products));
-      restoredCollections.push('products');
-    }
-    if (shouldRestore('categories') && Array.isArray(payload.categories)) {
-      serverDb.categories = JSON.parse(JSON.stringify(payload.categories));
-      restoredCollections.push('categories');
-    }
-    if (shouldRestore('orders') && Array.isArray(payload.orders)) {
-      serverDb.orders = JSON.parse(JSON.stringify(payload.orders));
-      restoredCollections.push('orders');
-    }
-    if (shouldRestore('customers') && Array.isArray(payload.customers)) {
-      serverDb.customers = JSON.parse(JSON.stringify(payload.customers));
-      restoredCollections.push('customers');
-    }
-    if (shouldRestore('expenses') && Array.isArray(payload.expenses)) {
-      serverDb.expenses = JSON.parse(JSON.stringify(payload.expenses));
-      restoredCollections.push('expenses');
-    }
-    if (shouldRestore('settlements') && Array.isArray(payload.settlements)) {
-      serverDb.settlements = JSON.parse(JSON.stringify(payload.settlements));
-      restoredCollections.push('settlements');
-    }
-    if (shouldRestore('inventoryTransactions') && Array.isArray(payload.inventoryTransactions)) {
-      serverDb.inventoryTransactions = JSON.parse(JSON.stringify(payload.inventoryTransactions));
-      restoredCollections.push('inventoryTransactions');
-    }
-    if (shouldRestore('coupons') && Array.isArray(payload.coupons)) {
-      serverDb.coupons = JSON.parse(JSON.stringify(payload.coupons));
-      restoredCollections.push('coupons');
-    }
-    if (shouldRestore('siteContent') && payload.siteContent) {
-      serverDb.siteContent = JSON.parse(JSON.stringify(payload.siteContent));
-      restoredCollections.push('siteContent');
-    }
-    if (shouldRestore('warehouses') && Array.isArray(payload.warehouses)) {
-      serverDb.warehouses = JSON.parse(JSON.stringify(payload.warehouses));
-      restoredCollections.push('warehouses');
+    // Restore every collection captured by the snapshot contract. Driving this
+    // from BACKED_UP_COLLECTIONS (instead of 10 hand-written ifs) guarantees
+    // restore coverage can never silently drift behind snapshot coverage.
+    for (const key of BackupEngine.BACKED_UP_COLLECTIONS) {
+      if (!shouldRestore(key)) continue;
+      const value = (payload as any)[key];
+      if (value === undefined || value === null) continue;
+
+      const current = (serverDb as any)[key];
+      // Shape guard: never replace an array with an object or vice versa.
+      if (Array.isArray(current) !== Array.isArray(value)) continue;
+
+      (serverDb as any)[key] = JSON.parse(JSON.stringify(value));
+      restoredCollections.push(key);
     }
 
     this.drMetrics.totalRestoresExecuted += 1;

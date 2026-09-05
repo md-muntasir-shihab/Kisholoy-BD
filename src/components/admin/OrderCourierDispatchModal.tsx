@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { Order, CustomCourierConfig } from '../../types';
 import { useApp } from '../../context/AppContext';
+import { useModalA11y } from '../../hooks/useModalA11y';
 
 interface OrderCourierDispatchModalProps {
   isOpen: boolean;
@@ -39,6 +40,13 @@ export function OrderCourierDispatchModal({
   onSuccess,
   onPrintLabel
 }: OrderCourierDispatchModalProps) {
+  // F-307: Escape to close, focus trap, focus restore and ARIA dialog roles.
+  const { containerRef, dialogProps } = useModalA11y({
+    open: isOpen,
+    onClose,
+    label: 'Order Courier Dispatch',
+  });
+
   const { customCouriers, showToast, language, syncServerOrder } = useApp();
   const isBn = language === 'BN';
 
@@ -58,6 +66,7 @@ export function OrderCourierDispatchModal({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [lastBookingResponse, setLastBookingResponse] = useState<any | null>(null);
   const [copiedTracking, setCopiedTracking] = useState(false);
+  const [configLoadFailed, setConfigLoadFailed] = useState(false);
 
   // Fetch courier API status from server
   useEffect(() => {
@@ -68,7 +77,11 @@ export function OrderCourierDispatchModal({
           setCourierConfigs(data.config);
         }
       })
-      .catch(err => console.warn('Could not fetch courier configs:', err));
+      .catch(err => {
+        // Without the config the modal silently offers stale provider options.
+        console.warn('Could not fetch courier configs:', err);
+        setConfigLoadFailed(true);
+      });
   }, []);
 
   // Initialize fields when order changes
@@ -168,7 +181,7 @@ export function OrderCourierDispatchModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+    <div ref={containerRef} {...dialogProps} className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
       <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[92vh] flex flex-col shadow-2xl border border-stone-200 overflow-hidden my-auto">
         {/* Header */}
         <div className="px-6 py-4 bg-stone-900 text-white flex items-center justify-between">
@@ -312,11 +325,15 @@ export function OrderCourierDispatchModal({
                   <div className="mt-2 pt-2 border-t border-stone-200 flex items-center justify-between text-[10px]">
                     <span className="text-stone-500">API Status:</span>
                     <span className={`font-semibold px-1.5 py-0.2 rounded ${
-                      courierConfigs?.steadfast.configured 
+                      configLoadFailed
+                        ? 'bg-stone-200 text-stone-700'
+                        : courierConfigs?.steadfast.configured 
                         ? 'bg-emerald-100 text-emerald-800' 
                         : 'bg-amber-100 text-amber-800'
                     }`}>
-                      {courierConfigs?.steadfast.configured ? 'Live API Ready' : 'Sandbox (Simulated)'}
+                      {configLoadFailed
+                        ? 'Status unknown'
+                        : courierConfigs?.steadfast.configured ? 'Live API Ready' : 'Sandbox (Simulated)'}
                     </span>
                   </div>
                 </div>
@@ -347,11 +364,15 @@ export function OrderCourierDispatchModal({
                   <div className="mt-2 pt-2 border-t border-stone-200 flex items-center justify-between text-[10px]">
                     <span className="text-stone-500">API Status:</span>
                     <span className={`font-semibold px-1.5 py-0.2 rounded ${
-                      courierConfigs?.pathao.configured 
+                      configLoadFailed
+                        ? 'bg-stone-200 text-stone-700'
+                        : courierConfigs?.pathao.configured 
                         ? 'bg-emerald-100 text-emerald-800' 
                         : 'bg-amber-100 text-amber-800'
                     }`}>
-                      {courierConfigs?.pathao.configured ? 'Live API Ready' : 'Sandbox (Simulated)'}
+                      {configLoadFailed
+                        ? 'Status unknown'
+                        : courierConfigs?.pathao.configured ? 'Live API Ready' : 'Sandbox (Simulated)'}
                     </span>
                   </div>
                 </div>

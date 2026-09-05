@@ -31,6 +31,9 @@ import {
   marketingAttributionEntrySchema,
 } from './src/lib/validations';
 import { securityEngine } from './server/securityEngine';
+import { normalizeBdMobilePhone, phoneDigits } from './src/lib/phone';
+import { attachAuthContext, enforceStaffSurface, requireCustomerSelf, requireSupplierSelf, requireAddressOwner, requireNotificationOwner } from './server/authGuard';
+import { issueSessionToken } from './server/sessionTokens';
 import { backupEngine } from './server/backupEngine';
 import { supplierEngine } from './server/supplierEngine';
 import {
@@ -73,7 +76,17 @@ async function startServer() {
     let tier: RateLimitTier = 'STOREFRONT';
     if (req.path.startsWith('/api/checkout') || req.path === '/api/orders/create') {
       tier = 'CHECKOUT';
-    } else if (req.path.startsWith('/api/auth') || req.path.startsWith('/api/security/auth')) {
+    } else if (
+      req.path.startsWith('/api/auth') ||
+      req.path.startsWith('/api/security/auth') ||
+      // These credential routes were previously classified as STOREFRONT, so
+      // password spraying against customer and vendor accounts ran at the
+      // permissive tier. CodeQL flagged the authorization surface as
+      // unthrottled and was right about these.
+      req.path.startsWith('/api/customer/auth/') ||
+      req.path === '/api/suppliers/portal/login' ||
+      /^\/api\/suppliers\/[^/]+\/(portal-token|set-portal-password)$/.test(req.path)
+    ) {
       tier = 'AUTH';
     } else if (req.path.startsWith('/api/admin') || req.path.startsWith('/api/security') || req.path.startsWith('/api/marketing/command')) {
       tier = 'ADMIN';
@@ -101,6 +114,14 @@ async function startServer() {
   });
 
   app.use(express.json());
+
+  // Phase 21: Server-side authentication & authorization.
+  // `attachAuthContext` resolves the caller (staff / customer / supplier) into
+  // `req.auth`; `enforceStaffSurface` then requires a staff session for every
+  // /api write plus the sensitive reads. Client-side ROUTE_PERMISSIONS is now
+  // only a UX affordance — the server is the authority.
+  app.use(attachAuthContext);
+  app.use(enforceStaffSurface);
 
   // -------------------------------------------------------------
   // 1. Health Check
@@ -183,9 +204,17 @@ async function startServer() {
         deductedItems.length = 0;
       };
 
+      // Allocate the order identity BEFORE touching stock so every ledger row
+      // written during allocation can reference the order it belongs to.
+      const orderNumber = `KSH-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
+      const orderId = `ord-${Date.now()}`;
+
       try {
         for (const item of calculation.verifiedItems) {
-          const deducted = serverDb.updateProductStock(item.productId, item.quantity);
+          const deducted = serverDb.updateProductStock(item.productId, item.quantity, {
+            orderNumber,
+            operator: 'ORDER_ENGINE'
+          });
           if (!deducted) {
             throw new Error(`Failed to allocate stock for "${item.title}". It may have just sold out.`);
           }
@@ -195,14 +224,29 @@ async function startServer() {
         rollbackStock();
         return res.status(400).json({ error: deductErr.message });
       }
-
-      const orderNumber = `KSH-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
-      const orderId = `ord-${Date.now()}`;
       const clientIp = (req.headers['x-forwarded-for'] as string) || req.socket.remoteAddress || '127.0.0.1';
+
+      // Canonicalise the buyer's phone once, up front. Every downstream join
+      // (CRM dedupe, loyalty wallet, fraud velocity, blacklist, marketing RFM)
+      // is phone-keyed, so storing raw user input made the same human look like
+      // several different people depending on how they typed their number.
+      const canonicalPhone = normalizeBdMobilePhone(customer.phone) || customer.phone.trim();
+
+      // Resolve (or create) the CRM customer record so guest checkouts are no
+      // longer invisible to Customer 360, RFM segmentation and CLV metrics.
+      const crmCustomer = serverDb.upsertCustomerFromOrder({
+        name: customer.name,
+        phone: canonicalPhone,
+        email: customer.email,
+        address: shippingAddress.address,
+        district: shippingAddress.district,
+        thana: shippingAddress.thana,
+        source: req.body.orderSource || 'WEB'
+      });
 
       // Perform Authoritative Real-Time Fraud & Risk Assessment
       const fraudRisk = fraudEngine.evaluateOrderRisk({
-        phone: customer.phone.trim(),
+        phone: canonicalPhone,
         email: customer.email?.trim(),
         address: shippingAddress.address,
         district: shippingAddress.district,
@@ -235,15 +279,15 @@ async function startServer() {
         advancePaymentAmount,
         balanceDueCod,
         customer: {
-          id: `cust-${Date.now()}`,
+          id: crmCustomer.id,
           name: customer.name.trim(),
-          phone: customer.phone.trim(),
-          email: customer.email?.trim()
+          phone: canonicalPhone,
+          email: customer.email?.trim() || crmCustomer.email
         },
         shippingAddress: {
           firstName: shippingAddress.firstName || customer.name,
           lastName: shippingAddress.lastName || '',
-          phone: shippingAddress.phone || customer.phone,
+          phone: normalizeBdMobilePhone(shippingAddress.phone) || shippingAddress.phone || canonicalPhone,
           email: shippingAddress.email || customer.email,
           address: shippingAddress.address,
           division: shippingAddress.division || 'Dhaka',
@@ -335,6 +379,10 @@ async function startServer() {
       }
 
       serverDb.addOrder(newOrder);
+
+      // Roll the order into the buyer's lifetime CRM aggregates so repeat-rate,
+      // CLV and RFM segmentation reflect guest checkouts too.
+      serverDb.recordCustomerOrderStats(crmCustomer.id, newOrder.total || 0);
 
       // Enqueue asynchronous order confirmation SMS only for non-blocked orders
       if (!isAutoBlocked) {
@@ -478,6 +526,14 @@ async function startServer() {
   // -------------------------------------------------------------
   app.get('/api/orders', (req, res) => {
     try {
+      // Identify the caller. A customer session bearer (`ksh-cust-sess-<id>-<ts>`)
+      // scopes the response down to that customer's own orders; staff/system
+      // callers keep the full list.
+      const authHeader = req.headers.authorization;
+      const bearer = authHeader?.startsWith('Bearer ') ? authHeader.slice(7).trim() : '';
+      const custMatch = /^ksh-cust-sess-(.+)-\d+$/.exec(bearer);
+      const scopedCustomerId = custMatch ? custMatch[1] : null;
+
       // Ensure all orders have an authoritative fraud risk assessment
       const orders = serverDb.orders.map(o => {
         if (!o.fraudRisk) {
@@ -495,6 +551,19 @@ async function startServer() {
         }
         return o;
       });
+
+      if (scopedCustomerId) {
+        const customer = serverDb.customers.find(c => c.id === scopedCustomerId);
+        const customerPhone = normalizeBdMobilePhone(customer?.phone);
+        const scoped = orders.filter(o => {
+          if (o.customer?.id && o.customer.id === scopedCustomerId) return true;
+          if ((o as any).customerId && (o as any).customerId === scopedCustomerId) return true;
+          const orderPhone = normalizeBdMobilePhone(o.customer?.phone);
+          return !!customerPhone && !!orderPhone && customerPhone === orderPhone;
+        });
+        return res.json({ success: true, orders: scoped, scopedTo: scopedCustomerId });
+      }
+
       res.json({ success: true, orders });
     } catch (e: any) {
       res.status(500).json({ success: false, error: e.message });
@@ -510,10 +579,33 @@ async function startServer() {
       return res.status(400).json({ error: 'Provide orderNumber or phone to track order.' });
     }
 
+    const rawPhone = phone ? String(phone).trim() : '';
+    // Canonical BD mobile form of the query (null when the input is not a
+    // plausible BD mobile — e.g. the user typed an order number here).
+    const queryPhone = rawPhone ? normalizeBdMobilePhone(rawPhone) : null;
+    // Legacy fallback only makes sense for a long-enough digit run; short or
+    // garbage input must never substring-match an unrelated order.
+    const queryDigits = phoneDigits(rawPhone);
+    const allowLegacyDigitFallback = queryDigits.length >= 10;
+
+    const matchPhoneFor = (stored?: string | null) => {
+      if (!rawPhone) return false;
+      // 1. Canonical match — works for +8801…, 8801…, 01…, 008801…, spaced/dashed.
+      if (queryPhone) {
+        const storedCanonical = normalizeBdMobilePhone(stored);
+        if (storedCanonical && storedCanonical === queryPhone) return true;
+      }
+      // 2. Legacy substring fallback for historical/non-canonical stored values.
+      if (!allowLegacyDigitFallback) return false;
+      const storedDigits = phoneDigits(stored);
+      if (!storedDigits) return false;
+      return storedDigits.includes(queryDigits) || queryDigits.includes(storedDigits);
+    };
+
     const order = serverDb.orders.find(o => {
       const matchNum = orderNumber ? o.orderNumber.toLowerCase() === String(orderNumber).trim().toLowerCase() : false;
-      const matchPhone = phone ? o.customer.phone.includes(String(phone).trim()) : false;
-      return matchNum || matchPhone;
+      if (matchNum) return true;
+      return matchPhoneFor(o.customer?.phone) || matchPhoneFor(o.shippingAddress?.phone);
     });
 
     if (!order) {
@@ -538,6 +630,31 @@ async function startServer() {
       const updatedOrder = serverDb.updateOrderStatus(id, status, note, operator || 'ADMIN');
       if (!updatedOrder) {
         return res.status(404).json({ error: 'Order not found' });
+      }
+
+      // Courier booking is a deliberate manual step, so an order can reach
+      // SHIPPED with no consignment. Surface that as an explicit warning
+      // instead of letting it pass silently untracked.
+      // A `courier` object is pre-seeded on orders (provider + CREATED status)
+      // long before a parcel is actually booked, so it is NOT evidence of a
+      // booking. Only a real consignment/tracking number is.
+      const courierInfo = (updatedOrder as any).courier || {};
+      const shippedWithoutConsignment =
+        status === 'SHIPPED' &&
+        !(updatedOrder as any).consignmentId &&
+        !(updatedOrder as any).trackingId &&
+        !courierInfo.consignmentId &&
+        !courierInfo.trackingCode &&
+        !courierInfo.trackingId;
+
+      if (shippedWithoutConsignment) {
+        serverDb.addAuditLog(
+          'SHIPPED_WITHOUT_CONSIGNMENT',
+          'Order',
+          updatedOrder.orderNumber,
+          `Order marked SHIPPED with no courier consignment. Customer cannot track this parcel until it is booked.`,
+          operator || 'ADMIN'
+        );
       }
 
       // When an order is cancelled, restore the sold stock exactly once so we
@@ -600,7 +717,16 @@ async function startServer() {
         success: true,
         order: updatedOrder,
         notificationsDispatched: dispatchedLogs.length,
-        dispatchedLogs
+        dispatchedLogs,
+        ...(shippedWithoutConsignment
+          ? {
+              warnings: [{
+                code: 'SHIPPED_WITHOUT_CONSIGNMENT',
+                message: 'Order is marked SHIPPED but has no courier consignment yet. Book a courier so the customer can track it.',
+                messageBn: 'অর্ডারটি SHIPPED করা হয়েছে কিন্তু কোনো কুরিয়ার কনসাইনমেন্ট নেই। গ্রাহক ট্র্যাক করতে পারবেন না — কুরিয়ার বুক করুন।'
+              }]
+            }
+          : {})
       });
     } catch (err: any) {
       return res.status(500).json({ success: false, error: err.message });
@@ -1130,19 +1256,19 @@ async function startServer() {
   });
 
   // Customer In-App Notifications
-  app.get('/api/customer/notifications/:customerId', (req, res) => {
+  app.get('/api/customer/notifications/:customerId', requireCustomerSelf('customerId'), (req, res) => {
     const { customerId } = req.params;
     const notifications = serverDb.getCustomerNotifications(customerId);
     res.json({ success: true, notifications });
   });
 
-  app.post('/api/customer/notifications/:id/read', (req, res) => {
+  app.post('/api/customer/notifications/:id/read', requireNotificationOwner('id'), (req, res) => {
     const { id } = req.params;
     const success = serverDb.markNotificationAsRead(id);
     res.json({ success });
   });
 
-  app.post('/api/customer/notifications/read-all', (req, res) => {
+  app.post('/api/customer/notifications/read-all', requireCustomerSelf('customerId'), (req, res) => {
     const { customerId } = req.body;
     const success = serverDb.markAllNotificationsAsRead(customerId);
     res.json({ success });
@@ -1287,6 +1413,47 @@ async function startServer() {
   // -------------------------------------------------------------
   // 9. Returns & Refunds Engine
   // -------------------------------------------------------------
+  // S2-3: authoritative RMA case store. These records used to live in the
+  // operator's own browser, so a return raised at one desk was invisible to
+  // everyone else and survived nothing more than a cache clear.
+  app.get('/api/admin/rma', (req, res) => {
+    res.json({ success: true, records: serverDb.rmaRecords });
+  });
+
+  app.post('/api/admin/rma', (req, res) => {
+    const body = req.body || {};
+    if (!body.orderId) return res.status(400).json({ error: 'orderId is required' });
+    const order = serverDb.getOrderById(body.orderId);
+    if (!order) return res.status(404).json({ error: 'Order not found' });
+    const record = serverDb.createRma({
+      orderId: order.id,
+      orderNumber: order.orderNumber,
+      customerName: body.customerName || order.customer.name,
+      customerPhone: body.customerPhone || order.customer.phone,
+      district: body.district || order.shippingAddress?.district || 'Dhaka',
+      requestDate: new Date().toISOString(),
+      reason: body.reason || 'CHANGED_MIND',
+      reasonDetails: body.reasonDetails || '',
+      productTitle: body.productTitle || order.items?.[0]?.title || 'Ordered Items',
+      sku: body.sku || order.items?.[0]?.sku || '',
+      quantity: body.quantity ?? order.items?.[0]?.quantity ?? 1,
+      itemPrice: body.itemPrice ?? order.items?.[0]?.price ?? order.total,
+      // Never trust a client-sent refund amount: it decides how much money
+      // leaves the business. Derive it from the order.
+      totalRefundAmount: order.total,
+      originalPaymentMethod: order.paymentMethod,
+      originalPaymentStatus: order.paymentStatus,
+      stage: 'REQUESTED'
+    });
+    res.json({ success: true, record });
+  });
+
+  app.patch('/api/admin/rma/:id', (req, res) => {
+    const record = serverDb.updateRma(req.params.id, req.body || {});
+    if (!record) return res.status(404).json({ error: 'RMA not found' });
+    res.json({ success: true, record });
+  });
+
   app.get('/api/admin/returns', (req, res) => {
     const returns = serverDb.orders.filter(o => o.orderStatus === 'RETURN_REQUESTED' || o.orderStatus === 'RETURNED');
     res.json({ success: true, returns });
@@ -1419,12 +1586,30 @@ async function startServer() {
     if (!category || !vendor || typeof amount !== 'number' || amount <= 0 || !reference) {
       return res.status(400).json({ error: 'Valid category, vendor, positive amount, and reference are required.' });
     }
+    // Idempotency: `reference` is the accounting document number, so the same
+    // reference must not create a second cost row. A double-click or a retry
+    // on a flaky connection previously duplicated the expense and understated
+    // profit (F-304). Mirrors the guard already used by /api/payments/refund.
+    const cleanReference = reference.trim();
+    const duplicate = serverDb.expenses.find(
+      e => e.reference?.trim().toLowerCase() === cleanReference.toLowerCase()
+    );
+    if (duplicate) {
+      return res.status(409).json({
+        success: false,
+        error: `An expense with reference "${cleanReference}" already exists — duplicate prevented.`,
+        errorBn: `"${cleanReference}" রেফারেন্সে খরচ ইতিমধ্যে রেকর্ড করা আছে — ডুপ্লিকেট আটকানো হয়েছে।`,
+        code: 'DUPLICATE_REFERENCE',
+        expense: duplicate,
+      });
+    }
+
     const expense = serverDb.addExpense({
       date: new Date().toISOString().split('T')[0],
       category,
       vendor: vendor.trim(),
       amount,
-      reference: reference.trim(),
+      reference: cleanReference,
       notes: notes?.trim(),
       recordedBy: recordedBy || 'Finance Manager'
     });
@@ -2473,7 +2658,7 @@ async function startServer() {
   // =============================================================
 
   // Customer Profile Endpoints
-  app.get('/api/customer/profile/:customerId', (req, res) => {
+  app.get('/api/customer/profile/:customerId', requireCustomerSelf('customerId'), (req, res) => {
     try {
       const profile = serverDb.getCustomerProfile(req.params.customerId);
       if (!profile) {
@@ -2485,7 +2670,7 @@ async function startServer() {
     }
   });
 
-  app.put('/api/customer/profile/:customerId', (req, res) => {
+  app.put('/api/customer/profile/:customerId', requireCustomerSelf('customerId'), (req, res) => {
     try {
       const updated = serverDb.updateCustomerProfile(req.params.customerId, req.body);
       if (!updated) {
@@ -2498,7 +2683,7 @@ async function startServer() {
   });
 
   // Customer Saved Addresses Endpoints
-  app.get('/api/customer/addresses/:customerId', (req, res) => {
+  app.get('/api/customer/addresses/:customerId', requireCustomerSelf('customerId'), (req, res) => {
     try {
       const addresses = serverDb.getCustomerAddresses(req.params.customerId);
       res.json({ success: true, addresses });
@@ -2507,7 +2692,7 @@ async function startServer() {
     }
   });
 
-  app.post('/api/customer/addresses', (req, res) => {
+  app.post('/api/customer/addresses', requireCustomerSelf('customerId'), (req, res) => {
     try {
       const { customerId, label, labelBn, recipientName, phone, altPhone, division, district, upazilaOrArea, addressLine, postalCode, isDefault } = req.body;
       if (!customerId || !recipientName || !phone || !division || !district || !addressLine) {
@@ -2533,9 +2718,11 @@ async function startServer() {
     }
   });
 
-  app.put('/api/customer/addresses/:addressId', (req, res) => {
+  app.put('/api/customer/addresses/:addressId', requireAddressOwner('addressId'), (req, res) => {
     try {
-      const updated = serverDb.updateCustomerAddress(req.params.addressId, req.body);
+      // Never let the body move an address to another customer.
+      const { customerId: _ignored, ...safeUpdates } = req.body || {};
+      const updated = serverDb.updateCustomerAddress(req.params.addressId, safeUpdates);
       if (!updated) {
         return res.status(404).json({ error: 'Address not found' });
       }
@@ -2545,7 +2732,7 @@ async function startServer() {
     }
   });
 
-  app.delete('/api/customer/addresses/:addressId', (req, res) => {
+  app.delete('/api/customer/addresses/:addressId', requireAddressOwner('addressId'), (req, res) => {
     try {
       const { customerId } = req.query;
       if (!customerId) {
@@ -2562,7 +2749,7 @@ async function startServer() {
   });
 
   // Wishlist Endpoints
-  app.get('/api/customer/wishlist/:customerId', (req, res) => {
+  app.get('/api/customer/wishlist/:customerId', requireCustomerSelf('customerId'), (req, res) => {
     try {
       const wishlist = serverDb.getWishlist(req.params.customerId);
       res.json({ success: true, wishlist });
@@ -2571,7 +2758,7 @@ async function startServer() {
     }
   });
 
-  app.post('/api/customer/wishlist/toggle', (req, res) => {
+  app.post('/api/customer/wishlist/toggle', requireCustomerSelf('customerId'), (req, res) => {
     try {
       const { customerId, productId } = req.body;
       if (!customerId || !productId) {
@@ -2586,7 +2773,7 @@ async function startServer() {
   });
 
   // Customer Return Requests (RMA) Endpoints
-  app.get('/api/customer/returns/:customerId', (req, res) => {
+  app.get('/api/customer/returns/:customerId', requireCustomerSelf('customerId'), (req, res) => {
     try {
       const returns = serverDb.getCustomerReturnRequests(req.params.customerId);
       res.json({ success: true, returns });
@@ -2595,7 +2782,7 @@ async function startServer() {
     }
   });
 
-  app.post('/api/customer/returns', (req, res) => {
+  app.post('/api/customer/returns', requireCustomerSelf('customerId'), (req, res) => {
     try {
       const { customerId, customerPhone, orderId, orderNumber, productId, productTitle, quantity, reason, reasonDetails, preferredResolution, images } = req.body;
       if (!customerId || !orderId || !productId || !reason || !reasonDetails) {
@@ -3762,6 +3949,34 @@ async function startServer() {
     }
   });
 
+  /**
+   * Staff-only: mint a supplier portal token so an admin can open the vendor
+   * hub as that supplier. Previously the admin UI fabricated this token in the
+   * browser; now that tokens are signed, only the server can issue one.
+   */
+  app.post('/api/suppliers/:id/portal-token', (req, res) => {
+    try {
+      const record = supplierEngine.getSupplierById(req.params.id);
+      const supplier = record?.supplier;
+      if (!supplier) return res.status(404).json({ error: 'Supplier not found' });
+
+      const token = issueSessionToken('SUPPLIER', supplier.id);
+      securityEngine.logAudit({
+        operator: req.auth?.userName || 'ADMIN',
+        role: req.auth?.role || 'SUPER_ADMIN',
+        action: 'SUPPLIER_PORTAL_IMPERSONATE',
+        category: 'AUTH',
+        severity: 'WARNING',
+        resource: 'SupplierPortal',
+        resourceId: supplier.id,
+        details: `Staff opened the vendor hub as ${supplier.companyName}.`,
+      });
+      res.json({ success: true, token, supplier });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
   app.post('/api/suppliers/portal/login', (req, res) => {
     try {
       const { email, password } = req.body;
@@ -3781,7 +3996,7 @@ async function startServer() {
     }
   });
 
-  app.get('/api/suppliers/portal/dashboard', (req, res) => {
+  app.get('/api/suppliers/portal/dashboard', requireSupplierSelf('supplierId'), (req, res) => {
     try {
       const supplierId = (req.query.supplierId as string) || (req.headers['x-supplier-id'] as string);
       if (!supplierId) {
@@ -3799,7 +4014,7 @@ async function startServer() {
     }
   });
 
-  app.post('/api/suppliers/portal/update-profile', (req, res) => {
+  app.post('/api/suppliers/portal/update-profile', requireSupplierSelf('supplierId'), (req, res) => {
     try {
       const { supplierId, updates, operator } = req.body;
       if (!supplierId) return res.status(400).json({ error: 'Supplier ID is required' });
@@ -3813,12 +4028,15 @@ async function startServer() {
     }
   });
 
-  app.post('/api/suppliers/portal/change-password', (req, res) => {
+  app.post('/api/suppliers/portal/change-password', requireSupplierSelf('supplierId'), (req, res) => {
     try {
-      const { supplierId, newPassword, operator } = req.body;
+      const { supplierId, currentPassword, newPassword } = req.body;
       if (!supplierId || !newPassword) return res.status(400).json({ error: 'Supplier ID and new password required' });
+      if (!currentPassword) return res.status(400).json({ error: 'Current password is required' });
 
-      const result = supplierEngine.setSupplierPortalPassword(supplierId, newPassword, operator || 'Supplier Self-Service');
+      // Self-service path: must prove possession of the current password, so
+      // a stolen session token cannot take over the account.
+      const result = supplierEngine.changeOwnPortalPassword(supplierId, currentPassword, newPassword);
       if (!result.success) return res.status(400).json({ error: result.error });
 
       res.json({ success: true, message: 'Password updated successfully' });
@@ -3830,10 +4048,15 @@ async function startServer() {
   app.post('/api/suppliers/:id/set-portal-password', (req, res) => {
     try {
       const operator = req.body.operator || 'SUPER_ADMIN';
-      const { newPassword } = req.body;
-      const result = supplierEngine.setSupplierPortalPassword(req.params.id, newPassword, operator);
+      // Admins issue a temporary password rather than choosing one for the
+      // vendor; it is shown once here and stored only as a hash.
+      const result = supplierEngine.issueTemporaryPortalPassword(req.params.id, operator);
       if (!result.success) return res.status(400).json({ error: result.error });
-      res.json({ success: true, message: 'Supplier portal password set successfully' });
+      res.json({
+        success: true,
+        temporaryPassword: result.temporaryPassword,
+        message: 'Temporary password issued. Share it securely; the supplier must change it at next login.'
+      });
     } catch (e: any) {
       res.status(500).json({ error: e.message });
     }
@@ -4124,7 +4347,7 @@ async function startServer() {
       }
 
       // Customer session token
-      const token = `ksh-cust-sess-${customer.id}-${Date.now()}`;
+      const token = issueSessionToken('CUSTOMER', customer.id);
       res.json({
         success: true,
         token,
@@ -4196,7 +4419,7 @@ async function startServer() {
         });
       }
 
-      const token = `ksh-cust-sess-${id}-${Date.now()}`;
+      const token = issueSessionToken('CUSTOMER', id);
       res.json({
         success: true,
         token,
@@ -4212,7 +4435,7 @@ async function startServer() {
     res.json({ success: true, message: 'Logged out successfully' });
   });
 
-  app.post('/api/customer/auth/link-guest-order', (req, res) => {
+  app.post('/api/customer/auth/link-guest-order', requireCustomerSelf('customerId'), (req, res) => {
     try {
       const { customerId, orderNumber, phone } = req.body;
       if (!customerId || !orderNumber || !phone) {
@@ -4266,7 +4489,7 @@ async function startServer() {
     }
   });
 
-  app.post('/api/customer/auth/change-password', (req, res) => {
+  app.post('/api/customer/auth/change-password', requireCustomerSelf('customerId'), (req, res) => {
     try {
       const { customerId, currentPassword, newPassword } = req.body;
       if (!customerId || !newPassword) {

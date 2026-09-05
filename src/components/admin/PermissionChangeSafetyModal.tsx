@@ -2,6 +2,7 @@ import React from 'react';
 import { ShieldCheck, AlertCircle, Plus, Minus, Check, X } from 'lucide-react';
 import { Role } from '../../types';
 import { useApp } from '../../context/AppContext';
+import { useModalA11y } from '../../hooks/useModalA11y';
 
 interface PermissionChangeSafetyModalProps {
   isOpen: boolean;
@@ -24,6 +25,13 @@ export const PermissionChangeSafetyModal: React.FC<PermissionChangeSafetyModalPr
   newPermissions,
   isProcessing = false
 }) => {
+  // F-307: Escape to close, focus trap, focus restore and ARIA dialog roles.
+  const { containerRef, dialogProps } = useModalA11y({
+    open: isOpen,
+    onClose,
+    label: 'Permission Change Safety',
+  });
+
   const { language } = useApp();
 
   if (!isOpen) return null;
@@ -32,7 +40,7 @@ export const PermissionChangeSafetyModal: React.FC<PermissionChangeSafetyModalPr
   const removed = originalPermissions.filter(p => !newPermissions.includes(p));
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-900/60 backdrop-blur-xs animate-in fade-in duration-150">
+    <div ref={containerRef} {...dialogProps} className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-900/60 backdrop-blur-xs animate-in fade-in duration-150">
       <div className="bg-white w-full max-w-xl rounded-2xl shadow-xl border border-stone-200 overflow-hidden flex flex-col max-h-[85vh]">
         
         {/* Header */}

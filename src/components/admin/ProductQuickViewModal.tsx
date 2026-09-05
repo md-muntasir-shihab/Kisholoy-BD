@@ -6,6 +6,7 @@ import {
   Layers, Plus, Minus, CheckCircle, AlertTriangle, ArrowUpRight
 } from 'lucide-react';
 import { Product, Supplier } from '../../types';
+import { useModalA11y } from '../../hooks/useModalA11y';
 
 interface ProductQuickViewModalProps {
   product: Product | null;
@@ -26,6 +27,13 @@ export function ProductQuickViewModal({
   onToggleStatus,
   language
 }: ProductQuickViewModalProps) {
+  // F-307: Escape to close, focus trap, focus restore and ARIA dialog roles.
+  const { containerRef, dialogProps } = useModalA11y({
+    open: !!product,
+    onClose,
+    label: 'Product Quick View',
+  });
+
   if (!product) return null;
 
   const [activeImageIdx, setActiveImageIdx] = useState(0);
@@ -46,7 +54,7 @@ export function ProductQuickViewModal({
   const isOutOfStock = product.stock === 0;
 
   return (
-    <div className="fixed inset-0 z-50 bg-stone-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-in fade-in duration-150">
+    <div ref={containerRef} {...dialogProps} className="fixed inset-0 z-50 bg-stone-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-in fade-in duration-150">
       <div className="bg-white rounded-2xl max-w-3xl w-full max-h-[92vh] flex flex-col shadow-2xl overflow-hidden my-auto border border-stone-100">
         
         {/* Modal Top Header */}

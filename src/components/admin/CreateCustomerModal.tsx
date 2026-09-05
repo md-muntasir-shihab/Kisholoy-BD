@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, UserPlus, Phone, Mail, MapPin, FileText, CheckCircle2 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
+import { useModalA11y } from '../../hooks/useModalA11y';
 
 interface CreateCustomerModalProps {
   isOpen: boolean;
@@ -27,6 +28,13 @@ const BD_DISTRICTS = [
 ];
 
 export function CreateCustomerModal({ isOpen, onClose, onCreated }: CreateCustomerModalProps) {
+  // F-307: Escape to close, focus trap, focus restore and ARIA dialog roles.
+  const { containerRef, dialogProps } = useModalA11y({
+    open: isOpen,
+    onClose,
+    label: 'Create Customer',
+  });
+
   const { language, addAdminCustomer, showToast } = useApp();
   const isBn = language === 'BN';
 
@@ -86,8 +94,7 @@ export function CreateCustomerModal({ isOpen, onClose, onCreated }: CreateCustom
   };
 
   return (
-    <div
-      id="create-customer-modal-overlay"
+    <div ref={containerRef} {...dialogProps} id="create-customer-modal-overlay"
       className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();

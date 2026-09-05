@@ -14,6 +14,7 @@ import { ProductQuickViewModal } from '../components/admin/ProductQuickViewModal
 import { ProductEditModal } from '../components/admin/ProductEditModal';
 import { ProductDeleteConfirmModal } from '../components/admin/ProductDeleteConfirmModal';
 import { productSchema, formatZodError } from '../lib/validations';
+import { AdminModalShell } from '../components/admin/AdminModalShell';
 
 export function ProductsAdmin() {
   const { products, categories, addProduct, updateProduct, deleteProduct, language, showToast } = useApp();
@@ -74,7 +75,12 @@ export function ProductsAdmin() {
           }
         }
       })
-      .catch(console.error);
+      .catch(err => {
+        // An empty supplier dropdown looks like "no suppliers exist" rather
+        // than "the list failed to load" (F-305).
+        console.error(err);
+        showToast('Could not load the supplier list — the supplier field may be empty.');
+      });
   }, []);
 
   // Financial KPI Metrics
@@ -1042,8 +1048,14 @@ export function ProductsAdmin() {
       />
 
       {/* Add New Product Modal */}
-      {showAddModal && (
-        <div className="fixed inset-0 z-50 bg-stone-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-in fade-in duration-150">
+      <AdminModalShell
+        open={!!showAddModal}
+        onClose={() => setShowAddModal(false)}
+        label="Add New Product Modal"
+        // Contains a form: a stray backdrop click must not discard entered data.
+        closeOnBackdrop={false}
+        overlayClassName="fixed inset-0 z-50 bg-stone-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-in fade-in duration-150"
+      >
           <div className="bg-white rounded-2xl max-w-3xl w-full max-h-[92vh] flex flex-col shadow-2xl overflow-hidden my-auto border border-stone-100">
             {/* Header */}
             <div className="flex justify-between items-center px-6 py-4 border-b border-stone-200 bg-white z-10">
@@ -1468,8 +1480,7 @@ export function ProductsAdmin() {
               </div>
             </form>
           </div>
-        </div>
-      )}
+      </AdminModalShell>
 
     </div>
   );

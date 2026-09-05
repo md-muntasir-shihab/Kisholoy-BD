@@ -9,6 +9,8 @@ import { useApp } from '../context/AppContext';
 import { Order, ExpenseRecord, SettlementRecord, SettlementStatus, FinancialSummary, ReconciliationAnomaly } from '../types';
 import { DateRangeFilterBar } from '../components/admin/DateRangeFilterBar';
 import { DateWiseDataHubModal } from '../components/admin/DateWiseDataHubModal';
+import { AdminModalShell } from '../components/admin/AdminModalShell';
+import { usePendingAction } from '../hooks/usePendingAction';
 import { 
   DateFilterConfig, 
   filterItemsByDate, 
@@ -27,6 +29,10 @@ export function FinanceAdmin() {
   const isBn = language === 'BN';
 
   const [activeTab, setActiveTab] = useState<'pnl' | 'expenses' | 'settlements' | 'reconciliation'>('pnl');
+
+  // F-306: blocks duplicate submits while a mutation is in flight.
+
+  const { run, isPending, isBusy } = usePendingAction();
   const [showDataHub, setShowDataHub] = useState(false);
 
   // Date Filter State
@@ -101,6 +107,7 @@ export function FinanceAdmin() {
       }
     } catch (e) {
       console.error('Failed to fetch server financial summary', e);
+      showToast('Could not load the financial summary from the server — figures may be incomplete.', 'info');
     } finally {
       setLoadingSummary(false);
     }
@@ -179,8 +186,11 @@ export function FinanceAdmin() {
   const totalFilteredExpensesAmount = filteredExpenses.reduce((sum, e) => sum + e.amount, 0);
 
   // Expense Handlers
-  const handleCreateExpense = async (e: React.FormEvent) => {
+    const handleCreateExpense = async (e: React.FormEvent) => {
+    // Must fire synchronously. Inside run() it would land in a microtask and
+    // the browser would submit the form and reload the page first.
     e.preventDefault();
+    return run('handleCreateExpense', async () => {
     const amountNum = parseFloat(newExpense.amount);
     if (!newExpense.vendor || isNaN(amountNum) || amountNum <= 0 || !newExpense.reference) {
       showToast('Please fill all required expense fields with a valid amount');
@@ -201,14 +211,11 @@ export function FinanceAdmin() {
       });
       const data = await res.json();
       if (data.success) {
-        addExpense({
-          date: new Date().toISOString().split('T')[0],
-          category: newExpense.category,
-          vendor: newExpense.vendor,
-          amount: amountNum,
-          reference: newExpense.reference,
-          notes: newExpense.notes
-        });
+        // Adopt the SERVER record so local state and the ledger share one id.
+        // Building a local copy here is what made the P&L drift (F-302).
+        if (data.expense) {
+          addExpense(data.expense);
+        }
         setShowExpenseModal(false);
         setNewExpense({
           category: 'PACKAGING',
@@ -217,15 +224,17 @@ export function FinanceAdmin() {
           reference: '',
           notes: ''
         });
-        showToast('Expense recorded and logged to ledger.');
         fetchSummary();
+      } else {
+        showToast(data.error || 'Failed to record expense', 'info');
       }
     } catch (err) {
       showToast('Failed to record expense', 'info');
     }
+    });
   };
 
-  const handleDeleteExpense = async (id: string) => {
+  const handleDeleteExpense = async (id: string) =>  run('handleDeleteExpense', async () => {
     if (!window.confirm('Are you sure you want to delete this expense record?')) return;
     try {
       await fetch(`/api/finance/expenses/${id}`, { method: 'DELETE' });
@@ -234,11 +243,15 @@ export function FinanceAdmin() {
     } catch (err) {
       showToast('Failed to delete expense', 'info');
     }
-  };
+  
+  });
 
   // Settlement Handlers
-  const handleCreateSettlement = async (e: React.FormEvent) => {
+    const handleCreateSettlement = async (e: React.FormEvent) => {
+    // Must fire synchronously. Inside run() it would land in a microtask and
+    // the browser would submit the form and reload the page first.
     e.preventDefault();
+    return run('handleCreateSettlement', async () => {
     const grossNum = parseFloat(newSettlement.grossAmount);
     const feeNum = parseFloat(newSettlement.gatewayFee) || (grossNum * 0.02);
     if (!newSettlement.batchNumber || isNaN(grossNum) || grossNum <= 0) {
@@ -289,9 +302,10 @@ export function FinanceAdmin() {
     } catch (err) {
       showToast('Failed to create settlement batch', 'info');
     }
+    });
   };
 
-  const handleConfirmPayout = async () => {
+  const handleConfirmPayout = async () =>  run('handleConfirmPayout', async () => {
     if (!settlingRecord) return;
     try {
       const res = await fetch(`/api/finance/settlements/${settlingRecord.id}/status`, {
@@ -313,7 +327,8 @@ export function FinanceAdmin() {
     } catch (err) {
       showToast('Failed to update settlement status', 'info');
     }
-  };
+  
+  });
 
   // CSV Export for P&L and Expenses
   const handleExportPnLCsv = () => {
@@ -977,8 +992,14 @@ export function FinanceAdmin() {
       )}
 
       {/* Modal: Record Expense */}
-      {showExpenseModal && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+      <AdminModalShell
+        open={!!showExpenseModal}
+        onClose={() => setShowExpenseModal(false)}
+        label="Modal Record Expense"
+        // Contains a form: a stray backdrop click must not discard entered data.
+        closeOnBackdrop={false}
+        overlayClassName="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+      >
           <div className="bg-white rounded-xl max-w-md w-full p-6 space-y-4 shadow-xl border border-stone-200">
             <h3 className="text-base font-serif font-bold text-stone-900">Record Operational Expense</h3>
             <form onSubmit={handleCreateExpense} className="space-y-3 text-xs">
@@ -1011,7 +1032,7 @@ export function FinanceAdmin() {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-stone-600 font-semibold mb-1">Amount (BDT ৳) *</label>
                   <input
@@ -1065,12 +1086,17 @@ export function FinanceAdmin() {
               </div>
             </form>
           </div>
-        </div>
-      )}
+      </AdminModalShell>
 
       {/* Modal: New Settlement Batch */}
-      {showSettlementModal && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+      <AdminModalShell
+        open={!!showSettlementModal}
+        onClose={() => setShowSettlementModal(false)}
+        label="Modal New Settlement Batch"
+        // Contains a form: a stray backdrop click must not discard entered data.
+        closeOnBackdrop={false}
+        overlayClassName="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+      >
           <div className="bg-white rounded-xl max-w-md w-full p-6 space-y-4 shadow-xl border border-stone-200">
             <h3 className="text-base font-serif font-bold text-stone-900">Create Settlement Batch</h3>
             <form onSubmit={handleCreateSettlement} className="space-y-3 text-xs">
@@ -1110,7 +1136,7 @@ export function FinanceAdmin() {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-stone-600 font-semibold mb-1">Gross Amount (৳) *</label>
                   <input
@@ -1152,12 +1178,15 @@ export function FinanceAdmin() {
               </div>
             </form>
           </div>
-        </div>
-      )}
+      </AdminModalShell>
 
       {/* Modal: Mark Settled & Input UTR */}
-      {settlingRecord && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+      <AdminModalShell
+        open={!!settlingRecord}
+        onClose={() => setSettlingRecord(null)}
+        label="Modal Mark Settled & Input UTR"
+        overlayClassName="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+      >
           <div className="bg-white rounded-xl max-w-md w-full p-6 space-y-4 shadow-xl border border-stone-200">
             <h3 className="text-base font-serif font-bold text-stone-900">Confirm Bank Remittance Payout</h3>
             <p className="text-xs text-stone-500">
@@ -1194,8 +1223,7 @@ export function FinanceAdmin() {
               </div>
             </div>
           </div>
-        </div>
-      )}
+      </AdminModalShell>
 
       {/* Date-wise Master Data Hub Modal */}
       {showDataHub && (

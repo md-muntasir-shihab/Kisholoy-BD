@@ -24,10 +24,14 @@ import {
 import { SECURITY_HELP_DEFINITIONS, SecurityFunctionHelp } from './securityHelpData';
 import { RoleChangeSafetyModal } from '../components/admin/RoleChangeSafetyModal';
 import { PermissionChangeSafetyModal } from '../components/admin/PermissionChangeSafetyModal';
+import { AdminModalShell } from '../components/admin/AdminModalShell';
+import { usePendingAction } from '../hooks/usePendingAction';
 
 export function UsersAdmin() {
   const { currentRole, setCurrentRole, language, showToast } = useApp();
   const [activeTab, setActiveTab] = useState<'users' | 'rbac' | 'sessions' | 'ratelimit'>('users');
+  // F-306: blocks duplicate submits while a mutation is in flight.
+  const { run, isPending, isBusy } = usePendingAction();
 
   // Server state
   const [staffUsers, setStaffUsers] = useState<AdminUser[]>([]);
@@ -91,8 +95,11 @@ export function UsersAdmin() {
   }, []);
 
   // Staff creation handler
-  const handleCreateStaff = async (e: React.FormEvent) => {
+    const handleCreateStaff = async (e: React.FormEvent) => {
+    // Must fire synchronously. Inside run() it would land in a microtask and
+    // the browser would submit the form and reload the page first.
     e.preventDefault();
+    return run('handleCreateStaff', async () => {
     if (!newStaffName || !newStaffEmail || !newStaffPhone) {
       showToast('error', 'Please fill in all required fields.');
       return;
@@ -124,10 +131,11 @@ export function UsersAdmin() {
     } catch (err: any) {
       showToast('error', err.message);
     }
+    });
   };
 
   // Update staff role handler
-  const handleUpdateRole = async () => {
+  const handleUpdateRole = async () =>  run('handleUpdateRole', async () => {
     if (!editRoleUser) return;
     try {
       const res = await fetch('/api/security/users/update-role', {
@@ -150,10 +158,10 @@ export function UsersAdmin() {
     } catch (err: any) {
       showToast('error', err.message);
     }
-  };
+    });
 
   // Toggle staff account status
-  const handleToggleStatus = async (user: AdminUser) => {
+  const handleToggleStatus = async (user: AdminUser) =>  run('handleToggleStatus', async () => {
     const nextStatus: AdminAccountStatus = user.status === 'ACTIVE' ? 'SUSPENDED' : 'ACTIVE';
     try {
       const res = await fetch('/api/security/users/update-status', {
@@ -175,10 +183,10 @@ export function UsersAdmin() {
     } catch (err: any) {
       showToast('error', err.message);
     }
-  };
+    });
 
   // Revoke session handler
-  const handleRevokeSession = async (sessionId: string, userName: string) => {
+  const handleRevokeSession = async (sessionId: string, userName: string) =>  run('handleRevokeSession', async () => {
     try {
       const res = await fetch('/api/security/sessions/revoke', {
         method: 'POST',
@@ -198,10 +206,10 @@ export function UsersAdmin() {
     } catch (err: any) {
       showToast('error', err.message);
     }
-  };
+    });
 
   // Unban IP handler
-  const handleUnbanIp = async (ip: string) => {
+  const handleUnbanIp = async (ip: string) =>  run('handleUnbanIp', async () => {
     try {
       const res = await fetch('/api/security/rate-limit/unban', {
         method: 'POST',
@@ -221,11 +229,14 @@ export function UsersAdmin() {
     } catch (err: any) {
       showToast('error', err.message);
     }
-  };
+    });
 
   // Manual Ban IP handler
-  const handleManualBan = async (e: React.FormEvent) => {
+    const handleManualBan = async (e: React.FormEvent) => {
+    // Must fire synchronously. Inside run() it would land in a microtask and
+    // the browser would submit the form and reload the page first.
     e.preventDefault();
+    return run('handleManualBan', async () => {
     if (!banIpAddress || !banReason) {
       showToast('error', 'IP Address and reason are required.');
       return;
@@ -254,6 +265,7 @@ export function UsersAdmin() {
     } catch (err: any) {
       showToast('error', err.message);
     }
+    });
   };
 
   const domainList = [
@@ -781,8 +793,14 @@ export function UsersAdmin() {
       )}
 
       {/* MODAL: Add Staff Member */}
-      {addStaffOpen && (
-        <div className="fixed inset-0 bg-stone-900/50 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+      <AdminModalShell
+        open={!!addStaffOpen}
+        onClose={() => setAddStaffOpen(false)}
+        label="Add Staff Member"
+        // Contains a form: a stray backdrop click must not discard entered data.
+        closeOnBackdrop={false}
+        overlayClassName="fixed inset-0 bg-stone-900/50 backdrop-blur-xs z-50 flex items-center justify-center p-4"
+      >
           <div className="bg-white rounded-xl max-w-md w-full p-6 shadow-xl border border-stone-200 animate-in fade-in zoom-in-95 duration-150">
             <div className="flex items-center justify-between pb-3 border-b border-stone-200">
               <div className="flex items-center gap-2">
@@ -866,12 +884,15 @@ export function UsersAdmin() {
               </div>
             </form>
           </div>
-        </div>
-      )}
+      </AdminModalShell>
 
       {/* MODAL: Edit Staff Role */}
-      {editRoleUser && (
-        <div className="fixed inset-0 bg-stone-900/50 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+      <AdminModalShell
+        open={!!editRoleUser}
+        onClose={() => setEditRoleUser(null)}
+        label="Edit Staff Role"
+        overlayClassName="fixed inset-0 bg-stone-900/50 backdrop-blur-xs z-50 flex items-center justify-center p-4"
+      >
           <div className="bg-white rounded-xl max-w-md w-full p-6 shadow-xl border border-stone-200">
             <div className="flex items-center justify-between pb-3 border-b border-stone-200">
               <h3 className="font-serif font-bold text-stone-900 text-lg">Modify Staff Role</h3>
@@ -928,8 +949,7 @@ export function UsersAdmin() {
               </div>
             </div>
           </div>
-        </div>
-      )}
+      </AdminModalShell>
 
       {/* Role Change Safety Confirmation Modal (Section 25) */}
       {editRoleUser && (
@@ -947,8 +967,12 @@ export function UsersAdmin() {
       )}
 
       {/* RBAC Permission Adjustment Safety Modal (Section 26) */}
-      {editingRoleConfig && !permSafetyModalOpen && (
-        <div className="fixed inset-0 bg-stone-900/50 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+      <AdminModalShell
+        open={!!(editingRoleConfig && !permSafetyModalOpen)}
+        onClose={() => setEditingRoleConfig(null)}
+        label="RBAC Permission Adjustment Safety Modal"
+        overlayClassName="fixed inset-0 bg-stone-900/50 backdrop-blur-xs z-50 flex items-center justify-center p-4"
+      >
           <div className="bg-white rounded-xl max-w-2xl w-full p-6 shadow-xl border border-stone-200 flex flex-col max-h-[85vh]">
             <div className="flex items-center justify-between pb-3 border-b border-stone-200">
               <div>
@@ -1044,8 +1068,7 @@ export function UsersAdmin() {
               </div>
             </div>
           </div>
-        </div>
-      )}
+      </AdminModalShell>
 
       {/* RBAC Permission Adjustment Safety Modal (Section 26) */}
       {editingRoleConfig && (
@@ -1084,8 +1107,14 @@ export function UsersAdmin() {
       )}
 
       {/* MODAL: Manual Quarantine IP */}
-      {manualBanOpen && (
-        <div className="fixed inset-0 bg-stone-900/50 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+      <AdminModalShell
+        open={!!manualBanOpen}
+        onClose={() => setManualBanOpen(false)}
+        label="Manual Quarantine IP"
+        closeOnEscape={false}
+        closeOnBackdrop={false}
+        overlayClassName="fixed inset-0 bg-stone-900/50 backdrop-blur-xs z-50 flex items-center justify-center p-4"
+      >
           <div className="bg-white rounded-xl max-w-md w-full p-6 shadow-xl border border-stone-200">
             <div className="flex items-center justify-between pb-3 border-b border-stone-200">
               <div className="flex items-center gap-2">
@@ -1154,12 +1183,15 @@ export function UsersAdmin() {
               </div>
             </form>
           </div>
-        </div>
-      )}
+      </AdminModalShell>
 
       {/* ⓘ GLOBAL CONTEXTUAL ADMIN HELP MODAL (11-POINT COMPREHENSIVE EXPLANATION) */}
-      {activeHelp && (
-        <div className="fixed inset-0 bg-stone-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+      <AdminModalShell
+        open={!!activeHelp}
+        onClose={() => setActiveHelp(null)}
+        label="GLOBAL CONTEXTUAL ADMIN HELP MODAL"
+        overlayClassName="fixed inset-0 bg-stone-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4"
+      >
           <div className="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-2xl border border-stone-200 max-h-[90vh] flex flex-col">
             <div className="flex items-center justify-between pb-3 border-b border-stone-200">
               <div className="flex items-center gap-2.5">
@@ -1285,8 +1317,7 @@ export function UsersAdmin() {
               </button>
             </div>
           </div>
-        </div>
-      )}
+      </AdminModalShell>
     </div>
   );
 }

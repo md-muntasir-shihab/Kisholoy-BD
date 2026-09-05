@@ -16,6 +16,7 @@ import { DateWiseDataHubModal } from '../components/admin/DateWiseDataHubModal';
 import { ManualOrderModal } from '../components/admin/ManualOrderModal';
 import { OrderCourierDispatchModal } from '../components/admin/OrderCourierDispatchModal';
 import { OrderLiveTrackingTimeline } from '../components/admin/OrderLiveTrackingTimeline';
+import { AdminModalShell } from '../components/admin/AdminModalShell';
 import { 
   DateFilterConfig, 
   filterItemsByDate, 
@@ -494,8 +495,12 @@ ${advancePaid > 0 ? `✅ *অগ্রিম পরিশোধ:* ৳${advancePa
       </div>
 
       {/* Order Detail Modal */}
-      {selectedOrder && (
-        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
+      <AdminModalShell
+        open={!!selectedOrder}
+        onClose={() => setSelectedOrder(null)}
+        label="Order Detail Modal"
+        overlayClassName="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4"
+      >
           <div className="bg-white dark:bg-slate-900 rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-4 sm:p-6 space-y-6 shadow-2xl border border-stone-200 dark:border-slate-800 text-stone-900 dark:text-slate-100">
             <div className="flex justify-between items-center pb-4 border-b border-stone-200 dark:border-slate-800">
               <div>
@@ -786,8 +791,7 @@ ${advancePaid > 0 ? `✅ *অগ্রিম পরিশোধ:* ৳${advancePa
               </button>
             </div>
           </div>
-        </div>
-      )}
+      </AdminModalShell>
 
       {/* Courier & Delivery Dispatch Modal (Steadfast & Pathao APIs) */}
       {courierDispatchOrder && (

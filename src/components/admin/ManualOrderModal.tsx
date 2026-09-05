@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { Order, OrderSourceChannel, Product, Customer } from '../../types';
+import { useModalA11y } from '../../hooks/useModalA11y';
 
 interface ManualOrderModalProps {
   isOpen: boolean;
@@ -57,6 +58,13 @@ export function ManualOrderModal({
   defaultChannel,
   initialCustomerPhone = ''
 }: ManualOrderModalProps) {
+  // F-307: Escape to close, focus trap, focus restore and ARIA dialog roles.
+  const { containerRef, dialogProps } = useModalA11y({
+    open: isOpen,
+    onClose,
+    label: 'Manual Order',
+  });
+
   const { products, customers, createOrder, currentRole, language, showToast, customCouriers } = useApp();
   const isBn = language === 'BN';
 
@@ -421,7 +429,7 @@ ${address}, ${thana ? `${thana}, ` : ''}${district}
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-5 overflow-y-auto">
+    <div ref={containerRef} {...dialogProps} className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-5 overflow-y-auto">
       <div className="bg-white rounded-2xl max-w-4xl w-full max-h-[92vh] flex flex-col shadow-2xl border border-stone-200 overflow-hidden my-auto">
         
         {/* Header */}
@@ -905,7 +913,7 @@ ${address}, ${thana ? `${thana}, ` : ''}${district}
 
                     {hasAdvancePayment && (
                       <div className="space-y-2.5 pt-2 border-t border-amber-200/60">
-                        <div className="grid grid-cols-2 gap-2">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                           <div>
                             <label className="text-amber-900 font-semibold block mb-1">Advance Amount (BDT)</label>
                             <input

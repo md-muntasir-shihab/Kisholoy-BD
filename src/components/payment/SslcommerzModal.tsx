@@ -187,7 +187,7 @@ export function SslcommerzModal({
                         className="w-full bg-white border border-stone-300 rounded px-2.5 py-1.5 font-mono text-xs"
                       />
                     </div>
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                       <div>
                         <label className="text-[10px] font-bold text-stone-500 uppercase">Expiry</label>
                         <input

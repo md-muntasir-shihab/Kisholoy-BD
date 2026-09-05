@@ -7,6 +7,7 @@ import { useApp } from '../../context/AppContext';
 import { logAuthEvent } from '../../utils/telemetryLogger';
 import { signInWithGoogle } from '../../lib/firebase';
 import { BrandLogo } from '../brand/BrandLogo';
+import { setCustomerToken } from '../../lib/apiClient';
 
 interface CustomerAuthModalProps {
   isOpen: boolean;
@@ -62,6 +63,7 @@ export const CustomerAuthModal: React.FC<CustomerAuthModalProps> = ({
       });
       const data = await res.json();
       if (data.success && data.customer) {
+        setCustomerToken(data.token || null);
         setCurrentCustomerId(data.customer.id);
         logAuthEvent({
           userId: data.customer.id,
@@ -138,6 +140,7 @@ export const CustomerAuthModal: React.FC<CustomerAuthModalProps> = ({
       const data = await res.json();
       if (data.success && data.customer) {
         setCustomers([...customers, data.customer]);
+        setCustomerToken(data.token || null);
         setCurrentCustomerId(data.customer.id);
         showToast(`Account created! Welcome, ${data.customer.name}.`);
         onClose();
@@ -384,7 +387,7 @@ export const CustomerAuthModal: React.FC<CustomerAuthModalProps> = ({
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 <div>
                   <label className="block text-stone-700 font-semibold mb-1">
                     Phone <span className="text-red-500">*</span>

@@ -14,6 +14,7 @@ import {
 import { useApp } from '../context/AppContext';
 import { Product, Order } from '../types';
 import { getStoredAuthEvents, logAuthEvent } from '../utils/telemetryLogger';
+import { AdminModalShell } from '../components/admin/AdminModalShell';
 
 // Types for Analytics
 export interface VisitorSession {
@@ -1159,8 +1160,12 @@ export function AnalyticsAdmin() {
       {/* ========================================================================= */}
       {/* VISITOR INSPECTOR MODAL */}
       {/* ========================================================================= */}
-      {selectedVisitor && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+      <AdminModalShell
+        open={!!selectedVisitor}
+        onClose={() => setSelectedVisitor(null)}
+        label=""
+        overlayClassName="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4"
+      >
           <div className="bg-white rounded-2xl border border-stone-200 shadow-xl max-w-lg w-full p-6 space-y-4">
             <div className="flex justify-between items-center pb-3 border-b border-stone-100">
               <div className="flex items-center gap-2">
@@ -1225,8 +1230,7 @@ export function AnalyticsAdmin() {
               </button>
             </div>
           </div>
-        </div>
-      )}
+      </AdminModalShell>
 
     </div>
   );

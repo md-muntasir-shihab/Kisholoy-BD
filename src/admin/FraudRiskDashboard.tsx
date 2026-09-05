@@ -5,6 +5,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { OfflineDataBanner } from '../components/admin/OfflineDataBanner';
 import { Link, useSearchParams } from 'react-router-dom';
 import { 
   ShieldAlert, ShieldCheck, AlertTriangle, Ban, PhoneCall, CheckCircle, 
@@ -17,6 +18,8 @@ import {
   FraudRuleConfig, FraudStats 
 } from '../types';
 import { useApp } from '../context/AppContext';
+import { AdminModalShell } from '../components/admin/AdminModalShell';
+import { usePendingAction } from '../hooks/usePendingAction';
 
 interface FraudDashboardProps {
   orders?: Order[];
@@ -31,11 +34,14 @@ export const FraudRiskDashboard: React.FC<FraudDashboardProps> = ({
   const isBn = language === 'BN';
   const [searchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState<'queue' | 'blacklists' | 'rules' | 'sandbox'>('queue');
+  // F-306: blocks duplicate submits while a mutation is in flight.
+  const { run, isPending, isBusy } = usePendingAction();
   const [stats, setStats] = useState<FraudStats | null>(null);
   const [blacklists, setBlacklists] = useState<BlacklistEntry[]>([]);
   const [settings, setSettings] = useState<FraudRiskSettings | null>(null);
   const [orders, setOrders] = useState<Order[]>(propOrders || contextOrders || []);
   const [loading, setLoading] = useState(false);
+  const [loadFailures, setLoadFailures] = useState<string[]>([]);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [feedbackMsg, setFeedbackMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
@@ -100,8 +106,23 @@ export const FraudRiskDashboard: React.FC<FraudDashboardProps> = ({
       } else if (contextOrders && contextOrders.length > 0) {
         setOrders(contextOrders);
       }
+
+      // Each sub-request degrades independently. An empty blacklist panel
+      // reads as "nobody is blacklisted" when it really means "the list never
+      // loaded" — a dangerous misreading on a fraud screen (F-305).
+      const failed = [
+        !statsRes.success && 'risk statistics',
+        !blRes.success && 'blacklist',
+        !setRes.success && 'risk settings',
+      ].filter(Boolean) as string[];
+      setLoadFailures(failed);
+      if (failed.length > 0) {
+        showNotification('error', `Could not load: ${failed.join(', ')}. Panels below may be incomplete.`);
+      }
     } catch (err) {
       console.error('Failed to load fraud engine data:', err);
+      setLoadFailures(['risk statistics', 'blacklist', 'risk settings']);
+      showNotification('error', 'Could not reach the fraud engine — this screen is not showing live data.');
     } finally {
       setLoading(false);
     }
@@ -123,8 +144,11 @@ export const FraudRiskDashboard: React.FC<FraudDashboardProps> = ({
   };
 
   // Add Blacklist Entry
-  const handleAddBlacklist = async (e: React.FormEvent) => {
+    const handleAddBlacklist = async (e: React.FormEvent) => {
+    // Must fire synchronously. Inside run() it would land in a microtask and
+    // the browser would submit the form and reload the page first.
     e.preventDefault();
+    return run('handleAddBlacklist', async () => {
     if (!newBlValue.trim() || !newBlReason.trim()) {
       showNotification('error', 'Value and reason are required');
       return;
@@ -155,10 +179,11 @@ export const FraudRiskDashboard: React.FC<FraudDashboardProps> = ({
     } catch (err: any) {
       showNotification('error', err.message);
     }
+    });
   };
 
   // Toggle Blacklist Active Status
-  const handleToggleBlacklist = async (id: string) => {
+  const handleToggleBlacklist = async (id: string) =>  run('handleToggleBlacklist', async () => {
     try {
       const res = await fetch(`/api/fraud/blacklists/${id}/toggle`, { method: 'POST' });
       const data = await res.json();
@@ -169,10 +194,10 @@ export const FraudRiskDashboard: React.FC<FraudDashboardProps> = ({
     } catch (err: any) {
       showNotification('error', err.message);
     }
-  };
+    });
 
   // Delete Blacklist Entry
-  const handleDeleteBlacklist = async (id: string) => {
+  const handleDeleteBlacklist = async (id: string) =>  run('handleDeleteBlacklist', async () => {
     if (!confirm('Are you sure you want to remove this entry from the blacklist?')) return;
     try {
       const res = await fetch(`/api/fraud/blacklists/${id}`, { method: 'DELETE' });
@@ -184,10 +209,10 @@ export const FraudRiskDashboard: React.FC<FraudDashboardProps> = ({
     } catch (err: any) {
       showNotification('error', err.message);
     }
-  };
+    });
 
   // Save Settings
-  const handleSaveSettings = async () => {
+  const handleSaveSettings = async () =>  run('handleSaveSettings', async () => {
     if (!settings) return;
     try {
       const res = await fetch('/api/fraud/settings', {
@@ -206,10 +231,10 @@ export const FraudRiskDashboard: React.FC<FraudDashboardProps> = ({
     } catch (err: any) {
       showNotification('error', err.message);
     }
-  };
+    });
 
   // Execute Order Verification Action
-  const handleExecuteAction = async () => {
+  const handleExecuteAction = async () =>  run('handleExecuteAction', async () => {
     if (!actionModalOrder) return;
     setActionSubmitting(true);
     try {
@@ -247,10 +272,10 @@ export const FraudRiskDashboard: React.FC<FraudDashboardProps> = ({
     } finally {
       setActionSubmitting(false);
     }
-  };
+    });
 
   // One-click quick phone verification for table rows
-  const handleQuickVerifyPhone = async (ord: Order) => {
+  const handleQuickVerifyPhone = async (ord: Order) =>  run('handleQuickVerifyPhone', async () => {
     try {
       const res = await fetch('/api/fraud/verify-order', {
         method: 'POST',
@@ -275,11 +300,14 @@ export const FraudRiskDashboard: React.FC<FraudDashboardProps> = ({
     } catch (err: any) {
       showNotification('error', err.message);
     }
-  };
+    });
 
   // Run Sandbox Evaluation
-  const handleRunSandbox = async (e: React.FormEvent) => {
+    const handleRunSandbox = async (e: React.FormEvent) => {
+    // Must fire synchronously. Inside run() it would land in a microtask and
+    // the browser would submit the form and reload the page first.
     e.preventDefault();
+    return run('handleRunSandbox', async () => {
     setSandboxEvaluating(true);
     try {
       const res = await fetch('/api/fraud/evaluate', {
@@ -303,6 +331,7 @@ export const FraudRiskDashboard: React.FC<FraudDashboardProps> = ({
     } finally {
       setSandboxEvaluating(false);
     }
+    });
   };
 
   const handleRunSandboxPreset = async (preset: {
@@ -413,6 +442,14 @@ export const FraudRiskDashboard: React.FC<FraudDashboardProps> = ({
 
   return (
     <div id="fraud-risk-engine-container" className="space-y-6">
+      <OfflineDataBanner
+        visible={loadFailures.length > 0}
+        resource={`fraud engine data (${loadFailures.join(', ')})`}
+        resourceBn={`ফ্রড ইঞ্জিনের তথ্য (${loadFailures.join(', ')})`}
+        onRetry={fetchData}
+        retrying={loading}
+      />
+
       {/* Top Header & Quick Actions */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
         <div>
@@ -1238,7 +1275,7 @@ export const FraudRiskDashboard: React.FC<FraudDashboardProps> = ({
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <label className="text-xs font-semibold text-gray-700">District / City</label>
                   <select
@@ -1374,8 +1411,14 @@ export const FraudRiskDashboard: React.FC<FraudDashboardProps> = ({
       {/* ============================================================= */}
       {/* MODAL: ADD BLACKLIST ENTRY */}
       {/* ============================================================= */}
-      {showAddBlacklistModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+      <AdminModalShell
+        open={!!showAddBlacklistModal}
+        onClose={() => setShowAddBlacklistModal(false)}
+        label=""
+        // Contains a form: a stray backdrop click must not discard entered data.
+        closeOnBackdrop={false}
+        overlayClassName="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+      >
           <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-5 animate-in fade-in zoom-in-95 duration-200">
             <div className="flex justify-between items-center">
               <div className="flex items-center gap-2 text-rose-700">
@@ -1458,14 +1501,19 @@ export const FraudRiskDashboard: React.FC<FraudDashboardProps> = ({
               </div>
             </form>
           </div>
-        </div>
-      )}
+      </AdminModalShell>
 
       {/* ============================================================= */}
       {/* MODAL: VERIFICATION & ACTION MODAL */}
       {/* ============================================================= */}
-      {actionModalOrder && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+      <AdminModalShell
+        open={!!actionModalOrder}
+        onClose={() => setActionModalOrder(null)}
+        label=""
+        // Contains a form: a stray backdrop click must not discard entered data.
+        closeOnBackdrop={false}
+        overlayClassName="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+      >
           <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-5 animate-in fade-in zoom-in-95 duration-200">
             <div className="flex justify-between items-center">
               <div>
@@ -1516,7 +1564,7 @@ export const FraudRiskDashboard: React.FC<FraudDashboardProps> = ({
               </div>
 
               {actionType === 'ADVANCE_FEE_PAID' && (
-                <div className="grid grid-cols-2 gap-3 bg-emerald-50/50 p-3 rounded-lg border border-emerald-200">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-emerald-50/50 p-3 rounded-lg border border-emerald-200">
                   <div className="space-y-1">
                     <label className="text-xs font-semibold text-gray-700">Advance Amount (৳)</label>
                     <input
@@ -1591,14 +1639,17 @@ export const FraudRiskDashboard: React.FC<FraudDashboardProps> = ({
               </div>
             </div>
           </div>
-        </div>
-      )}
+      </AdminModalShell>
 
       {/* ============================================================= */}
       {/* DRAWER: DETAILED RISK INSPECTION */}
       {/* ============================================================= */}
-      {selectedOrder && (
-        <div className="fixed inset-0 z-50 flex items-center justify-end bg-black/50 backdrop-blur-xs">
+      <AdminModalShell
+        open={!!selectedOrder}
+        onClose={() => setSelectedOrder(null)}
+        label=""
+        overlayClassName="fixed inset-0 z-50 flex items-center justify-end bg-black/50 backdrop-blur-xs"
+      >
           <div className="bg-white w-full max-w-md h-full shadow-2xl p-6 overflow-y-auto space-y-6 animate-in slide-in-from-right duration-200">
             <div className="flex justify-between items-center pb-4 border-b border-gray-200">
               <div>
@@ -1700,8 +1751,7 @@ export const FraudRiskDashboard: React.FC<FraudDashboardProps> = ({
               </div>
             )}
           </div>
-        </div>
-      )}
+      </AdminModalShell>
     </div>
   );
 };

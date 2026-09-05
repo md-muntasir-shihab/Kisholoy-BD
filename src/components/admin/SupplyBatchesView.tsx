@@ -7,6 +7,8 @@ import {
 import { Supplier, SupplyBatch, SupplierSettlementMethod } from '../../types';
 import { useApp } from '../../context/AppContext';
 import { SUPPLIER_HELP_DEFINITIONS, SupplierFunctionHelp } from '../../admin/supplierHelpData';
+import { AdminModalShell } from './AdminModalShell';
+import { usePendingAction } from '../../hooks/usePendingAction';
 
 interface SupplyBatchesViewProps {
   suppliers: Supplier[];
@@ -19,6 +21,8 @@ export const SupplyBatchesView: React.FC<SupplyBatchesViewProps> = ({
 }) => {
   const { language, showToast, currentRole, products } = useApp();
   const [batches, setBatches] = useState<SupplyBatch[]>([]);
+  // F-306: blocks duplicate submits while a mutation is in flight.
+  const { run, isPending, isBusy } = usePendingAction();
   const [loading, setLoading] = useState(false);
   const [selectedSupplierFilter, setSelectedSupplierFilter] = useState<string>('ALL');
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
@@ -87,8 +91,11 @@ export const SupplyBatchesView: React.FC<SupplyBatchesViewProps> = ({
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
+    // Must fire synchronously. Inside run() it would land in a microtask and
+    // the browser would submit the form and reload the page first.
     e.preventDefault();
+    return run('handleSubmit', async () => {
     if (!supplierId || !productId || receivedQuantity <= 0) {
       showToast?.('Please specify supplier, product and a positive quantity.');
       return;
@@ -126,6 +133,8 @@ export const SupplyBatchesView: React.FC<SupplyBatchesViewProps> = ({
     } catch (err: any) {
       showToast?.(err.message || 'Error recording batch.');
     }
+  
+  });
   };
 
   const filteredBatches = batches.filter(b => {
@@ -200,7 +209,7 @@ export const SupplyBatchesView: React.FC<SupplyBatchesViewProps> = ({
           <button
             type="button"
             onClick={loadBatches}
-            className="p-2 text-stone-600 hover:text-stone-900 bg-stone-100 hover:bg-stone-200 rounded-lg"
+            className="p-2 text-stone-600 hover:text-stone-900 bg-stone-100 hover:bg-stone-200 rounded-lg min-w-11 min-h-11 sm:min-w-0 sm:min-h-0 inline-flex items-center justify-center"
           >
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
           </button>
@@ -327,8 +336,14 @@ export const SupplyBatchesView: React.FC<SupplyBatchesViewProps> = ({
       </div>
 
       {/* Intake Batch Modal */}
-      {createModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-900/60 backdrop-blur-xs animate-in fade-in duration-150">
+      <AdminModalShell
+        open={!!createModalOpen}
+        onClose={() => setCreateModalOpen(false)}
+        label="Intake Batch Modal"
+        // Contains a form: a stray backdrop click must not discard entered data.
+        closeOnBackdrop={false}
+        overlayClassName="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-900/60 backdrop-blur-xs animate-in fade-in duration-150"
+      >
           <div className="bg-white w-full max-w-lg rounded-2xl shadow-2xl border border-stone-200 overflow-hidden flex flex-col max-h-[90vh]">
             <div className="px-6 py-4 bg-teal-900 text-white flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -378,7 +393,7 @@ export const SupplyBatchesView: React.FC<SupplyBatchesViewProps> = ({
               </div>
 
               {/* Quantity and Costs */}
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
                   <label className="block text-xs font-bold text-stone-700 mb-1">
                     Received Qty *
@@ -422,7 +437,7 @@ export const SupplyBatchesView: React.FC<SupplyBatchesViewProps> = ({
               </div>
 
               {/* Settlement Method & Share */}
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-bold text-stone-700 mb-1">
                     Settlement Method *
@@ -489,8 +504,7 @@ export const SupplyBatchesView: React.FC<SupplyBatchesViewProps> = ({
               </div>
             </form>
           </div>
-        </div>
-      )}
+      </AdminModalShell>
     </div>
   );
 };

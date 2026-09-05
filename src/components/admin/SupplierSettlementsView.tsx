@@ -9,6 +9,8 @@ import {
 import { Supplier, SupplierSettlement, SupplierEligibleSale } from '../../types';
 import { useApp } from '../../context/AppContext';
 import { SUPPLIER_HELP_DEFINITIONS, SupplierFunctionHelp } from '../../admin/supplierHelpData';
+import { AdminModalShell } from './AdminModalShell';
+import { usePendingAction } from '../../hooks/usePendingAction';
 
 interface SupplierSettlementsViewProps {
   suppliers: Supplier[];
@@ -25,6 +27,8 @@ export const SupplierSettlementsView: React.FC<SupplierSettlementsViewProps> = (
 }) => {
   const { language, showToast, currentRole, formatPrice } = useApp();
   const [activeSubTab, setActiveSubTab] = useState<SubTab>('cycles');
+  // F-306: blocks duplicate submits while a mutation is in flight.
+  const { run, isPending, isBusy } = usePendingAction();
   const [settlements, setSettlements] = useState<SupplierSettlement[]>([]);
   const [eligibleSales, setEligibleSales] = useState<SupplierEligibleSale[]>([]);
   const [loading, setLoading] = useState(false);
@@ -125,8 +129,11 @@ export const SupplierSettlementsView: React.FC<SupplierSettlementsViewProps> = (
   const previewReturns = previewSales.filter(s => s.status === 'ADJUSTED_RETURNED').reduce((sum, s) => sum + (s.supplierShare || 0), 0);
   const previewNet = Math.max(0, previewSupplierShare - previewReturns);
 
-  const handleGenerateSettlement = async (e: React.FormEvent) => {
+    const handleGenerateSettlement = async (e: React.FormEvent) => {
+    // Must fire synchronously. Inside run() it would land in a microtask and
+    // the browser would submit the form and reload the page first.
     e.preventDefault();
+    return run('handleGenerateSettlement', async () => {
     if (!supplierId || !periodStart || !periodEnd) {
       showToast?.('Please specify supplier and complete date range.');
       return;
@@ -153,11 +160,16 @@ export const SupplierSettlementsView: React.FC<SupplierSettlementsViewProps> = (
     } catch (err: any) {
       showToast?.(err.message || 'Error generating settlement.');
     }
+  
+  });
   };
 
   // Manual Return Adjustment Handler
-  const handleApplyReturnAdjustment = async (e: React.FormEvent) => {
+    const handleApplyReturnAdjustment = async (e: React.FormEvent) => {
+    // Must fire synchronously. Inside run() it would land in a microtask and
+    // the browser would submit the form and reload the page first.
     e.preventDefault();
+    return run('handleApplyReturnAdjustment', async () => {
     if (!returnOrderId.trim()) {
       showToast?.('Please enter Order ID or Reference Number.');
       return;
@@ -185,9 +197,10 @@ export const SupplierSettlementsView: React.FC<SupplierSettlementsViewProps> = (
     } catch (err: any) {
       showToast?.(err.message || 'Error processing return adjustment.');
     }
+    });
   };
 
-  const handleUpdateStatus = async (settlementId: string, newStatus: string) => {
+  const handleUpdateStatus = async (settlementId: string, newStatus: string) =>  run('handleUpdateStatus', async () => {
     try {
       const res = await fetch(`/api/suppliers/settlements/${settlementId}/status`, {
         method: 'PUT',
@@ -207,7 +220,8 @@ export const SupplierSettlementsView: React.FC<SupplierSettlementsViewProps> = (
     } catch (err: any) {
       showToast?.(err.message || 'Error updating status.');
     }
-  };
+  
+  });
 
   const openPayModal = (settlement: SupplierSettlement) => {
     setSelectedSettlement(settlement);
@@ -222,8 +236,11 @@ export const SupplierSettlementsView: React.FC<SupplierSettlementsViewProps> = (
     setPayModalOpen(true);
   };
 
-  const handleDisbursePayment = async (e: React.FormEvent) => {
+    const handleDisbursePayment = async (e: React.FormEvent) => {
+    // Must fire synchronously. Inside run() it would land in a microtask and
+    // the browser would submit the form and reload the page first.
     e.preventDefault();
+    return run('handleDisbursePayment', async () => {
     if (!selectedSettlement || paymentAmount <= 0) {
       showToast?.('Please specify a positive payout amount.');
       return;
@@ -258,6 +275,8 @@ export const SupplierSettlementsView: React.FC<SupplierSettlementsViewProps> = (
     } catch (err: any) {
       showToast?.(err.message || 'Error executing payout.');
     }
+  
+  });
   };
 
   // High-level Calculations
@@ -962,8 +981,12 @@ export const SupplierSettlementsView: React.FC<SupplierSettlementsViewProps> = (
       )}
 
       {/* 6. Settlement Detail Breakdown Modal */}
-      {detailModalOpen && selectedSettlement && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-900/60 backdrop-blur-xs animate-in fade-in duration-150">
+      <AdminModalShell
+        open={!!(detailModalOpen && selectedSettlement)}
+        onClose={() => setDetailModalOpen(false)}
+        label="6 Settlement Detail Breakdown Modal"
+        overlayClassName="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-900/60 backdrop-blur-xs animate-in fade-in duration-150"
+      >
           <div className="bg-white w-full max-w-2xl rounded-2xl shadow-2xl border border-stone-200 overflow-hidden flex flex-col max-h-[90vh]">
             <div className="px-6 py-4 bg-emerald-900 text-white flex items-center justify-between">
               <div>
@@ -1053,12 +1076,17 @@ export const SupplierSettlementsView: React.FC<SupplierSettlementsViewProps> = (
               </div>
             </div>
           </div>
-        </div>
-      )}
+      </AdminModalShell>
 
       {/* 7. Generate Settlement Modal Wizard */}
-      {createModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-900/60 backdrop-blur-xs animate-in fade-in duration-150">
+      <AdminModalShell
+        open={!!createModalOpen}
+        onClose={() => setCreateModalOpen(false)}
+        label="7 Generate Settlement Modal Wizard"
+        // Contains a form: a stray backdrop click must not discard entered data.
+        closeOnBackdrop={false}
+        overlayClassName="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-900/60 backdrop-blur-xs animate-in fade-in duration-150"
+      >
           <div className="bg-white w-full max-w-lg rounded-2xl shadow-2xl border border-stone-200 overflow-hidden flex flex-col">
             <div className="px-6 py-4 bg-emerald-900 text-white flex items-center justify-between">
               <div>
@@ -1084,7 +1112,7 @@ export const SupplierSettlementsView: React.FC<SupplierSettlementsViewProps> = (
                 </select>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-bold text-stone-700 mb-1">Period Start *</label>
                   <input
@@ -1138,12 +1166,17 @@ export const SupplierSettlementsView: React.FC<SupplierSettlementsViewProps> = (
               </div>
             </form>
           </div>
-        </div>
-      )}
+      </AdminModalShell>
 
       {/* 8. Return Adjustment Modal */}
-      {returnModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-900/60 backdrop-blur-xs animate-in fade-in duration-150">
+      <AdminModalShell
+        open={!!returnModalOpen}
+        onClose={() => setReturnModalOpen(false)}
+        label="8 Return Adjustment Modal"
+        // Contains a form: a stray backdrop click must not discard entered data.
+        closeOnBackdrop={false}
+        overlayClassName="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-900/60 backdrop-blur-xs animate-in fade-in duration-150"
+      >
           <div className="bg-white w-full max-w-md rounded-2xl shadow-2xl border border-stone-200 overflow-hidden flex flex-col">
             <div className="px-6 py-4 bg-amber-900 text-white flex items-center justify-between">
               <h3 className="font-bold text-sm flex items-center gap-2">
@@ -1197,12 +1230,17 @@ export const SupplierSettlementsView: React.FC<SupplierSettlementsViewProps> = (
               </div>
             </form>
           </div>
-        </div>
-      )}
+      </AdminModalShell>
 
       {/* 9. Pay Settlement Modal with MFA */}
-      {payModalOpen && selectedSettlement && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-900/60 backdrop-blur-xs animate-in fade-in duration-150">
+      <AdminModalShell
+        open={!!(payModalOpen && selectedSettlement)}
+        onClose={() => setPayModalOpen(false)}
+        label="9 Pay Settlement Modal with MFA"
+        closeOnEscape={false}
+        closeOnBackdrop={false}
+        overlayClassName="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-900/60 backdrop-blur-xs animate-in fade-in duration-150"
+      >
           <div className="bg-white w-full max-w-md rounded-2xl shadow-2xl border border-stone-200 overflow-hidden flex flex-col">
             <div className="px-6 py-4 bg-emerald-800 text-white flex items-center justify-between">
               <h3 className="font-bold text-sm">Disburse Supplier Payout</h3>
@@ -1230,7 +1268,7 @@ export const SupplierSettlementsView: React.FC<SupplierSettlementsViewProps> = (
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-bold text-stone-700 mb-1">Payment Method *</label>
                   <select
@@ -1301,8 +1339,7 @@ export const SupplierSettlementsView: React.FC<SupplierSettlementsViewProps> = (
               </div>
             </form>
           </div>
-        </div>
-      )}
+      </AdminModalShell>
     </div>
   );
 };

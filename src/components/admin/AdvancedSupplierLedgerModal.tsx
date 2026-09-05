@@ -17,6 +17,7 @@ import {
   SupplierDetailResponse
 } from '../../types';
 import { SupplierFinancialTrendChart } from './SupplierFinancialTrendChart';
+import { useModalA11y } from '../../hooks/useModalA11y';
 
 interface AdvancedSupplierLedgerModalProps {
   supplier: Supplier;
@@ -39,6 +40,14 @@ export const AdvancedSupplierLedgerModal: React.FC<AdvancedSupplierLedgerModalPr
   onIssuePo,
   onRefresh
 }) => {
+  // F-307: this modal is mounted only while open (the parent conditionally
+  // renders it), so the dialog is always "open" from the hook's perspective.
+  const { containerRef, dialogProps } = useModalA11y({
+    open: true,
+    onClose,
+    label: 'Supplier ledger',
+  });
+
   const [activeTab, setActiveTab] = useState<'products' | 'statement' | 'trends' | 'pos' | 'payments' | 'profile'>('products');
   const [showStatementTrendChart, setShowStatementTrendChart] = useState(true);
   const [productSearch, setProductSearch] = useState('');
@@ -132,7 +141,7 @@ export const AdvancedSupplierLedgerModal: React.FC<AdvancedSupplierLedgerModalPr
   };
 
   return (
-    <div id="advanced-supplier-ledger-modal" className="fixed inset-0 z-50 bg-stone-900/70 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 overflow-y-auto animate-in fade-in duration-150">
+    <div ref={containerRef} {...dialogProps} id="advanced-supplier-ledger-modal" className="fixed inset-0 z-50 bg-stone-900/70 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 overflow-y-auto animate-in fade-in duration-150">
       <div className="bg-white rounded-t-2xl sm:rounded-2xl w-full max-w-6xl h-[92vh] sm:h-auto sm:max-h-[94vh] shadow-2xl flex flex-col overflow-hidden border border-stone-200">
         
         {/* ========================================================================= */}
@@ -212,7 +221,7 @@ export const AdvancedSupplierLedgerModal: React.FC<AdvancedSupplierLedgerModalPr
                   <button
                     onClick={onRefresh}
                     title="রিফ্রেশ করুন"
-                    className="p-1.5 sm:p-2 text-stone-300 hover:text-white bg-stone-800 hover:bg-stone-700 rounded-lg transition-colors"
+                    className="p-1.5 sm:p-2 text-stone-300 hover:text-white bg-stone-800 hover:bg-stone-700 rounded-lg transition-colors min-w-11 min-h-11 sm:min-w-0 sm:min-h-0 inline-flex items-center justify-center"
                   >
                     <RefreshCw className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${loading ? 'animate-spin text-amber-400' : ''}`} />
                   </button>
@@ -1318,7 +1327,7 @@ export const AdvancedSupplierLedgerModal: React.FC<AdvancedSupplierLedgerModalPr
             </div>
           </div>
 
-          <table className="w-full text-left text-xs border-collapse border">
+          <div className="overflow-x-auto"><table className="w-full text-left text-xs border-collapse border">
             <thead>
               <tr className="bg-stone-100 border">
                 <th className="p-2 border">Date</th>
@@ -1341,7 +1350,7 @@ export const AdvancedSupplierLedgerModal: React.FC<AdvancedSupplierLedgerModalPr
                 </tr>
               ))}
             </tbody>
-          </table>
+          </table></div>
 
           <div className="pt-12 flex justify-between text-xs">
             <div className="text-center border-t border-black pt-1 w-40">Accounts Officer</div>

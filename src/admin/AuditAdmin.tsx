@@ -5,6 +5,7 @@
  */
 
 import React, { useState, useEffect, useMemo } from 'react';
+import { OfflineDataBanner } from '../components/admin/OfflineDataBanner';
 import { 
   ShieldCheck, Search, Shield, Filter, AlertTriangle, RefreshCw, 
   HelpCircle, CheckCircle2, X, Download, Lock, Key, ShieldAlert,
@@ -15,6 +16,7 @@ import { AuditLog, AuditSeverity, AuditCategory, SecurityDiagnosticsSummary } fr
 import { SECURITY_HELP_DEFINITIONS, SecurityFunctionHelp } from './securityHelpData';
 import { DateRangeFilterBar } from '../components/admin/DateRangeFilterBar';
 import { DateWiseDataHubModal } from '../components/admin/DateWiseDataHubModal';
+import { AdminModalShell } from '../components/admin/AdminModalShell';
 import { 
   DateFilterConfig, 
   filterItemsByDate, 
@@ -41,6 +43,7 @@ export function AuditAdmin() {
   // Ledger from server API
   const [serverLedger, setServerLedger] = useState<AuditLog[]>([]);
   const [loading, setLoading] = useState(false);
+  const [usingFallback, setUsingFallback] = useState(false);
 
   // Verification state
   const [verifying, setVerifying] = useState(false);
@@ -71,13 +74,19 @@ export function AuditAdmin() {
       const data = await res.json();
       if (data.success && Array.isArray(data.ledger)) {
         setServerLedger(data.ledger);
+        setUsingFallback(false);
       } else {
         // Fallback to context logs if server returns empty
         setServerLedger(contextAuditLogs);
+        setUsingFallback(true);
       }
     } catch (err: any) {
+      // An audit ledger is a compliance artefact: silently swapping in local
+      // logs let it look complete and verified when the real chain was never
+      // loaded (F-305).
       console.error('Failed to load server audit ledger:', err);
       setServerLedger(contextAuditLogs);
+      setUsingFallback(true);
     } finally {
       setLoading(false);
     }
@@ -230,6 +239,14 @@ export function AuditAdmin() {
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
+      <OfflineDataBanner
+        visible={usingFallback}
+        resource="cryptographic audit ledger"
+        resourceBn="ক্রিপ্টোগ্রাফিক অডিট লেজার"
+        onRetry={fetchLedger}
+        retrying={loading}
+      />
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -379,7 +396,7 @@ export function AuditAdmin() {
           <button
             onClick={fetchLedger}
             disabled={loading}
-            className="p-2 border border-stone-200 rounded-lg hover:bg-stone-50 text-stone-500"
+            className="p-2 border border-stone-200 rounded-lg hover:bg-stone-50 text-stone-500 min-w-11 min-h-11 sm:min-w-0 sm:min-h-0 inline-flex items-center justify-center"
             title="Reload Ledger"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
@@ -482,8 +499,12 @@ export function AuditAdmin() {
       </div>
 
       {/* MODAL: Inspect Cryptographic Hash */}
-      {inspectEntry && (
-        <div className="fixed inset-0 bg-stone-900/50 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+      <AdminModalShell
+        open={!!inspectEntry}
+        onClose={() => setInspectEntry(null)}
+        label="Inspect Cryptographic Hash"
+        overlayClassName="fixed inset-0 bg-stone-900/50 backdrop-blur-xs z-50 flex items-center justify-center p-4"
+      >
           <div className="bg-white rounded-xl max-w-lg w-full p-6 shadow-xl border border-stone-200">
             <div className="flex items-center justify-between pb-3 border-b border-stone-200">
               <div className="flex items-center gap-2">
@@ -534,12 +555,15 @@ export function AuditAdmin() {
               </button>
             </div>
           </div>
-        </div>
-      )}
+      </AdminModalShell>
 
       {/* MODAL: 10-Point Security Vulnerability Scanner */}
-      {scannerOpen && (
-        <div className="fixed inset-0 bg-stone-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+      <AdminModalShell
+        open={!!scannerOpen}
+        onClose={() => setScannerOpen(false)}
+        label="Security vulnerability scanner"
+        overlayClassName="fixed inset-0 bg-stone-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4"
+      >
           <div className="bg-white rounded-2xl max-w-3xl w-full p-6 shadow-2xl border border-stone-200 max-h-[90vh] flex flex-col">
             <div className="flex items-center justify-between pb-3 border-b border-stone-200">
               <div className="flex items-center gap-2.5">
@@ -652,12 +676,15 @@ export function AuditAdmin() {
               </div>
             </div>
           </div>
-        </div>
-      )}
+      </AdminModalShell>
 
       {/* ⓘ GLOBAL CONTEXTUAL ADMIN HELP MODAL */}
-      {activeHelp && (
-        <div className="fixed inset-0 bg-stone-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+      <AdminModalShell
+        open={!!activeHelp}
+        onClose={() => setActiveHelp(null)}
+        label="GLOBAL CONTEXTUAL ADMIN HELP MODAL"
+        overlayClassName="fixed inset-0 bg-stone-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4"
+      >
           <div className="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-2xl border border-stone-200 max-h-[90vh] flex flex-col">
             <div className="flex items-center justify-between pb-3 border-b border-stone-200">
               <div className="flex items-center gap-2.5">
@@ -783,8 +810,7 @@ export function AuditAdmin() {
               </button>
             </div>
           </div>
-        </div>
-      )}
+      </AdminModalShell>
 
       {/* Date-wise Master Data Hub Modal */}
       {showDataHub && (

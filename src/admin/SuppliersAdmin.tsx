@@ -31,10 +31,14 @@ import { SupplierSettlementsView } from '../components/admin/SupplierSettlements
 import { supplierSchema, purchaseOrderSchema, formatZodError } from '../lib/validations';
 import { PrintSupplierStatementModal } from '../components/print/PrintSupplierStatementModal';
 import { PurchaseDocumentPrintModal } from '../components/print/PurchaseDocumentPrintModal';
+import { AdminModalShell } from '../components/admin/AdminModalShell';
+import { usePendingAction } from '../hooks/usePendingAction';
 
 export function SuppliersAdmin() {
   const { currentRole, language, showToast, products } = useApp();
   const [activeTab, setActiveTab] = useState<'suppliers' | 'agreements' | 'batches' | 'pos' | 'payments' | 'settlements' | 'portal'>('suppliers');
+  // F-306: blocks duplicate submits while a mutation is in flight.
+  const { run, isPending, isBusy } = usePendingAction();
   const [previewPortalSupplier, setPreviewPortalSupplier] = useState<Supplier | null>(null);
   const [statementSupplierId, setStatementSupplierId] = useState<string | null>(null);
   const [printPoId, setPrintPoId] = useState<string | null>(null);
@@ -135,6 +139,7 @@ export function SuppliersAdmin() {
       if (data.success) setAllPurchaseOrders(data.pos || []);
     } catch (err) {
       console.error('Failed to load purchase orders', err);
+      notify('Could not load purchase orders from the server.');
     }
   };
 
@@ -159,14 +164,18 @@ export function SuppliersAdmin() {
       }
     } catch (err) {
       console.error('Failed to fetch supplier detail:', err);
+      notify('Could not load this supplier\'s details from the server.');
     } finally {
       setLoadingDetail(false);
     }
   };
 
   // Create Supplier Handler
-  const handleCreateSupplier = async (e: React.FormEvent) => {
+    const handleCreateSupplier = async (e: React.FormEvent) => {
+    // Must fire synchronously. Inside run() it would land in a microtask and
+    // the browser would submit the form and reload the page first.
     e.preventDefault();
+    return run('handleCreateSupplier', async () => {
 
     const rawSupplier = {
       companyName: newCompanyName.trim(),
@@ -213,11 +222,15 @@ export function SuppliersAdmin() {
     } catch (err: any) {
       notify(err.message);
     }
+    });
   };
 
   // Issue Purchase Order Handler
-  const handleCreatePo = async (e: React.FormEvent) => {
+    const handleCreatePo = async (e: React.FormEvent) => {
+    // Must fire synchronously. Inside run() it would land in a microtask and
+    // the browser would submit the form and reload the page first.
     e.preventDefault();
+    return run('handleCreatePo', async () => {
 
     const rawPo = {
       supplierId: poSupplierId,
@@ -260,10 +273,11 @@ export function SuppliersAdmin() {
     } catch (err: any) {
       notify(err.message);
     }
+    });
   };
 
   // Mark PO Received (Triggers automated stock increment)
-  const handleMarkPoReceived = async (supplierId: string, poId: string) => {
+  const handleMarkPoReceived = async (supplierId: string, poId: string) =>  run('handleMarkPoReceived', async () => {
     if (!confirm('Marking this PO as RECEIVED will automatically increment product inventory in the active catalog. Confirm receipt?')) {
       return;
     }
@@ -285,7 +299,7 @@ export function SuppliersAdmin() {
     } catch (err: any) {
       notify(err.message);
     }
-  };
+    });
 
   // Submit Payment Disbursement
   const handleRecordPayment = async (e: React.FormEvent) => {
@@ -354,7 +368,7 @@ export function SuppliersAdmin() {
   };
 
   // Toggle Supplier Portal Access (Feature flag)
-  const handleTogglePortal = async (supplierId: string, currentEnabled: boolean) => {
+  const handleTogglePortal = async (supplierId: string, currentEnabled: boolean) =>  run('handleTogglePortal', async () => {
     const action = currentEnabled ? 'disable' : 'enable';
     if (!confirm(`Are you sure you want to ${action} isolated self-service portal access for this vendor?`)) {
       return;
@@ -379,7 +393,7 @@ export function SuppliersAdmin() {
     } catch (err: any) {
       notify(err.message);
     }
-  };
+    });
 
   // Filtered suppliers
   const filteredSuppliers = suppliers.filter(s => {
@@ -933,7 +947,9 @@ export function SuppliersAdmin() {
             </button>
           </div>
 
-          <div className="border border-stone-200 rounded-lg overflow-hidden">
+          {/* overflow-x-auto, not overflow-hidden: the PO table must be able to
+              scroll sideways on phones while the corners stay rounded. */}
+          <div className="border border-stone-200 rounded-lg overflow-x-auto">
             {allPurchaseOrders.length === 0 ? (
               <div className="p-8 text-center text-stone-400 text-xs">
                 No purchase orders found. Click "Issue New PO" to create one.
@@ -1052,7 +1068,10 @@ export function SuppliersAdmin() {
                       </span>
                     </div>
                     <div className="text-[11px] text-stone-500 font-mono mt-0.5">
-                      Login Email: <strong className="text-stone-800">{s.portalAccess?.loginEmail || s.email}</strong> • Default Password: <code className="text-stone-600 font-mono">kisholoy2026</code>
+                      Login Email: <strong className="text-stone-800">{s.portalAccess?.loginEmail || s.email}</strong>
+                      {s.portalAccess?.mustChangePassword && (
+                        <span className="text-amber-700"> • {language === 'BN' ? 'অস্থায়ী পাসওয়ার্ডে আছে' : 'on a temporary password'}</span>
+                      )}
                     </div>
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
@@ -1065,11 +1084,22 @@ export function SuppliersAdmin() {
                     </span>
                     
                     <button
-                      onClick={() => {
-                        // Store session and open live portal directly
-                        localStorage.setItem('ksh_supplier_token', `ksh-sup-token-${s.id}-${Date.now()}`);
-                        localStorage.setItem('ksh_supplier_user', JSON.stringify(s));
-                        window.open('/supplier', '_blank');
+                      onClick={async () => {
+                        // Portal tokens are HMAC-signed server-side, so the
+                        // browser can no longer fabricate one; ask the server.
+                        try {
+                          const res = await fetch(`/api/suppliers/${s.id}/portal-token`, { method: 'POST' });
+                          const data = await res.json();
+                          if (!res.ok || !data.success || !data.token) {
+                            showToast(data.error || 'Could not open the vendor hub.', 'info');
+                            return;
+                          }
+                          localStorage.setItem('ksh_supplier_token', data.token);
+                          localStorage.setItem('ksh_supplier_user', JSON.stringify(s));
+                          window.open('/supplier', '_blank');
+                        } catch {
+                          showToast('Network error opening the vendor hub.', 'info');
+                        }
                       }}
                       className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-stone-900 text-white hover:bg-stone-800 flex items-center gap-1 shadow-xs"
                     >
@@ -1125,8 +1155,14 @@ export function SuppliersAdmin() {
       )}
 
       {/* Modal: Create Supplier */}
-      {createSupplierOpen && (
-        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
+      <AdminModalShell
+        open={!!createSupplierOpen}
+        onClose={() => setCreateSupplierOpen(false)}
+        label="Modal Create Supplier"
+        // Contains a form: a stray backdrop click must not discard entered data.
+        closeOnBackdrop={false}
+        overlayClassName="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4"
+      >
           <div className="bg-white rounded-xl max-w-lg w-full p-6 shadow-2xl space-y-4">
             <div className="flex items-center justify-between border-b border-stone-200 pb-3">
               <h3 className="text-sm font-bold text-stone-900">Register New Supplier</h3>
@@ -1147,7 +1183,7 @@ export function SuppliersAdmin() {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-stone-600 font-semibold mb-1">Contact Person *</label>
                   <input
@@ -1184,7 +1220,7 @@ export function SuppliersAdmin() {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-stone-600 font-semibold mb-1">Payment Terms</label>
                   <select
@@ -1239,12 +1275,17 @@ export function SuppliersAdmin() {
               </div>
             </form>
           </div>
-        </div>
-      )}
+      </AdminModalShell>
 
       {/* Modal: Issue Purchase Order */}
-      {createPoOpen && (
-        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
+      <AdminModalShell
+        open={!!createPoOpen}
+        onClose={() => setCreatePoOpen(false)}
+        label="Modal Issue Purchase Order"
+        // Contains a form: a stray backdrop click must not discard entered data.
+        closeOnBackdrop={false}
+        overlayClassName="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4"
+      >
           <div className="bg-white rounded-xl max-w-xl w-full p-6 shadow-2xl space-y-4">
             <div className="flex items-center justify-between border-b border-stone-200 pb-3">
               <h3 className="text-sm font-bold text-stone-900">Issue Purchase Order</h3>
@@ -1268,7 +1309,7 @@ export function SuppliersAdmin() {
                 </select>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-stone-600 font-semibold mb-1">Receiving Warehouse Hub</label>
                   <select
@@ -1362,12 +1403,17 @@ export function SuppliersAdmin() {
               </div>
             </form>
           </div>
-        </div>
-      )}
+      </AdminModalShell>
 
       {/* Modal: Record Payment Disbursement */}
-      {recordPaymentOpen && (
-        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
+      <AdminModalShell
+        open={!!recordPaymentOpen}
+        onClose={() => setRecordPaymentOpen(false)}
+        label="Modal Record Payment Disbursement"
+        // Contains a form: a stray backdrop click must not discard entered data.
+        closeOnBackdrop={false}
+        overlayClassName="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4"
+      >
           <div className="bg-white rounded-xl max-w-md w-full p-6 shadow-2xl space-y-4">
             <div className="flex items-center justify-between border-b border-stone-200 pb-3">
               <h3 className="text-sm font-bold text-stone-900">Record Vendor Disbursement</h3>
@@ -1411,7 +1457,7 @@ export function SuppliersAdmin() {
                 )}
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-stone-600 font-semibold mb-1">Disbursement Method</label>
                   <select
@@ -1465,12 +1511,17 @@ export function SuppliersAdmin() {
               </div>
             </form>
           </div>
-        </div>
-      )}
+      </AdminModalShell>
 
       {/* Step-Up MFA Confirmation Modal */}
-      {mfaModalOpen && pendingPaymentPayload && (
-        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
+      <AdminModalShell
+        open={!!(mfaModalOpen && pendingPaymentPayload)}
+        onClose={() => setMfaModalOpen(false)}
+        label="Step-Up MFA Confirmation Modal"
+        closeOnEscape={false}
+        closeOnBackdrop={false}
+        overlayClassName="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4"
+      >
           <div className="bg-white rounded-xl max-w-sm w-full p-6 shadow-2xl space-y-4 border-2 border-amber-300">
             <div className="flex items-center gap-2 text-amber-700">
               <ShieldAlert className="w-5 h-5" />
@@ -1506,12 +1557,15 @@ export function SuppliersAdmin() {
               </div>
             </form>
           </div>
-        </div>
-      )}
+      </AdminModalShell>
 
       {/* 11-Point Contextual Help Modal */}
-      {activeHelp && (
-        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-150">
+      <AdminModalShell
+        open={!!activeHelp}
+        onClose={() => setActiveHelp(null)}
+        label="11-Point Contextual Help Modal"
+        overlayClassName="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-150"
+      >
           <div className="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-2xl max-h-[90vh] overflow-y-auto space-y-5 border border-stone-200">
             <div className="flex items-start justify-between border-b border-stone-200 pb-4">
               <div>
@@ -1617,8 +1671,7 @@ export function SuppliersAdmin() {
               </button>
             </div>
           </div>
-        </div>
-      )}
+      </AdminModalShell>
 
       {/* Bulk Supplier Import Modal (CSV & JSON) */}
       <BulkSupplierImportModal

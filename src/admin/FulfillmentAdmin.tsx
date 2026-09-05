@@ -7,6 +7,7 @@ import {
   Compass, RefreshCw, Send, UserCheck, AlertCircle, Phone, Navigation, SlidersHorizontal
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
+import { AdminModalShell } from '../components/admin/AdminModalShell';
 import { 
   WarehouseHub, WarehouseStockItem, StockTransferOrder, 
   PickList, DispatchManifest, Order, Division 
@@ -1151,8 +1152,14 @@ export const FulfillmentAdmin: React.FC = () => {
       {/* ======================================================== */}
       {/* MODAL 1: ADD / EDIT WAREHOUSE HUB */}
       {/* ======================================================== */}
-      {isHubModalOpen && editingHub && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm animate-in fade-in duration-200">
+      <AdminModalShell
+        open={!!(isHubModalOpen && editingHub)}
+        onClose={() => setIsHubModalOpen(false)}
+        label=""
+        // Contains a form: a stray backdrop click must not discard entered data.
+        closeOnBackdrop={false}
+        overlayClassName="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm animate-in fade-in duration-200"
+      >
           <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-stone-200 p-6 space-y-4">
             <div className="flex items-center justify-between border-b border-stone-200 pb-3">
               <h3 className="text-lg font-bold text-stone-900 flex items-center gap-2">
@@ -1317,14 +1324,19 @@ export const FulfillmentAdmin: React.FC = () => {
               </div>
             </form>
           </div>
-        </div>
-      )}
+      </AdminModalShell>
 
       {/* ======================================================== */}
       {/* MODAL 2: EDIT BIN LOCATION COORDINATES */}
       {/* ======================================================== */}
-      {editingBinStock && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm animate-in fade-in duration-200">
+      <AdminModalShell
+        open={!!editingBinStock}
+        onClose={() => setEditingBinStock(null)}
+        label=""
+        // Contains a form: a stray backdrop click must not discard entered data.
+        closeOnBackdrop={false}
+        overlayClassName="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm animate-in fade-in duration-200"
+      >
           <div className="bg-white rounded-xl shadow-2xl max-w-md w-full border border-stone-200 p-6 space-y-4">
             <div className="flex items-center justify-between border-b border-stone-200 pb-3">
               <h3 className="text-base font-bold text-stone-900 flex items-center gap-2">
@@ -1342,7 +1354,7 @@ export const FulfillmentAdmin: React.FC = () => {
             </div>
 
             <div className="space-y-3 text-sm">
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                 <div>
                   <label className="block text-xs font-semibold text-stone-700 mb-1">Aisle</label>
                   <input
@@ -1375,7 +1387,7 @@ export const FulfillmentAdmin: React.FC = () => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3 pt-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
                 <div>
                   <label className="block text-xs font-semibold text-stone-700 mb-1">Reorder Alert Level</label>
                   <input
@@ -1414,14 +1426,19 @@ export const FulfillmentAdmin: React.FC = () => {
               </div>
             </div>
           </div>
-        </div>
-      )}
+      </AdminModalShell>
 
       {/* ======================================================== */}
       {/* MODAL 3: CREATE STOCK TRANSFER ORDER (STO) */}
       {/* ======================================================== */}
-      {isStoModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm animate-in fade-in duration-200">
+      <AdminModalShell
+        open={!!isStoModalOpen}
+        onClose={() => setIsStoModalOpen(false)}
+        label=""
+        // Contains a form: a stray backdrop click must not discard entered data.
+        closeOnBackdrop={false}
+        overlayClassName="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm animate-in fade-in duration-200"
+      >
           <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-stone-200 p-6 space-y-4">
             <div className="flex items-center justify-between border-b border-stone-200 pb-3">
               <h3 className="text-lg font-bold text-stone-900 flex items-center gap-2">
@@ -1576,14 +1593,19 @@ export const FulfillmentAdmin: React.FC = () => {
               </div>
             </div>
           </div>
-        </div>
-      )}
+      </AdminModalShell>
 
       {/* ======================================================== */}
       {/* MODAL 4: GENERATE DIGITAL PICK LIST */}
       {/* ======================================================== */}
-      {isPickModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm animate-in fade-in duration-200">
+      <AdminModalShell
+        open={!!isPickModalOpen}
+        onClose={() => setIsPickModalOpen(false)}
+        label=""
+        // Contains a form: a stray backdrop click must not discard entered data.
+        closeOnBackdrop={false}
+        overlayClassName="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm animate-in fade-in duration-200"
+      >
           <div className="bg-white rounded-xl shadow-2xl max-w-xl w-full border border-stone-200 p-6 space-y-4">
             <div className="flex items-center justify-between border-b border-stone-200 pb-3">
               <h3 className="text-lg font-bold text-stone-900 flex items-center gap-2">
@@ -1664,14 +1686,17 @@ export const FulfillmentAdmin: React.FC = () => {
               </div>
             </div>
           </div>
-        </div>
-      )}
+      </AdminModalShell>
 
       {/* ======================================================== */}
       {/* MODAL 5: INTERACTIVE PICK RUNNER VIEW */}
       {/* ======================================================== */}
-      {viewingPickList && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm animate-in fade-in duration-200">
+      <AdminModalShell
+        open={!!viewingPickList}
+        onClose={() => setViewingPickList(null)}
+        label=""
+        overlayClassName="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm animate-in fade-in duration-200"
+      >
           <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-stone-200 p-6 space-y-4">
             <div className="flex items-center justify-between border-b border-stone-200 pb-3">
               <div>
@@ -1745,14 +1770,19 @@ export const FulfillmentAdmin: React.FC = () => {
               </button>
             </div>
           </div>
-        </div>
-      )}
+      </AdminModalShell>
 
       {/* ======================================================== */}
       {/* MODAL 6: CREATE COURIER BATCH MANIFEST */}
       {/* ======================================================== */}
-      {isManifestModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm animate-in fade-in duration-200">
+      <AdminModalShell
+        open={!!isManifestModalOpen}
+        onClose={() => setIsManifestModalOpen(false)}
+        label=""
+        // Contains a form: a stray backdrop click must not discard entered data.
+        closeOnBackdrop={false}
+        overlayClassName="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm animate-in fade-in duration-200"
+      >
           <div className="bg-white rounded-xl shadow-2xl max-w-xl w-full border border-stone-200 p-6 space-y-4">
             <div className="flex items-center justify-between border-b border-stone-200 pb-3">
               <h3 className="text-lg font-bold text-stone-900 flex items-center gap-2">
@@ -1871,14 +1901,17 @@ export const FulfillmentAdmin: React.FC = () => {
               </div>
             </div>
           </div>
-        </div>
-      )}
+      </AdminModalShell>
 
       {/* ======================================================== */}
       {/* MODAL 7: VIEW / PRINT COURIER MANIFEST */}
       {/* ======================================================== */}
-      {viewingManifest && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm animate-in fade-in duration-200">
+      <AdminModalShell
+        open={!!viewingManifest}
+        onClose={() => setViewingManifest(null)}
+        label=""
+        overlayClassName="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm animate-in fade-in duration-200"
+      >
           <div className="bg-white rounded-xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto border border-stone-200 p-8 space-y-6">
             <div className="flex items-start justify-between border-b border-stone-300 pb-4">
               <div>
@@ -1970,8 +2003,7 @@ export const FulfillmentAdmin: React.FC = () => {
               </button>
             </div>
           </div>
-        </div>
-      )}
+      </AdminModalShell>
     </div>
   );
 };

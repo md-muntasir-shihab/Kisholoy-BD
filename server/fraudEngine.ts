@@ -9,6 +9,7 @@ import {
   FraudRuleConfig, FraudStats 
 } from '../src/types';
 import { serverDb } from './db';
+import { normalizeBdMobilePhone } from '../src/lib/phone';
 
 // Known disposable/temporary email provider domains
 const DISPOSABLE_EMAIL_DOMAINS = new Set([
@@ -33,11 +34,15 @@ export class FraudEngine {
    * Normalizes a Bangladeshi mobile number to standard +8801XXXXXXXXX format
    */
   normalizeBdPhone(phone: string): string {
-    const cleaned = phone.replace(/[\s\-\(\)]/g, '');
-    if (cleaned.startsWith('+8801')) return cleaned;
-    if (cleaned.startsWith('8801')) return `+${cleaned}`;
-    if (cleaned.startsWith('01')) return `+88${cleaned}`;
-    return cleaned;
+    // Delegate to the single canonical implementation shared with the client
+    // and the order/tracking layer, so blacklist hits and velocity counts key
+    // off exactly the same string everywhere. When the input is not a valid BD
+    // mobile we fall back to a digits-only form rather than returning the raw
+    // text, so malformed values cannot accidentally collide.
+    const canonical = normalizeBdMobilePhone(phone);
+    if (canonical) return canonical;
+    const digits = String(phone || '').replace(/\D/g, '');
+    return digits || String(phone || '').trim();
   }
 
   /**

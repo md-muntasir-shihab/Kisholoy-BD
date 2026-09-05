@@ -7,6 +7,8 @@ import {
 import { useApp } from '../context/AppContext';
 import { PrintOrderDocumentsModal } from '../components/print/PrintOrderDocumentsModal';
 import { Order, CustomCourierConfig } from '../types';
+import { AdminModalShell } from '../components/admin/AdminModalShell';
+import { usePendingAction } from '../hooks/usePendingAction';
 
 export function ShipmentsAdmin() {
   const { 
@@ -26,6 +28,8 @@ export function ShipmentsAdmin() {
 
   // State for active view and filtering
   const [activeSubTab, setActiveSubTab] = useState<'pending' | 'dispatched' | 'couriers'>('pending');
+  // F-306: blocks duplicate submits while a mutation is in flight.
+  const { run, isPending, isBusy } = usePendingAction();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCourierFilter, setSelectedCourierFilter] = useState('ALL');
 
@@ -154,14 +158,18 @@ export function ShipmentsAdmin() {
   };
 
   // Execute Consignment Booking
-  const handleExecuteDispatch = async (e: React.FormEvent) => {
+    const handleExecuteDispatch = async (e: React.FormEvent) => {
+    // Must fire synchronously. Inside run() it would land in a microtask and
+    // the browser would submit the form and reload the page first.
     e.preventDefault();
+    return run('handleExecuteDispatch', async () => {
     if (!dispatchModalOrder) return;
 
     setIsDispatching(dispatchModalOrder.id);
     try {
       // Try API integration if built-in
       const isBuiltIn = dispatchSelectedCourier.toLowerCase().includes('steadfast') || dispatchSelectedCourier.toLowerCase().includes('pathao');
+      let bookingFailed: string | null = null;
       if (isBuiltIn) {
         try {
           const res = await fetch('/api/courier/book', {
@@ -173,19 +181,32 @@ export function ShipmentsAdmin() {
             })
           });
           const data = await res.json().catch(() => null);
-          if (data && !data.success) {
-            console.warn('API booking warning, falling back to instant provider assignment:', data.error);
+          if (!res.ok || (data && !data.success)) {
+            bookingFailed = data?.error || `Courier API returned ${res.status}.`;
           }
-        } catch (err) {
-          console.warn('Live API offline, recording dispatch locally:', err);
+        } catch (err: any) {
+          bookingFailed = err?.message || 'Courier API unreachable.';
         }
       }
 
       dispatchCourier(dispatchModalOrder.id, dispatchSelectedCourier, dispatchCustomTracking);
       setDispatchModalOrder(null);
+
+      // The consignment was NOT booked with the carrier. Recording it locally
+      // is the intended fallback, but staying silent let an operator believe
+      // the parcel was booked when no carrier ever received it (F-305).
+      if (bookingFailed) {
+        showToast(
+          language === 'BN'
+            ? `কুরিয়ার বুকিং ব্যর্থ (${bookingFailed}) — ডিসপ্যাচ শুধু লোকালি রেকর্ড হয়েছে। কনসাইনমেন্ট হাতে নিশ্চিত করুন।`
+            : `Courier booking failed (${bookingFailed}) — dispatch recorded locally only. Confirm the consignment manually.`,
+          'info'
+        );
+      }
     } finally {
       setIsDispatching(null);
     }
+    });
   };
 
   // Webhook simulator
@@ -665,8 +686,14 @@ export function ShipmentsAdmin() {
       )}
 
       {/* MODAL 1: ADD / EDIT COURIER PARTNER */}
-      {isCourierModalOpen && (
-        <div className="fixed inset-0 z-50 bg-stone-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+      <AdminModalShell
+        open={!!isCourierModalOpen}
+        onClose={() => setIsCourierModalOpen(false)}
+        label="MODAL 1 ADD EDIT COURIER PARTNER"
+        // Contains a form: a stray backdrop click must not discard entered data.
+        closeOnBackdrop={false}
+        overlayClassName="fixed inset-0 z-50 bg-stone-900/60 backdrop-blur-xs flex items-center justify-center p-4"
+      >
           <form onSubmit={handleSaveCourier} className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-stone-200 space-y-4 animate-in fade-in zoom-in-95 duration-150">
             <div className="flex items-center justify-between border-b border-stone-200 pb-3">
               <div>
@@ -830,12 +857,17 @@ export function ShipmentsAdmin() {
               </button>
             </div>
           </form>
-        </div>
-      )}
+      </AdminModalShell>
 
       {/* MODAL 2: DISPATCH PARCEL MODAL */}
-      {dispatchModalOrder && (
-        <div className="fixed inset-0 z-50 bg-stone-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+      <AdminModalShell
+        open={!!dispatchModalOrder}
+        onClose={() => setDispatchModalOrder(null)}
+        label="MODAL 2 DISPATCH PARCEL MODAL"
+        // Contains a form: a stray backdrop click must not discard entered data.
+        closeOnBackdrop={false}
+        overlayClassName="fixed inset-0 z-50 bg-stone-900/60 backdrop-blur-xs flex items-center justify-center p-4"
+      >
           <form onSubmit={handleExecuteDispatch} className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-stone-200 space-y-4 animate-in fade-in zoom-in-95 duration-150">
             <div className="flex items-center justify-between border-b border-stone-200 pb-3">
               <div>
@@ -923,8 +955,7 @@ export function ShipmentsAdmin() {
               </button>
             </div>
           </form>
-        </div>
-      )}
+      </AdminModalShell>
 
       {/* UNIFIED PRINT DOCUMENTS MODAL */}
       {labelOrder && (

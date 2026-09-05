@@ -9,7 +9,7 @@ import {
   Database, Download, Upload, ShieldCheck, CheckCircle2, AlertTriangle, 
   RefreshCw, Clock, HardDrive, Server, Cpu, FileSpreadsheet, FileJson, 
   HelpCircle, X, Play, Check, Copy, ArrowRight, Lock, AlertCircle, 
-  Archive, Activity, FileText, ChevronRight, Layers
+  Archive, Activity, FileText, ChevronRight, Layers, CloudOff
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { 
@@ -23,12 +23,35 @@ import {
   GoogleDriveFileItem
 } from '../types';
 import { BACKUP_HELP_DEFINITIONS, BackupFunctionHelp } from './backupHelpData';
+import { AdminModalShell } from '../components/admin/AdminModalShell';
+import { usePendingAction } from '../hooks/usePendingAction';
 
 export function BackupAdmin() {
   const { language, currentRole, showToast, logAudit, products, orders, customers } = useApp();
+  const isBn = language === 'BN';
 
   // Tab State
   const [activeTab, setActiveTab] = useState<'snapshots' | 'google_drive' | 'dr_pipeline' | 'export_import' | 'system_health'>('snapshots');
+  // F-306: blocks duplicate submits while a mutation is in flight.
+  const { run, isPending, isBusy } = usePendingAction();
+
+  // Every panel on this screen loads independently and used to fail silently,
+  // leaving empty cards that look like "no backups" rather than "not loaded"
+  // (F-305). Failures are collected here and surfaced in one banner.
+  const [loadFailures, setLoadFailures] = useState<string[]>([]);
+  const noteLoadFailure = (label: string) =>
+    setLoadFailures(prev => (prev.includes(label) ? prev : [...prev, label]));
+
+  /** Reload every panel and clear the failure banner on success. */
+  const retryAllLoads = () => {
+    setLoadFailures([]);
+    fetchDriveConfig();
+    fetchDriveFiles();
+    fetchSnapshots();
+    fetchSchedule();
+    fetchDrMetrics();
+    fetchHealth();
+  };
 
   // Help Modal State (11-point requirement)
   const [selectedHelp, setSelectedHelp] = useState<BackupFunctionHelp | null>(null);
@@ -118,6 +141,7 @@ export function BackupAdmin() {
       }
     } catch (e) {
       console.error('Failed to fetch Google Drive config:', e);
+      noteLoadFailure('Google Drive config');
     } finally {
       setLoadingDriveConfig(false);
     }
@@ -135,6 +159,7 @@ export function BackupAdmin() {
       }
     } catch (e) {
       console.error('Failed to fetch Google Drive files:', e);
+      noteLoadFailure('Google Drive file list');
     } finally {
       setLoadingDriveFiles(false);
     }
@@ -167,7 +192,7 @@ export function BackupAdmin() {
     }
   };
 
-  const handleDisconnectDrive = async () => {
+  const handleDisconnectDrive = async () =>  run('handleDisconnectDrive', async () => {
     try {
       const res = await fetch('/api/system/drive/disconnect', {
         method: 'POST',
@@ -182,7 +207,8 @@ export function BackupAdmin() {
     } catch (e: any) {
       showToast(`Error disconnecting Drive: ${e.message}`);
     }
-  };
+  
+  });
 
   const handleSyncDriveNow = async () => {
     setSyncingDrive(true);
@@ -251,6 +277,7 @@ export function BackupAdmin() {
       }
     } catch (e) {
       console.error('Failed to fetch snapshots:', e);
+      noteLoadFailure('backup snapshots');
     } finally {
       setLoadingSnapshots(false);
     }
@@ -267,6 +294,7 @@ export function BackupAdmin() {
       }
     } catch (e) {
       console.error('Failed to fetch backup schedule:', e);
+      noteLoadFailure('backup schedule');
     }
   };
 
@@ -281,6 +309,7 @@ export function BackupAdmin() {
       }
     } catch (e) {
       console.error('Failed to fetch DR metrics:', e);
+      noteLoadFailure('DR metrics');
     }
   };
 
@@ -296,6 +325,7 @@ export function BackupAdmin() {
       }
     } catch (e) {
       console.error('Failed to fetch system health:', e);
+      noteLoadFailure('system health');
     } finally {
       setLoadingHealth(false);
     }
@@ -375,9 +405,23 @@ export function BackupAdmin() {
       const data = await res.json();
       if (data.success && data.dryRun) {
         setDryRunResult(data.dryRun);
+      } else {
+        setDryRunResult(null);
+        showToast(
+          language === 'BN'
+            ? `ড্রাই-রান যাচাই ব্যর্থ: ${data.error || 'সার্ভার সাড়া দেয়নি'}। যাচাই ছাড়া রিস্টোর করবেন না।`
+            : `Dry-run check failed: ${data.error || 'no response'}. Do not restore without it.`
+        );
       }
-    } catch (e) {
-      console.error('Dry-run check failed:', e);
+    } catch (e: any) {
+      // Silence here meant the operator saw an empty impact panel and could
+      // restore a snapshot without ever seeing what it would overwrite (F-305).
+      setDryRunResult(null);
+      showToast(
+        language === 'BN'
+          ? 'ড্রাই-রান যাচাই করা যায়নি — সার্ভারে পৌঁছানো যাচ্ছে না। যাচাই ছাড়া রিস্টোর করবেন না।'
+          : 'Could not run the dry-run check — server unreachable. Do not restore without it.'
+      );
     } finally {
       setCheckingDryRun(false);
     }
@@ -446,7 +490,7 @@ export function BackupAdmin() {
   };
 
   // Handle Export
-  const handleTriggerExport = async (entity: 'PRODUCTS' | 'ORDERS' | 'CUSTOMERS' | 'FINANCE', format: 'CSV' | 'JSON') => {
+  const handleTriggerExport = async (entity: 'PRODUCTS' | 'ORDERS' | 'CUSTOMERS' | 'FINANCE', format: 'CSV' | 'JSON') =>  run('handleTriggerExport', async () => {
     setExportingEntity(`${entity}_${format}`);
     try {
       const res = await fetch('/api/system/export', {
@@ -472,7 +516,7 @@ export function BackupAdmin() {
     } finally {
       setExportingEntity(null);
     }
-  };
+    });
 
   // Handle Bulk Import Validation (Dry Run)
   const handleValidateImport = async (dryRun: boolean) => {
@@ -551,6 +595,29 @@ export function BackupAdmin() {
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto pb-16">
+      {loadFailures.length > 0 && (
+        <div
+          role="status"
+          aria-live="polite"
+          className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2.5 text-amber-900"
+        >
+          <CloudOff className="w-4 h-4 shrink-0" aria-hidden="true" />
+          <p className="text-[11px] leading-relaxed flex-1 min-w-0">
+            {isBn
+              ? `সার্ভার থেকে লোড করা যায়নি: ${loadFailures.join(', ')}। খালি প্যানেলগুলো "কিছু নেই" নয় — "লোড হয়নি"।`
+              : `Could not load from the server: ${loadFailures.join(', ')}. Empty panels below mean "not loaded", not "nothing there".`}
+          </p>
+          <button
+            type="button"
+            onClick={retryAllLoads}
+            className="self-start sm:self-auto shrink-0 inline-flex items-center gap-1.5 rounded-md border border-amber-400 bg-white px-2.5 py-1 text-[11px] font-bold hover:bg-amber-100 focus:outline-none focus:ring-2 focus:ring-amber-500/40"
+          >
+            <RefreshCw className="w-3 h-3" aria-hidden="true" />
+            {isBn ? 'আবার চেষ্টা করুন' : 'Retry'}
+          </button>
+        </div>
+      )}
+
       {/* Top Header Banner */}
       <div className="bg-white p-6 rounded-2xl border border-stone-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
@@ -1895,8 +1962,14 @@ export function BackupAdmin() {
       {/* ========================================================================= */}
       {/* RESTORE MODAL (High-Risk Operation with Dry-Run & Safeguards) */}
       {/* ========================================================================= */}
-      {restoreModalOpen && selectedSnapshotForRestore && (
-        <div className="fixed inset-0 z-50 bg-stone-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+      <AdminModalShell
+        open={!!(restoreModalOpen && selectedSnapshotForRestore)}
+        onClose={() => setRestoreModalOpen(false)}
+        label=""
+        closeOnEscape={false}
+        closeOnBackdrop={false}
+        overlayClassName="fixed inset-0 z-50 bg-stone-900/60 backdrop-blur-xs flex items-center justify-center p-4"
+      >
           <div className="bg-white rounded-2xl border border-stone-200 shadow-xl max-w-2xl w-full p-6 space-y-5 animate-in fade-in zoom-in-95 duration-150">
             {/* Modal Header */}
             <div className="flex items-start justify-between">
@@ -2035,14 +2108,17 @@ export function BackupAdmin() {
               </>
             )}
           </div>
-        </div>
-      )}
+      </AdminModalShell>
 
       {/* ========================================================================= */}
       {/* 11-POINT ADMIN FUNCTION EXPLANATION (ⓘ HELP MODAL) */}
       {/* ========================================================================= */}
-      {selectedHelp && (
-        <div className="fixed inset-0 z-50 bg-stone-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+      <AdminModalShell
+        open={!!selectedHelp}
+        onClose={() => setSelectedHelp(null)}
+        label=""
+        overlayClassName="fixed inset-0 z-50 bg-stone-900/60 backdrop-blur-xs flex items-center justify-center p-4"
+      >
           <div className="bg-white rounded-2xl border border-stone-200 shadow-2xl max-w-2xl w-full p-6 space-y-4 max-h-[90vh] overflow-y-auto animate-in fade-in zoom-in-95 duration-150">
             {/* Header */}
             <div className="flex items-start justify-between border-b border-stone-200 pb-3">
@@ -2179,8 +2255,7 @@ export function BackupAdmin() {
               </button>
             </div>
           </div>
-        </div>
-      )}
+      </AdminModalShell>
     </div>
   );
 }

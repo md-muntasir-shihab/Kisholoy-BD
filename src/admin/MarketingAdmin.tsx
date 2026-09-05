@@ -21,11 +21,16 @@ import {
 import { AdminHelpButton } from '../components/admin/AdminHelpModal';
 import { MARKETING_HELP_DATA } from './marketingHelpData';
 import { MarketingCommandCenter } from './MarketingCommandCenter';
+import { AdminModalShell } from '../components/admin/AdminModalShell';
+import { usePendingAction } from '../hooks/usePendingAction';
 
 type ActiveTab = 'SEGMENTS' | 'CARTS' | 'CAMPAIGNS' | 'REFERRALS' | 'CRM' | 'COMMAND';
 
 export function MarketingAdmin() {
   const { language, showToast, logAudit } = useApp();
+
+  // F-306: blocks duplicate submits while a mutation is in flight.
+  const { run, isPending, isBusy } = usePendingAction();
   const [activeTab, setActiveTab] = useState<ActiveTab>(() => {
     // Deep-link support: /admin/marketing?tab=command lands directly on the Command Center
     try {
@@ -174,7 +179,7 @@ export function MarketingAdmin() {
   };
 
   // Add CRM Note
-  const handleAddNote = async () => {
+  const handleAddNote = async () =>  run('handleAddNote', async () => {
     if (!selectedCustomerCrm || !newNoteText.trim()) return;
     try {
       const res = await fetch(`/api/marketing/customers-crm/${selectedCustomerCrm.customer.id}/notes`, {
@@ -195,10 +200,10 @@ export function MarketingAdmin() {
     } catch (e) {
       showToast('Error saving note');
     }
-  };
+    });
 
   // Toggle Customer Tag
-  const handleToggleTag = async (tag: string) => {
+  const handleToggleTag = async (tag: string) =>  run('handleToggleTag', async () => {
     if (!selectedCustomerCrm || !tag.trim()) return;
     try {
       const res = await fetch(`/api/marketing/customers-crm/${selectedCustomerCrm.customer.id}/tags`, {
@@ -219,10 +224,10 @@ export function MarketingAdmin() {
     } catch (e) {
       showToast('Error updating tag');
     }
-  };
+    });
 
   // Dispatch Abandoned Cart Recovery Nudge
-  const handleSendCartNudge = async () => {
+  const handleSendCartNudge = async () =>  run('handleSendCartNudge', async () => {
     if (!showCartNudgeModal) return;
     try {
       const res = await fetch(`/api/marketing/abandoned-carts/${showCartNudgeModal.id}/recover`, {
@@ -247,11 +252,14 @@ export function MarketingAdmin() {
     } catch (e) {
       showToast('Network error dispatching recovery nudge');
     }
-  };
+    });
 
   // Create Campaign
-  const handleCreateCampaign = async (e: React.FormEvent) => {
+    const handleCreateCampaign = async (e: React.FormEvent) => {
+    // Must fire synchronously. Inside run() it would land in a microtask and
+    // the browser would submit the form and reload the page first.
     e.preventDefault();
+    return run('handleCreateCampaign', async () => {
     if (!campaignForm.campaignName || !campaignForm.contentEn) {
       showToast('Please fill all required campaign fields');
       return;
@@ -274,10 +282,11 @@ export function MarketingAdmin() {
     } catch (e) {
       showToast('Network error creating campaign');
     }
+    });
   };
 
   // Dispatch Campaign
-  const handleDispatchCampaign = async (campaignId: string) => {
+  const handleDispatchCampaign = async (campaignId: string) =>  run('handleDispatchCampaign', async () => {
     try {
       const res = await fetch(`/api/marketing/campaigns/${campaignId}/dispatch`, {
         method: 'POST'
@@ -293,10 +302,10 @@ export function MarketingAdmin() {
     } catch (e) {
       showToast('Error dispatching campaign');
     }
-  };
+    });
 
   // Disburse Referral Reward
-  const handleDisburseReferral = async (referralId: string) => {
+  const handleDisburseReferral = async (referralId: string) =>  run('handleDisburseReferral', async () => {
     try {
       const res = await fetch(`/api/marketing/referrals/disburse/${referralId}`, {
         method: 'POST'
@@ -312,11 +321,14 @@ export function MarketingAdmin() {
     } catch (e) {
       showToast('Error disbursing reward');
     }
-  };
+    });
 
   // Update Referral Config
-  const handleUpdateConfig = async (e: React.FormEvent) => {
+    const handleUpdateConfig = async (e: React.FormEvent) => {
+    // Must fire synchronously. Inside run() it would land in a microtask and
+    // the browser would submit the form and reload the page first.
     e.preventDefault();
+    return run('handleUpdateConfig', async () => {
     if (!referralConfig) return;
     try {
       const res = await fetch('/api/marketing/referrals/config', {
@@ -333,6 +345,7 @@ export function MarketingAdmin() {
     } catch (e) {
       showToast('Error updating configuration');
     }
+    });
   };
 
   return (
@@ -1136,8 +1149,14 @@ export function MarketingAdmin() {
       {/* ===================================================================== */}
       {/* MODAL: CUSTOMER 360° DRAWER                                          */}
       {/* ===================================================================== */}
-      {selectedCustomerCrm && (
-        <div className="fixed inset-0 z-50 bg-stone-900/60 backdrop-blur-xs flex items-center justify-end">
+      <AdminModalShell
+        open={!!selectedCustomerCrm}
+        onClose={() => setSelectedCustomerCrm(null)}
+        label=""
+        // Contains a form: a stray backdrop click must not discard entered data.
+        closeOnBackdrop={false}
+        overlayClassName="fixed inset-0 z-50 bg-stone-900/60 backdrop-blur-xs flex items-center justify-end"
+      >
           <div className="bg-white w-full max-w-2xl h-full shadow-2xl p-6 overflow-y-auto space-y-6">
             <div className="flex items-center justify-between border-b border-stone-200 pb-4">
               <div>
@@ -1273,14 +1292,19 @@ export function MarketingAdmin() {
               </div>
             </div>
           </div>
-        </div>
-      )}
+      </AdminModalShell>
 
       {/* ===================================================================== */}
       {/* MODAL: CART RECOVERY NUDGE                                            */}
       {/* ===================================================================== */}
-      {showCartNudgeModal && (
-        <div className="fixed inset-0 z-50 bg-stone-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+      <AdminModalShell
+        open={!!showCartNudgeModal}
+        onClose={() => setShowCartNudgeModal(null)}
+        label=""
+        // Contains a form: a stray backdrop click must not discard entered data.
+        closeOnBackdrop={false}
+        overlayClassName="fixed inset-0 z-50 bg-stone-900/60 backdrop-blur-xs flex items-center justify-center p-4"
+      >
           <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl space-y-4">
             <div className="flex items-center justify-between border-b border-stone-200 pb-3">
               <h3 className="text-sm font-bold text-stone-900">
@@ -1360,14 +1384,19 @@ export function MarketingAdmin() {
               </button>
             </div>
           </div>
-        </div>
-      )}
+      </AdminModalShell>
 
       {/* ===================================================================== */}
       {/* MODAL: CREATE CAMPAIGN                                                */}
       {/* ===================================================================== */}
-      {showCampaignModal && (
-        <div className="fixed inset-0 z-50 bg-stone-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+      <AdminModalShell
+        open={!!showCampaignModal}
+        onClose={() => setShowCampaignModal(false)}
+        label=""
+        // Contains a form: a stray backdrop click must not discard entered data.
+        closeOnBackdrop={false}
+        overlayClassName="fixed inset-0 z-50 bg-stone-900/60 backdrop-blur-xs flex items-center justify-center p-4"
+      >
           <form onSubmit={handleCreateCampaign} className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-xl space-y-4">
             <div className="flex items-center justify-between border-b border-stone-200 pb-3">
               <h3 className="text-sm font-bold text-stone-900">
@@ -1379,7 +1408,7 @@ export function MarketingAdmin() {
             </div>
 
             <div className="space-y-3 text-xs">
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="font-bold text-stone-700 block mb-1">Campaign Name (English)</label>
                   <input
@@ -1403,7 +1432,7 @@ export function MarketingAdmin() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="font-bold text-stone-700 block mb-1">Target Segment</label>
                   <select
@@ -1457,7 +1486,7 @@ export function MarketingAdmin() {
                 </span>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="font-bold text-stone-700 block mb-1">Attribution Coupon</label>
                   <input
@@ -1495,14 +1524,19 @@ export function MarketingAdmin() {
               </button>
             </div>
           </form>
-        </div>
-      )}
+      </AdminModalShell>
 
       {/* ===================================================================== */}
       {/* MODAL: REFERRAL CONFIGURATION                                         */}
       {/* ===================================================================== */}
-      {showConfigModal && referralConfig && (
-        <div className="fixed inset-0 z-50 bg-stone-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+      <AdminModalShell
+        open={!!(showConfigModal && referralConfig)}
+        onClose={() => setShowConfigModal(false)}
+        label=""
+        // Contains a form: a stray backdrop click must not discard entered data.
+        closeOnBackdrop={false}
+        overlayClassName="fixed inset-0 z-50 bg-stone-900/60 backdrop-blur-xs flex items-center justify-center p-4"
+      >
           <form onSubmit={handleUpdateConfig} className="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl space-y-4">
             <div className="flex items-center justify-between border-b border-stone-200 pb-3">
               <h3 className="text-sm font-bold text-stone-900">
@@ -1587,8 +1621,7 @@ export function MarketingAdmin() {
               </button>
             </div>
           </form>
-        </div>
-      )}
+      </AdminModalShell>
     </div>
   );
 }

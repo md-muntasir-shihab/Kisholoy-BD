@@ -18,6 +18,8 @@ import { AdminUrgentAlertBanner } from '../components/admin/AdminUrgentAlertBann
 import { ScannerModal } from '../components/scan/ScannerModal';
 import { LanguageButton } from '../components/layout/LanguageButton';
 import { ThemeButton } from '../components/layout/ThemeButton';
+import { AUTH_EXPIRED_EVENT, setStaffToken, getStaffToken, apiFetchJson } from '../lib/apiClient';
+import { StaffLoginScreen } from './StaffLoginScreen';
 
 // Route Access Control Matrix
 const ROUTE_PERMISSIONS: Record<string, { requiredPermission: string; allowedRoles: Role[] }> = {
@@ -48,6 +50,40 @@ const ROUTE_PERMISSIONS: Record<string, { requiredPermission: string; allowedRol
 
 export function AdminLayout() {
   const { currentRole, setCurrentRole, orders, products, language, setLanguage, siteContent, showToast } = useApp();
+
+  // Staff session gate. The server now enforces RBAC on every admin mutation,
+  // so the panel must hold a real staff token rather than trusting a local
+  // role dropdown. `checking` avoids flashing the login screen while we
+  // revalidate an existing token on mount.
+  const [staffAuthed, setStaffAuthed] = useState<boolean>(() => !!getStaffToken());
+  const [checkingSession, setCheckingSession] = useState<boolean>(() => !!getStaffToken());
+
+  useEffect(() => {
+    let cancelled = false;
+    const token = getStaffToken();
+    if (!token) {
+      setStaffAuthed(false);
+      setCheckingSession(false);
+      return;
+    }
+    apiFetchJson('/api/security/auth/verify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token }),
+    }).then((data) => {
+      if (cancelled) return;
+      if (data?.valid) {
+        setStaffAuthed(true);
+        if (data.role) setCurrentRole(data.role);
+      } else {
+        setStaffToken(null);
+        setStaffAuthed(false);
+      }
+      setCheckingSession(false);
+    });
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [guideModalOpen, setGuideModalOpen] = useState(false);
   const [guideInitialSection, setGuideInitialSection] = useState<string>('all');
@@ -56,6 +92,26 @@ export function AdminLayout() {
   const [scannerOpen, setScannerOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
+
+  // PHASE 4: the mobile nav drawer is an overlay, so it needs the same
+  // affordances as a dialog — Escape to dismiss, and a scroll lock so the page
+  // behind it does not scroll under the user's finger while it is open.
+  useEffect(() => {
+    if (!sidebarOpen) return;
+
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setSidebarOpen(false);
+    };
+    document.addEventListener('keydown', onKey);
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [sidebarOpen]);
 
   // Sidebar accordion: expanded section ids (auto-open the active section).
   const [expandedSections, setExpandedSections] = useState<Set<string>>(() => new Set(['sales-operations']));
@@ -68,6 +124,23 @@ export function AdminLayout() {
       return next;
     });
   }, [location.pathname]);
+  // Staff session expiry gate.
+  // `kisholoy-auth-expired` is dispatched by apiClient ONLY for 401s coming
+  // back from staff-guarded API paths while a staff token was actually sent.
+  // A stale customer/portal token 401 in this tab can no longer log the whole
+  // admin panel out. We double-check the scope here as a defensive guard.
+  useEffect(() => {
+    const onAuthExpired = (e: Event) => {
+      const detail = (e as CustomEvent)?.detail || {};
+      if (detail.scope && detail.scope !== 'STAFF') return;
+      setStaffToken(null);
+      showToast('Staff session expired. Please sign in again.');
+      setStaffAuthed(false);
+    };
+    window.addEventListener(AUTH_EXPIRED_EVENT, onAuthExpired as EventListener);
+    return () => window.removeEventListener(AUTH_EXPIRED_EVENT, onAuthExpired as EventListener);
+  }, [navigate, setCurrentRole, showToast]);
+
   const toggleSection = (id: string) => {
     setExpandedSections((prev) => {
       const next = new Set(prev);
@@ -124,8 +197,35 @@ export function AdminLayout() {
     return rule.allowedRoles.includes(currentRole);
   };
 
+  if (checkingSession) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-stone-100 dark:bg-slate-950">
+        <div className="flex items-center gap-2 text-sm text-stone-500 dark:text-slate-400">
+          <span className="w-4 h-4 rounded-full border-2 border-teal-800 border-t-transparent animate-spin" />
+          {language === 'BN' ? 'সেশন যাচাই করা হচ্ছে…' : 'Verifying session…'}
+        </div>
+      </div>
+    );
+  }
+
+  if (!staffAuthed) {
+    return (
+      <StaffLoginScreen
+        onAuthenticated={(session) => {
+          setCurrentRole(session.role);
+          setStaffAuthed(true);
+          showToast(
+            language === 'BN'
+              ? `স্বাগতম, ${session.name}`
+              : `Welcome back, ${session.name}`
+          );
+        }}
+      />
+    );
+  }
+
   return (
-    <div id="admin-root-layout" className="h-screen overflow-hidden flex flex-col bg-stone-100/90 dark:bg-slate-950 text-stone-900 dark:text-slate-100 font-sans selection:bg-teal-900 selection:text-white transition-colors duration-200">
+    <div id="admin-root-layout" className="h-screen overflow-hidden flex flex-col bg-stone-100/90 dark:bg-slate-950 text-stone-900 dark:text-slate-100 font-sans selection:bg-teal-900 selection:text-white">
       {/* Top Operational Header */}
       <header id="admin-top-header" className="sticky top-0 z-30 bg-white/95 text-stone-900 border-b border-stone-200/90 dark:bg-stone-950/95 dark:text-white dark:border-stone-800/80 h-16 flex items-center justify-between px-4 sm:px-6 shadow-xs backdrop-blur-md transition-colors">
         <div className="flex items-center gap-3">
@@ -235,7 +335,7 @@ export function AdminLayout() {
       {/* Real-time Urgent Operational Marquee/Banner (High Fraud Risk / Pending Settlements) */}
       <AdminUrgentAlertBanner />
 
-      <div className="flex-1 flex min-h-0 overflow-hidden relative">
+      <div className="flex-1 flex min-h-0 overflow-hidden">
         {/* Mobile / Tablet Backdrop Overlay */}
         {sidebarOpen && (
           <div
@@ -248,8 +348,10 @@ export function AdminLayout() {
         {/* Sidebar Navigation */}
         <aside
           id="admin-sidebar"
-          className={`fixed inset-y-0 left-0 z-20 w-72 bg-white dark:bg-stone-950 text-stone-800 dark:text-stone-300 border-r border-stone-200/90 dark:border-stone-800/80 transform transition-transform duration-200 ease-in-out lg:translate-x-0 lg:static lg:inset-0 pt-16 lg:pt-0 min-h-0 flex flex-col ${
-            sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+          className={`fixed inset-y-0 left-0 z-20 w-72 bg-white dark:bg-stone-950 text-stone-800 dark:text-stone-300 border-r border-stone-200/90 dark:border-stone-800/80 transition-transform duration-200 ease-in-out lg:translate-x-0 lg:static lg:inset-0 pt-16 lg:pt-0 min-h-0 flex flex-col ${
+            sidebarOpen
+              ? 'translate-x-0 shadow-2xl lg:shadow-none'
+              : '-translate-x-full pointer-events-none lg:pointer-events-auto'
           }`}
         >
           {/* Identity & Scope Indicator */}
@@ -266,11 +368,7 @@ export function AdminLayout() {
                   {currentRole.replace('_', ' ')}
                 </span>
                 <span className="text-[10px] text-teal-700 dark:text-teal-400 font-mono block truncate">
-arena/01a06c02-kisholoy-bd
-                  {isBn ? 'আরবিএসি সক্রিয়' : 'RBAC Active'} • {isBn ? 'রুলস দেখুন' : 'Click to view rules'}
-
                   {isBn ? 'আরবিএসি সক্রিয়' : 'RBAC Active'} • {isBn ? 'রুলস দেখুন' : 'View rules'}
- main
                 </span>
               </div>
               <KeyRound className="w-3.5 h-3.5 text-stone-400 dark:text-stone-500 group-hover:text-teal-600 dark:group-hover:text-teal-400 transition-colors" />
@@ -327,7 +425,7 @@ arena/01a06c02-kisholoy-bd
                             id={item.id}
                             to={item.path}
                             onClick={() => setSidebarOpen(false)}
-                            className={`relative flex items-center justify-between pl-4 pr-3 py-2 rounded-xl text-xs font-medium transition-all group ${
+                            className={`relative flex items-center justify-between gap-1 pl-3.5 pr-2.5 py-2 rounded-xl text-xs font-medium transition-all group ${
                               isActive
                                 ? 'bg-teal-50 dark:bg-teal-900/40 text-teal-900 dark:text-teal-200 font-semibold shadow-xs border border-teal-200/60 dark:border-teal-800/60'
                                 : 'text-stone-600 dark:text-stone-400 hover:bg-stone-100 dark:hover:bg-stone-900 hover:text-stone-900 dark:hover:text-stone-100'
@@ -336,26 +434,21 @@ arena/01a06c02-kisholoy-bd
                             {isActive && (
                               <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 rounded-r-full bg-teal-600" />
                             )}
-                            <div className="flex items-center gap-2.5 truncate">
+                            <span className="flex items-center gap-2.5 min-w-0 flex-1">
                               <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-teal-700 dark:text-teal-300' : 'text-stone-400 dark:text-stone-500 group-hover:text-stone-600 dark:group-hover:text-stone-300'}`} />
-                              <span className="truncate font-medium">{isBn ? item.labelBn : item.label}</span>
-                            </div>
-
- arena/01a06c02-kisholoy-bd
-                            <div className="flex items-center gap-1.5 shrink-0">
-                              {badge && (
-                                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${badge.color}`}>
-                                  {isBn ? badge.labelBn : badge.label}
-                                </span>
-                              )}
-                            </div>
+                              <span className="truncate font-medium" title={isBn ? item.labelBn : item.label}>
+                                {isBn ? item.labelBn : item.label}
+                              </span>
+                            </span>
 
                             {badge && (
-                              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ml-2 ${badge.color}`}>
-                                {isBn ? badge.labelBn : badge.label}
+                              <span
+                                className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full shrink-0 ml-1.5 tabular-nums ${badge.color}`}
+                                title={isBn ? badge.labelBn : badge.label}
+                              >
+                                {badge.count ?? (isBn ? badge.labelBn : badge.label)}
                               </span>
                             )}
-main
                           </Link>
                         );
                       })}
