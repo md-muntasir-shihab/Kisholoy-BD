@@ -221,7 +221,7 @@ export const AdvancedSupplierLedgerModal: React.FC<AdvancedSupplierLedgerModalPr
                   <button
                     onClick={onRefresh}
                     title="রিফ্রেশ করুন"
-                    className="p-1.5 sm:p-2 text-stone-300 hover:text-white bg-stone-800 hover:bg-stone-700 rounded-lg transition-colors"
+                    className="p-1.5 sm:p-2 text-stone-300 hover:text-white bg-stone-800 hover:bg-stone-700 rounded-lg transition-colors min-w-11 min-h-11 sm:min-w-0 sm:min-h-0 inline-flex items-center justify-center"
                   >
                     <RefreshCw className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${loading ? 'animate-spin text-amber-400' : ''}`} />
                   </button>
@@ -1327,7 +1327,7 @@ export const AdvancedSupplierLedgerModal: React.FC<AdvancedSupplierLedgerModalPr
             </div>
           </div>
 
-          <table className="w-full text-left text-xs border-collapse border">
+          <div className="overflow-x-auto -mx-3 px-3 sm:mx-0 sm:px-0"><table className="w-full text-left text-xs border-collapse border">
             <thead>
               <tr className="bg-stone-100 border">
                 <th className="p-2 border">Date</th>
@@ -1350,7 +1350,7 @@ export const AdvancedSupplierLedgerModal: React.FC<AdvancedSupplierLedgerModalPr
                 </tr>
               ))}
             </tbody>
-          </table>
+          </table></div>
 
           <div className="pt-12 flex justify-between text-xs">
             <div className="text-center border-t border-black pt-1 w-40">Accounts Officer</div>

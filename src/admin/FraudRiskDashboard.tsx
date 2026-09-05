@@ -1275,7 +1275,7 @@ export const FraudRiskDashboard: React.FC<FraudDashboardProps> = ({
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <label className="text-xs font-semibold text-gray-700">District / City</label>
                   <select
@@ -1564,7 +1564,7 @@ export const FraudRiskDashboard: React.FC<FraudDashboardProps> = ({
               </div>
 
               {actionType === 'ADVANCE_FEE_PAID' && (
-                <div className="grid grid-cols-2 gap-3 bg-emerald-50/50 p-3 rounded-lg border border-emerald-200">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-emerald-50/50 p-3 rounded-lg border border-emerald-200">
                   <div className="space-y-1">
                     <label className="text-xs font-semibold text-gray-700">Advance Amount (৳)</label>
                     <input

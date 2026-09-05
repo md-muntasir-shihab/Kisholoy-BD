@@ -680,7 +680,7 @@ Sylhet Cane & Bamboo Crafts,Farhan Chowdhury,+8801644556677,cane@sylhetcrafts.bd
 
               <div className="border border-stone-200 rounded-xl overflow-hidden shadow-2xs">
                 <div className="max-h-60 overflow-y-auto">
-                  <table className="w-full text-left border-collapse text-xs">
+                  <div className="overflow-x-auto -mx-3 px-3 sm:mx-0 sm:px-0"><table className="w-full text-left border-collapse text-xs">
                     <thead>
                       <tr className="bg-stone-100 text-stone-700 font-semibold border-b border-stone-200 sticky top-0 z-10">
                         <th className="py-2.5 px-3">#</th>
@@ -749,7 +749,7 @@ Sylhet Cane & Bamboo Crafts,Farhan Chowdhury,+8801644556677,cane@sylhetcrafts.bd
                         </tr>
                       ))}
                     </tbody>
-                  </table>
+                  </table></div>
                 </div>
               </div>
             </div>

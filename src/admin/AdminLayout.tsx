@@ -93,6 +93,26 @@ export function AdminLayout() {
   const location = useLocation();
   const navigate = useNavigate();
 
+  // PHASE 4: the mobile nav drawer is an overlay, so it needs the same
+  // affordances as a dialog — Escape to dismiss, and a scroll lock so the page
+  // behind it does not scroll under the user's finger while it is open.
+  useEffect(() => {
+    if (!sidebarOpen) return;
+
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setSidebarOpen(false);
+    };
+    document.addEventListener('keydown', onKey);
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [sidebarOpen]);
+
   // Sidebar accordion: expanded section ids (auto-open the active section).
   const [expandedSections, setExpandedSections] = useState<Set<string>>(() => new Set(['sales-operations']));
   useEffect(() => {

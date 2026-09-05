@@ -447,7 +447,7 @@ export function OperationsAdmin() {
             <button
               onClick={fetchOperationsData}
               disabled={loading}
-              className="p-2.5 bg-stone-800 hover:bg-stone-700 text-stone-300 hover:text-white rounded-xl transition-colors"
+              className="p-2.5 bg-stone-800 hover:bg-stone-700 text-stone-300 hover:text-white rounded-xl transition-colors min-w-11 min-h-11 sm:min-w-0 sm:min-h-0 inline-flex items-center justify-center"
               title="Refresh telemetry"
             >
               <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
@@ -679,7 +679,7 @@ export function OperationsAdmin() {
               </div>
 
               <form onSubmit={handleDirectDispatch} className="space-y-3">
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="text-xs font-bold text-stone-700 block mb-1">Target Channel</label>
                     <select
@@ -1604,7 +1604,7 @@ export function OperationsAdmin() {
             </div>
 
             <div className="space-y-3 text-xs">
-              <div className="grid grid-cols-3 gap-2 bg-stone-50 p-2.5 rounded-lg font-mono">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 bg-stone-50 p-2.5 rounded-lg font-mono">
                 <div>
                   <span className="text-[10px] text-stone-400 block">Event</span>
                   <span className="font-bold text-stone-900">{selectedNotificationLog.eventKey}</span>

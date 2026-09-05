@@ -203,7 +203,7 @@ export const SupplierAgreementsView: React.FC<SupplierAgreementsViewProps> = ({
           <button
             type="button"
             onClick={loadAgreements}
-            className="p-2 text-stone-600 hover:text-stone-900 bg-stone-100 hover:bg-stone-200 rounded-lg transition-colors"
+            className="p-2 text-stone-600 hover:text-stone-900 bg-stone-100 hover:bg-stone-200 rounded-lg transition-colors min-w-11 min-h-11 sm:min-w-0 sm:min-h-0 inline-flex items-center justify-center"
             title="Refresh Agreements"
           >
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
@@ -422,7 +422,7 @@ export const SupplierAgreementsView: React.FC<SupplierAgreementsViewProps> = ({
               </div>
 
               {/* Settlement Method */}
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-bold text-stone-700 mb-1">
                     Settlement Method *
@@ -514,7 +514,7 @@ export const SupplierAgreementsView: React.FC<SupplierAgreementsViewProps> = ({
               )}
 
               {/* Effective Dates & Status */}
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-bold text-stone-700 mb-1">
                     Effective From

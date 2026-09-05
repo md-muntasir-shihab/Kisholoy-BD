@@ -1329,7 +1329,7 @@ export function MarketingAdmin() {
             <div className="space-y-3 text-xs">
               <div>
                 <label className="font-bold text-stone-700 block mb-1">Communication Channel</label>
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                   {(['SMS', 'WHATSAPP', 'EMAIL'] as const).map(ch => (
                     <button
                       key={ch}
@@ -1408,7 +1408,7 @@ export function MarketingAdmin() {
             </div>
 
             <div className="space-y-3 text-xs">
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="font-bold text-stone-700 block mb-1">Campaign Name (English)</label>
                   <input
@@ -1432,7 +1432,7 @@ export function MarketingAdmin() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="font-bold text-stone-700 block mb-1">Target Segment</label>
                   <select
@@ -1486,7 +1486,7 @@ export function MarketingAdmin() {
                 </span>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="font-bold text-stone-700 block mb-1">Attribution Coupon</label>
                   <input

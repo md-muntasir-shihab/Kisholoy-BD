@@ -1032,7 +1032,7 @@ export function FinanceAdmin() {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-stone-600 font-semibold mb-1">Amount (BDT ৳) *</label>
                   <input
@@ -1136,7 +1136,7 @@ export function FinanceAdmin() {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-stone-600 font-semibold mb-1">Gross Amount (৳) *</label>
                   <input

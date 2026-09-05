@@ -180,7 +180,7 @@ function ModalShell({ title, onClose, children, wide }: { title: React.ReactNode
       >
         <div className="flex items-center justify-between px-5 py-3.5 border-b border-stone-200 dark:border-slate-800 bg-white dark:bg-slate-900 sticky top-0 z-10 rounded-t-2xl">
           <h3 className="text-sm font-black text-stone-900 dark:text-slate-100">{title}</h3>
-          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-stone-200 dark:hover:bg-slate-800 text-stone-500 dark:text-slate-400">
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-stone-200 dark:hover:bg-slate-800 text-stone-500 dark:text-slate-400 min-w-11 min-h-11 sm:min-w-0 sm:min-h-0 inline-flex items-center justify-center">
             <Ban className="w-4 h-4 rotate-45" />
           </button>
         </div>
@@ -983,7 +983,7 @@ export function MarketingCommandCenter() {
               </div>
               <span className="text-[9px] font-black px-2 py-0.5 rounded-full bg-teal-100 text-teal-800 dark:bg-teal-950/50 dark:text-teal-300">{isBn ? 'অর্ডার ডেটা অপরিবর্তিত' : 'Orders untouched'}</span>
             </div>
-            <table className="w-full text-left text-[11px] mt-1">
+            <div className="overflow-x-auto -mx-3 px-3 sm:mx-0 sm:px-0"><table className="w-full text-left text-[11px] mt-1">
               <thead>
                 <tr className="text-[9px] uppercase tracking-wider text-stone-500 dark:text-slate-400 border-b border-stone-200 dark:border-slate-800">
                   <th className="py-2 px-3 font-black">{isBn ? 'অর্ডার' : 'Order'}</th>
@@ -1025,7 +1025,7 @@ export function MarketingCommandCenter() {
                   </td></tr>
                 )}
               </tbody>
-            </table>
+            </table></div>
           </div>
         </div>
       )}
@@ -1191,7 +1191,7 @@ export function MarketingCommandCenter() {
                 <input type="number" min="0.01" step="0.01" value={spendForm.amountBdt} onChange={(e) => setSpendForm({ ...spendForm, amountBdt: e.target.value })} className={inputCls} placeholder="2500" required />
               </Field>
             </div>
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <Field label={isBn ? 'ইম্প্রেশন' : 'Impressions'}>
                 <input type="number" min="0" step="1" value={spendForm.impressions} onChange={(e) => setSpendForm({ ...spendForm, impressions: e.target.value })} className={inputCls} placeholder="0" />
               </Field>
@@ -1392,7 +1392,7 @@ export function MarketingCommandCenter() {
             <p className="font-black text-stone-800 dark:text-slate-200">{statusTarget.name}</p>
             <p className="font-mono text-stone-400 text-[10px]">@{statusTarget.handle} · {statusTarget.type}</p>
           </div>
-          <div className="grid grid-cols-3 gap-2 mb-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-3">
             {(['ACTIVE', 'PAUSED', 'ARCHIVED'] as AdChannelStatus[]).map((st) => (
               <button
                 key={st}

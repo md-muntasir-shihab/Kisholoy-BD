@@ -457,7 +457,7 @@ export function Customer360Modal({
           <div className="flex items-center gap-2">
             <button
               onClick={fetchCustomerDetails}
-              className="p-2 text-stone-400 hover:text-white rounded-lg hover:bg-stone-800 transition-colors"
+              className="p-2 text-stone-400 hover:text-white rounded-lg hover:bg-stone-800 transition-colors min-w-11 min-h-11 sm:min-w-0 sm:min-h-0 inline-flex items-center justify-center"
               title="Refresh profile data"
             >
               <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-teal-400' : ''}`} />

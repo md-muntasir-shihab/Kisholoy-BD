@@ -953,7 +953,7 @@ export function SuppliersAdmin() {
                 No purchase orders found. Click "Issue New PO" to create one.
               </div>
             ) : (
-              <table className="w-full text-xs">
+              <div className="overflow-x-auto -mx-3 px-3 sm:mx-0 sm:px-0"><table className="w-full text-xs">
                 <thead>
                   <tr className="bg-stone-50 border-b border-stone-200 text-stone-500">
                     <th className="text-left px-4 py-2 font-bold">PO Number</th>
@@ -990,7 +990,7 @@ export function SuppliersAdmin() {
                     </tr>
                   ))}
                 </tbody>
-              </table>
+              </table></div>
             )}
           </div>
         </div>
@@ -1181,7 +1181,7 @@ export function SuppliersAdmin() {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-stone-600 font-semibold mb-1">Contact Person *</label>
                   <input
@@ -1218,7 +1218,7 @@ export function SuppliersAdmin() {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-stone-600 font-semibold mb-1">Payment Terms</label>
                   <select
@@ -1307,7 +1307,7 @@ export function SuppliersAdmin() {
                 </select>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-stone-600 font-semibold mb-1">Receiving Warehouse Hub</label>
                   <select
@@ -1455,7 +1455,7 @@ export function SuppliersAdmin() {
                 )}
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-stone-600 font-semibold mb-1">Disbursement Method</label>
                   <select

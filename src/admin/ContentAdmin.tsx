@@ -846,7 +846,7 @@ export function ContentAdmin() {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 bg-stone-50 rounded-xl border border-stone-200">
                     <div className="space-y-3">
                       <span className="font-bold text-stone-800 text-xs block">Primary Action Button</span>
-                      <div className="grid grid-cols-2 gap-2">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                         <input
                           type="text"
                           placeholder="Text (EN)"
@@ -873,7 +873,7 @@ export function ContentAdmin() {
 
                     <div className="space-y-3">
                       <span className="font-bold text-stone-800 text-xs block">Secondary Action Button</span>
-                      <div className="grid grid-cols-2 gap-2">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                         <input
                           type="text"
                           placeholder="Text (EN)"

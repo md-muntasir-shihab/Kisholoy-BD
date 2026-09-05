@@ -396,7 +396,7 @@ export function AuditAdmin() {
           <button
             onClick={fetchLedger}
             disabled={loading}
-            className="p-2 border border-stone-200 rounded-lg hover:bg-stone-50 text-stone-500"
+            className="p-2 border border-stone-200 rounded-lg hover:bg-stone-50 text-stone-500 min-w-11 min-h-11 sm:min-w-0 sm:min-h-0 inline-flex items-center justify-center"
             title="Reload Ledger"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />

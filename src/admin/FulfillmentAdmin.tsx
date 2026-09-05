@@ -1354,7 +1354,7 @@ export const FulfillmentAdmin: React.FC = () => {
             </div>
 
             <div className="space-y-3 text-sm">
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                 <div>
                   <label className="block text-xs font-semibold text-stone-700 mb-1">Aisle</label>
                   <input
@@ -1387,7 +1387,7 @@ export const FulfillmentAdmin: React.FC = () => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3 pt-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
                 <div>
                   <label className="block text-xs font-semibold text-stone-700 mb-1">Reorder Alert Level</label>
                   <input

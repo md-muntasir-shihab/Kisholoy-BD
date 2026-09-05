@@ -729,7 +729,7 @@ export function InventoryAdmin() {
               </div>
 
               <div className="border border-stone-200 rounded-xl overflow-hidden">
-                <table className="w-full text-left text-xs">
+                <div className="overflow-x-auto -mx-3 px-3 sm:mx-0 sm:px-0"><table className="w-full text-left text-xs">
                   <thead className="bg-stone-100 text-stone-600 font-bold uppercase tracking-wider border-b border-stone-200">
                     <tr>
                       <th className="p-3 w-1/3">Target SKU / Product</th>
@@ -806,7 +806,7 @@ export function InventoryAdmin() {
                       </tr>
                     ))}
                   </tbody>
-                </table>
+                </table></div>
               </div>
             </div>
 
@@ -1249,7 +1249,7 @@ export function InventoryAdmin() {
               </div>
 
               {/* Warehouse & Lot Batch */}
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="font-bold text-stone-700 block mb-1">Warehouse Hub</label>
                   <select

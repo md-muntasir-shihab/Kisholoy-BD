@@ -1112,7 +1112,7 @@ export const SupplierSettlementsView: React.FC<SupplierSettlementsViewProps> = (
                 </select>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-bold text-stone-700 mb-1">Period Start *</label>
                   <input
@@ -1268,7 +1268,7 @@ export const SupplierSettlementsView: React.FC<SupplierSettlementsViewProps> = (
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-bold text-stone-700 mb-1">Payment Method *</label>
                   <select

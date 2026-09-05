@@ -205,7 +205,7 @@ export function DateRangeFilterBar({
             <button
               type="button"
               onClick={handleReset}
-              className="p-1.5 rounded-xl bg-stone-800 hover:bg-stone-750 text-stone-400 hover:text-stone-200 border border-stone-700 transition-colors"
+              className="p-1.5 rounded-xl bg-stone-800 hover:bg-stone-750 text-stone-400 hover:text-stone-200 border border-stone-700 transition-colors min-w-11 min-h-11 sm:min-w-0 sm:min-h-0 inline-flex items-center justify-center"
               title={isBn ? 'ফিল্টার রিসেট করুন' : 'Reset Date Filter'}
             >
               <RotateCcw className="w-3.5 h-3.5" />

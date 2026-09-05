@@ -209,7 +209,7 @@ export const SupplyBatchesView: React.FC<SupplyBatchesViewProps> = ({
           <button
             type="button"
             onClick={loadBatches}
-            className="p-2 text-stone-600 hover:text-stone-900 bg-stone-100 hover:bg-stone-200 rounded-lg"
+            className="p-2 text-stone-600 hover:text-stone-900 bg-stone-100 hover:bg-stone-200 rounded-lg min-w-11 min-h-11 sm:min-w-0 sm:min-h-0 inline-flex items-center justify-center"
           >
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
           </button>
@@ -393,7 +393,7 @@ export const SupplyBatchesView: React.FC<SupplyBatchesViewProps> = ({
               </div>
 
               {/* Quantity and Costs */}
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
                   <label className="block text-xs font-bold text-stone-700 mb-1">
                     Received Qty *
@@ -437,7 +437,7 @@ export const SupplyBatchesView: React.FC<SupplyBatchesViewProps> = ({
               </div>
 
               {/* Settlement Method & Share */}
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-bold text-stone-700 mb-1">
                     Settlement Method *

@@ -1831,7 +1831,7 @@ export function AccountPage() {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="text-stone-700 font-bold block mb-1">Mobile Phone *</label>
                   <input
@@ -1855,7 +1855,7 @@ export function AccountPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="text-stone-700 font-bold block mb-1">Division *</label>
                   <select
@@ -1886,7 +1886,7 @@ export function AccountPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="text-stone-700 font-bold block mb-1">Thana / Upazila / Area *</label>
                   <input
@@ -1974,7 +1974,7 @@ export function AccountPage() {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="text-stone-700 font-bold block mb-1">Reason for Return *</label>
                   <select

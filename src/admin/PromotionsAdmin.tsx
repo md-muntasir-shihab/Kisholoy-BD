@@ -361,7 +361,7 @@ export function PromotionsAdmin() {
         <div className="flex items-center gap-2">
           <button
             onClick={fetchPromotionData}
-            className="p-2 text-stone-500 hover:text-stone-900 hover:bg-stone-100 rounded-xl transition-colors"
+            className="p-2 text-stone-500 hover:text-stone-900 hover:bg-stone-100 rounded-xl transition-colors min-w-11 min-h-11 sm:min-w-0 sm:min-h-0 inline-flex items-center justify-center"
             title="Refresh Data"
           >
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
@@ -871,7 +871,7 @@ export function PromotionsAdmin() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-semibold text-stone-700 mb-1">Cart Subtotal (৳)</label>
                   <input
@@ -1020,7 +1020,7 @@ export function PromotionsAdmin() {
             </div>
 
             <form onSubmit={handleSaveCoupon} className="space-y-4 text-xs">
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block font-semibold text-stone-700 mb-1">Coupon Code (Uppercase)</label>
                   <input
@@ -1048,7 +1048,7 @@ export function PromotionsAdmin() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block font-semibold text-stone-700 mb-1">Campaign Title (English)</label>
                   <input
@@ -1072,7 +1072,7 @@ export function PromotionsAdmin() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
                   <label className="block font-semibold text-stone-700 mb-1">
                     {formData.discountType === 'PERCENTAGE' ? 'Discount Percentage (%)' : 'Discount Amount (৳)'}
@@ -1110,7 +1110,7 @@ export function PromotionsAdmin() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block font-semibold text-stone-700 mb-1">Valid From</label>
                   <input
@@ -1133,7 +1133,7 @@ export function PromotionsAdmin() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block font-semibold text-stone-700 mb-1">Total Usage Limit (Quota)</label>
                   <input
@@ -1228,7 +1228,7 @@ export function PromotionsAdmin() {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block font-semibold text-stone-700 mb-1">Points Delta (+ or -)</label>
                   <input

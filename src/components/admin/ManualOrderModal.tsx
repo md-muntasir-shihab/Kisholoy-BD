@@ -913,7 +913,7 @@ ${address}, ${thana ? `${thana}, ` : ''}${district}
 
                     {hasAdvancePayment && (
                       <div className="space-y-2.5 pt-2 border-t border-amber-200/60">
-                        <div className="grid grid-cols-2 gap-2">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                           <div>
                             <label className="text-amber-900 font-semibold block mb-1">Advance Amount (BDT)</label>
                             <input

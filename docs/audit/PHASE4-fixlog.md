@@ -565,3 +565,82 @@ through Vite's transform · 10 admin routes 200 · expense create 3→4 ·
 supplier auth still rejects empty and old shared passwords · RMA restock
 12→13→13 (once-only guard holds) · PHASE 3 aggregate unchanged
 (i18n/responsive/aria all 0).
+
+---
+
+## Batch 9 — PHASE 4: mobile and any-device friendliness
+
+The brief asks that the whole site work on any device. The starting position
+was better than expected — `index.html` already sets the viewport, and 77 of
+100 `.tsx` files already use breakpoints — so this was not a rewrite. It was
+finding the specific places where the layout genuinely breaks at 375px.
+
+### Method
+
+Breakpoint density is a shallow metric: a file can be full of `sm:` classes and
+still put four inputs in a row. So each candidate was classified by what it
+actually contains before being touched:
+
+| pattern | count | action |
+|---|---|---|
+| grids holding form fields | 54 | stack to one column, restore at `sm:` |
+| stat pairs (two short numbers) | 31 | **left alone** — reads fine at 375px |
+| triples / 4-up chips | 14 | left alone |
+| 5-step tracker, 7-bar chart | 2 | left alone — not layouts to linearise |
+
+Blanket-converting all 99 unconditional grids would have wrecked the
+TrackOrder stepper and the ReportsAdmin bar chart.
+
+### What changed
+
+- **54 form grids** now stack on phones (`grid-cols-1 sm:grid-cols-N`). At
+  375px a two-column form gives each field about 160px, which is unusable for
+  addresses, phone numbers and money.
+- **8 wide tables** in 6 files wrapped in `overflow-x-auto -mx-3 px-3 sm:mx-0`.
+  The negative margin lets the scroll region reach the screen edge on a phone
+  and reverts to normal at `sm:`. The 5 print templates were **excluded** —
+  they render to paper, where a scroll container is meaningless and risks
+  clipping output.
+- **11 icon-only buttons** grew to a 44px tap target via
+  `min-w-11 min-h-11 sm:min-w-0 sm:min-h-0`. This expands the touch box without
+  changing the visual padding, and only on small screens.
+- **The admin nav drawer** got Escape-to-close and a body scroll lock. It was
+  already a correct off-canvas drawer that closes on navigation, but the page
+  behind it scrolled under the user's finger while open.
+- **3 supplier-portal form rows** that the first pass missed (their first
+  `<label>` sat beyond the look-ahead window).
+
+### Regression guard
+
+`scripts/audit/responsive-audit.mjs` — checks the four failure modes above and
+exits non-zero, so it can gate CI. It encodes the same classifier, so stat
+pairs and charts are not reported.
+
+Three `fixed-width` hits were investigated and confirmed as **false positives**,
+and the auditor now understands them: `sm:w-[420px]` (breakpoint-scoped, with
+`max-w-[95vw]`), `2xl:max-w-[1440px]` (a container cap), and ContentAdmin's
+`w-[375px]` — which is a deliberate simulated phone frame in the storefront
+preview, i.e. a device mock, not a layout bug.
+
+Current state: **form-grid 0 · table-scroll 0 · tap-target 0 · fixed-width 0.**
+
+### Verification
+
+Applying batch 8's lesson — green gates prove compilation, not behaviour — the
+CSS was checked to confirm the utilities were really emitted, not just written:
+`.min-w-11{min-width:calc(var(--spacing)*11)}` = 44px, and
+`.sm\:grid-cols-2` exists under `@media (min-width:40rem)`.
+
+`tsc` clean · build green · smoke 98/9 · all 27 changed modules pass Vite's
+transform · 12 routes 200 across storefront, admin and supplier portal ·
+table wrappers balanced 1:1 with no double-wrapping · grid diff exactly
+symmetric (40 × `cols-2`→`cols-1 sm:cols-2`, 7 × `cols-3`→`cols-1 sm:cols-3`),
+so no layout lost a column at desktop width.
+
+### Honest limitation
+
+This is static analysis plus CSS verification. Playwright was attempted for real
+viewport measurement but the sandbox blocks the browser download, so **nothing
+here has been looked at in an actual 375px browser**. The changes are
+conservative and mechanically symmetric, but a human should still open the
+storefront and two or three admin forms on a phone before this is called done.

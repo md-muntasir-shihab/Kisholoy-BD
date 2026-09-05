@@ -373,7 +373,7 @@ export function SupplierPortalPage() {
             onClick={handleRefresh}
             disabled={refreshing}
             title="Refresh Data"
-            className="p-2 rounded-lg bg-stone-800 hover:bg-stone-700 text-stone-300 transition-colors border border-stone-700 disabled:opacity-50"
+            className="p-2 rounded-lg bg-stone-800 hover:bg-stone-700 text-stone-300 transition-colors border border-stone-700 disabled:opacity-50 min-w-11 min-h-11 sm:min-w-0 sm:min-h-0 inline-flex items-center justify-center"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin text-amber-400' : ''}`} />
           </button>
@@ -1348,7 +1348,7 @@ export function SupplierPortalPage() {
                 <h4 className="font-bold text-xs uppercase tracking-wider text-stone-700 border-b border-stone-200 pb-2">
                   1. Sourced Batches & Warehouse Inventory Status
                 </h4>
-                <table className="w-full text-left text-xs text-stone-700 border border-stone-200">
+                <div className="overflow-x-auto -mx-3 px-3 sm:mx-0 sm:px-0"><table className="w-full text-left text-xs text-stone-700 border border-stone-200">
                   <thead className="bg-stone-100 font-semibold border-b border-stone-200 text-[11px]">
                     <tr>
                       <th className="py-2.5 px-3">Batch Number</th>
@@ -1371,7 +1371,7 @@ export function SupplierPortalPage() {
                       </tr>
                     ))}
                   </tbody>
-                </table>
+                </table></div>
               </div>
 
               {/* Settlement Disbursements in Statement */}
@@ -1379,7 +1379,7 @@ export function SupplierPortalPage() {
                 <h4 className="font-bold text-xs uppercase tracking-wider text-stone-700 border-b border-stone-200 pb-2">
                   2. Settlement History & Payout Disbursed Vouchers
                 </h4>
-                <table className="w-full text-left text-xs text-stone-700 border border-stone-200">
+                <div className="overflow-x-auto -mx-3 px-3 sm:mx-0 sm:px-0"><table className="w-full text-left text-xs text-stone-700 border border-stone-200">
                   <thead className="bg-stone-100 font-semibold border-b border-stone-200 text-[11px]">
                     <tr>
                       <th className="py-2.5 px-3">Date</th>
@@ -1400,7 +1400,7 @@ export function SupplierPortalPage() {
                       </tr>
                     ))}
                   </tbody>
-                </table>
+                </table></div>
               </div>
 
               {/* Signatures & Certification */}
@@ -1586,7 +1586,7 @@ export function SupplierPortalPage() {
                 </div>
               </div>
 
-              <table className="w-full text-left text-xs border border-stone-200">
+              <div className="overflow-x-auto -mx-3 px-3 sm:mx-0 sm:px-0"><table className="w-full text-left text-xs border border-stone-200">
                 <thead className="bg-stone-100 font-semibold border-b border-stone-200">
                   <tr>
                     <th className="p-2.5">Item</th>
@@ -1605,7 +1605,7 @@ export function SupplierPortalPage() {
                     </tr>
                   ))}
                 </tbody>
-              </table>
+              </table></div>
 
               <div className="flex justify-between items-center text-sm font-bold border-t border-stone-200 pt-3">
                 <span>Total Procurement Amount:</span>
@@ -1651,7 +1651,7 @@ export function SupplierPortalPage() {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 <div>
                   <label className="block text-stone-400 mb-1 font-semibold">Phone Number</label>
                   <input
@@ -1686,7 +1686,7 @@ export function SupplierPortalPage() {
               <div className="pt-2 border-t border-stone-800 space-y-2">
                 <span className="text-amber-400 font-bold block text-[11px]">Official Bank Account for Disbursements:</span>
                 
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   <div>
                     <label className="block text-stone-400 mb-1">Bank Name</label>
                     <input
@@ -1708,7 +1708,7 @@ export function SupplierPortalPage() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   <div>
                     <label className="block text-stone-400 mb-1">Account Number</label>
                     <input
