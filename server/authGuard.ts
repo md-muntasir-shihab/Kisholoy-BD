@@ -22,6 +22,7 @@
 import type { Request, Response, NextFunction } from 'express';
 import { securityEngine } from './securityEngine';
 import { serverDb } from './db';
+import { verifySessionToken } from './sessionTokens';
 import type { Role } from '../src/types';
 
 export interface AuthContext {
@@ -54,10 +55,7 @@ const bearerOf = (req: Request): string => {
   return typeof alt === 'string' ? alt.trim() : '';
 };
 
-/** `ksh-cust-sess-<customerId>-<timestamp>` */
-const CUSTOMER_TOKEN_RE = /^ksh-cust-sess-(.+)-\d+$/;
-/** `ksh-sup-token-<supplierId>-<timestamp>` */
-const SUPPLIER_TOKEN_RE = /^ksh-sup-token-(.+)-\d+$/;
+
 
 /**
  * Resolves whoever is calling into `req.auth`. Never rejects — enforcement is
@@ -78,15 +76,17 @@ export function attachAuthContext(req: Request, _res: Response, next: NextFuncti
       return next();
     }
 
-    const cust = CUSTOMER_TOKEN_RE.exec(token);
-    if (cust) {
-      req.auth = { kind: 'CUSTOMER', customerId: cust[1] };
+    // Identity comes from the HMAC-verified payload, never from the raw
+    // token shape — a guessable shape would let anyone impersonate an id.
+    const customerId = verifySessionToken('CUSTOMER', token);
+    if (customerId) {
+      req.auth = { kind: 'CUSTOMER', customerId };
       return next();
     }
 
-    const sup = SUPPLIER_TOKEN_RE.exec(token);
-    if (sup) {
-      req.auth = { kind: 'SUPPLIER', supplierId: sup[1] };
+    const supplierId = verifySessionToken('SUPPLIER', token);
+    if (supplierId) {
+      req.auth = { kind: 'SUPPLIER', supplierId };
       return next();
     }
   }

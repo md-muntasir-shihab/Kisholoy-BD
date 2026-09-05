@@ -97,3 +97,28 @@ Re-verified after the fixes: `GET /api/products` 200 anonymous, `POST
 Note for future batches: the tsx dev watcher served stale routes during this
 review and briefly showed every guard as failing. Restart the server before
 concluding a guard does not work.
+
+### Batch 2b — token forgery (found re-verifying PHASE 3)
+
+Re-checking the batch 2 work turned up an **S1 that undermined the batch 2
+ownership fixes themselves**, plus two related weaknesses.
+
+| # | Finding | Fix | Evidence |
+|---|---|---|---|
+| B2-D · **S1** | **Customer and supplier session tokens were unsigned and guessable.** `attachAuthContext` derived identity from the token *shape* (`ksh-cust-sess-<id>-<ts>`), so a hand-typed `ksh-cust-sess-cust-1-9999999999` authenticated as that customer. The IDOR guards were enforcing a value the attacker chose — `GET /api/customer/profile/cust-1` returned full PII to a fabricated token. | New `server/sessionTokens.ts`: HMAC-SHA256 signed tokens (`<payload>.<sig>`), constant-time compare, identity read only from the verified payload. Unsigned legacy tokens rejected unless `KISHOLOY_ALLOW_LEGACY_TOKENS=true`. Key from `KISHOLOY_SESSION_SECRET`, else a per-process random key. | forged token → 403; real login → 200 own / 403 cross; tampered signature → 403; valid signature replayed on another id → 403 |
+| B2-E · **S2** | The admin "Open Live Vendor Hub" button **fabricated a supplier token in the browser** (`SuppliersAdmin.tsx:1070`), which signing would have silently broken. | New staff-gated `POST /api/suppliers/:id/portal-token` mints a signed token and writes a `SUPPLIER_PORTAL_IMPERSONATE` audit row; the button now calls it. | anon → 401; staff → token; token opens `sup-001` (200) but not `sup-002` (403) |
+| B2-F · **S2** | The hardcoded `ksh-token-super-admin-root-session-2026` SUPER_ADMIN session was created unconditionally — a publicly known credential that would ship to production. | Skipped when `NODE_ENV=production` or `KISHOLOY_DISABLE_ROOT_TOKEN=true`; kept in dev for the seed and smoke suite. | `NODE_ENV=production` → `verifySession(...).valid === false`; dev → still 200 |
+
+**PHASE 3 claims re-verified.** "0 dead buttons" was re-tested with a stricter
+detector (name must appear in a JSX prop position, not merely twice in the
+file): 1 candidate surfaced, `AnalyticsAdmin.handleStorageChange`, which is a
+correctly-wired `window.addEventListener` callback. Claim holds. Inventory
+coverage re-counted: 175 `handleXxx` declarations vs 174 rows — the difference
+is a duplicated handler name, not a missing function; no handler is absent.
+F-301 and F-302 were re-confirmed live (`POST /api/categories` persists 4→5
+while the UI never calls it; server holds 3 expenses while the UI keeps its own
+divergent copy).
+
+**Gates:** `tsc --noEmit` clean · build green (`dist/server.cjs` 841.0 kB) ·
+smoke 98/9 unchanged · 10-point regression battery green (staff write 200, anon
+write 401, public read 200, checkout 400-not-401, all three ownership guards 403).

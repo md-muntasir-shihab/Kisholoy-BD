@@ -29,6 +29,7 @@ import {
   SupplierCalculationBasis
 } from '../src/types';
 import { securityEngine } from './securityEngine';
+import { issueSessionToken } from './sessionTokens';
 import { serverDb } from './db';
 
 class SupplierEngine {
@@ -1891,7 +1892,7 @@ class SupplierEngine {
     }
 
     // Isolated token generated for supplier self-service only
-    const token = `ksh-sup-token-${supplier.id}-${Date.now()}`;
+    const token = issueSessionToken('SUPPLIER', supplier.id);
     supplier.portalAccess.lastLoginAt = new Date().toISOString();
     this.suppliers.set(supplier.id, supplier);
 

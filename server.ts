@@ -33,6 +33,7 @@ import {
 import { securityEngine } from './server/securityEngine';
 import { normalizeBdMobilePhone, phoneDigits } from './src/lib/phone';
 import { attachAuthContext, enforceStaffSurface, requireCustomerSelf, requireSupplierSelf, requireAddressOwner, requireNotificationOwner } from './server/authGuard';
+import { issueSessionToken } from './server/sessionTokens';
 import { backupEngine } from './server/backupEngine';
 import { supplierEngine } from './server/supplierEngine';
 import {
@@ -3879,6 +3880,34 @@ async function startServer() {
     }
   });
 
+  /**
+   * Staff-only: mint a supplier portal token so an admin can open the vendor
+   * hub as that supplier. Previously the admin UI fabricated this token in the
+   * browser; now that tokens are signed, only the server can issue one.
+   */
+  app.post('/api/suppliers/:id/portal-token', (req, res) => {
+    try {
+      const record = supplierEngine.getSupplierById(req.params.id);
+      const supplier = record?.supplier;
+      if (!supplier) return res.status(404).json({ error: 'Supplier not found' });
+
+      const token = issueSessionToken('SUPPLIER', supplier.id);
+      securityEngine.logAudit({
+        operator: req.auth?.userName || 'ADMIN',
+        role: req.auth?.role || 'SUPER_ADMIN',
+        action: 'SUPPLIER_PORTAL_IMPERSONATE',
+        category: 'AUTH',
+        severity: 'WARNING',
+        resource: 'SupplierPortal',
+        resourceId: supplier.id,
+        details: `Staff opened the vendor hub as ${supplier.companyName}.`,
+      });
+      res.json({ success: true, token, supplier });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
   app.post('/api/suppliers/portal/login', (req, res) => {
     try {
       const { email, password } = req.body;
@@ -4241,7 +4270,7 @@ async function startServer() {
       }
 
       // Customer session token
-      const token = `ksh-cust-sess-${customer.id}-${Date.now()}`;
+      const token = issueSessionToken('CUSTOMER', customer.id);
       res.json({
         success: true,
         token,
@@ -4313,7 +4342,7 @@ async function startServer() {
         });
       }
 
-      const token = `ksh-cust-sess-${id}-${Date.now()}`;
+      const token = issueSessionToken('CUSTOMER', id);
       res.json({
         success: true,
         token,

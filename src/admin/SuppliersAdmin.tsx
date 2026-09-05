@@ -1065,11 +1065,22 @@ export function SuppliersAdmin() {
                     </span>
                     
                     <button
-                      onClick={() => {
-                        // Store session and open live portal directly
-                        localStorage.setItem('ksh_supplier_token', `ksh-sup-token-${s.id}-${Date.now()}`);
-                        localStorage.setItem('ksh_supplier_user', JSON.stringify(s));
-                        window.open('/supplier', '_blank');
+                      onClick={async () => {
+                        // Portal tokens are HMAC-signed server-side, so the
+                        // browser can no longer fabricate one; ask the server.
+                        try {
+                          const res = await fetch(`/api/suppliers/${s.id}/portal-token`, { method: 'POST' });
+                          const data = await res.json();
+                          if (!res.ok || !data.success || !data.token) {
+                            showToast(data.error || 'Could not open the vendor hub.', 'info');
+                            return;
+                          }
+                          localStorage.setItem('ksh_supplier_token', data.token);
+                          localStorage.setItem('ksh_supplier_user', JSON.stringify(s));
+                          window.open('/supplier', '_blank');
+                        } catch {
+                          showToast('Network error opening the vendor hub.', 'info');
+                        }
                       }}
                       className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-stone-900 text-white hover:bg-stone-800 flex items-center gap-1 shadow-xs"
                     >
