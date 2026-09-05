@@ -8,3 +8,4 @@ coverage/
 !.env.example
 
 package-lock.json
+docs/audit/.phase3.json
