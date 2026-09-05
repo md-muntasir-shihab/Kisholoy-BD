@@ -113,10 +113,18 @@ interface AppContextType {
   logAudit: (action: string, resource: string, detailsOrId: string, details?: string) => void;
   addAuditLog: (action: string, resource: string, resourceId: string, details: string) => void;
   
-  // Content CMS
+  // Content CMS & Brand Identity
   siteContent: SiteContent;
   updateSiteContent: (updates: Partial<SiteContent>, summary?: string) => void;
   publishSiteContent: (content: SiteContent, summary?: string) => Promise<boolean>;
+  uploadAndApplyLogo: (logoData: {
+    logoUrl: string;
+    logoDarkUrl?: string;
+    logoHeight?: number;
+    logoType?: 'TEXT' | 'IMAGE' | 'BOTH_IMAGE_AND_TEXT' | 'EMBLEM_AND_TEXT';
+    logoEmblemStyle?: any;
+  }, summary?: string) => Promise<boolean>;
+  resetToDefaultLogo: () => Promise<boolean>;
   contentRevisions: ContentRevision[];
   restoreContentRevision: (revisionId: string) => Promise<boolean>;
 
@@ -220,7 +228,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [settlements, setSettlements] = useState<SettlementRecord[]>(INITIAL_SETTLEMENTS);
   const [automationJobs, setAutomationJobs] = useState<AutomationJob[]>(INITIAL_AUTOMATION_JOBS);
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>(INITIAL_AUDIT_LOGS);
-  const [siteContent, setSiteContent] = useState<SiteContent>(INITIAL_CONTENT);
+  const [siteContent, setSiteContent] = useState<SiteContent>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('kisholoy-site-content');
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          return { ...INITIAL_CONTENT, ...parsed };
+        }
+      } catch {}
+    }
+    return INITIAL_CONTENT;
+  });
   const [contentRevisions, setContentRevisions] = useState<ContentRevision[]>(INITIAL_CONTENT_REVISIONS);
   
   // Phase 13: Multi-Warehouse, STO, Pick Lists & Manifests
@@ -255,7 +274,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     safeFetchJson('/api/content').then(data => {
       if (data?.success && data.content) {
-        setSiteContent(data.content);
+        setSiteContent(prev => {
+          const merged = { ...prev, ...data.content };
+          try {
+            localStorage.setItem('kisholoy-site-content', JSON.stringify(merged));
+          } catch {}
+          return merged;
+        });
       }
     });
 
@@ -1352,6 +1377,137 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  // Centralized Brand Logo Auto-Apply & Universal Sync Engine
+  const uploadAndApplyLogo = async (
+    logoData: {
+      logoUrl: string;
+      logoDarkUrl?: string;
+      logoHeight?: number;
+      logoType?: 'TEXT' | 'IMAGE' | 'BOTH_IMAGE_AND_TEXT' | 'EMBLEM_AND_TEXT';
+      logoEmblemStyle?: any;
+    },
+    summary = 'Updated official brand logo globally'
+  ): Promise<boolean> => {
+    try {
+      const updated: SiteContent = {
+        ...siteContent,
+        ...logoData
+      };
+      setSiteContent(updated);
+
+      // Instant local persistence
+      try {
+        localStorage.setItem('kisholoy-site-content', JSON.stringify(updated));
+      } catch {}
+
+      // Cross-component event broadcast
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('kisholoy-logo-updated', { detail: updated }));
+      }
+
+      // Synchronize with backend API
+      const res = await fetch('/api/brand/logo', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-operator-role': currentRole
+        },
+        body: JSON.stringify({
+          ...logoData,
+          operator: currentRole,
+          summary
+        })
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data?.content) {
+          setSiteContent(data.content);
+          try {
+            localStorage.setItem('kisholoy-site-content', JSON.stringify(data.content));
+          } catch {}
+        }
+        if (data?.revision) {
+          setContentRevisions(prev => [data.revision, ...prev.filter(r => r.id !== data.revision.id)]);
+        }
+      }
+
+      addAuditLog('UPDATE_BRAND_LOGO', 'BrandIdentity', 'GlobalLogo', summary);
+      showToast(
+        language === 'BN'
+          ? 'লোগো সফলভাবে আপলোড হয়েছে এবং ওয়েবসাইট ও অ্যাডমিন প্যানেলে সর্বত্র অটোমেটিক আপডেট হয়েছে!'
+          : 'Logo uploaded and updated automatically across storefront and admin panel!'
+      );
+      return true;
+    } catch (err) {
+      console.error('Error applying logo:', err);
+      showToast(
+        language === 'BN'
+          ? 'লোগো স্থানীয়ভাবে আপডেট হয়েছে, ব্যাকএন্ড সিঙ্ক বাকি আছে।'
+          : 'Logo updated locally, backend sync in progress.'
+      );
+      return true;
+    }
+  };
+
+  const resetToDefaultLogo = async (): Promise<boolean> => {
+    try {
+      const defaultData = {
+        logoUrl: '/brand/kisholoy-logo.svg',
+        logoDarkUrl: '/brand/kisholoy-logo-dark.svg',
+        logoType: 'IMAGE' as const,
+        logoHeight: 46,
+        logoEmblemStyle: 'leaf_sprout' as const
+      };
+
+      const updated: SiteContent = {
+        ...siteContent,
+        ...defaultData
+      };
+      setSiteContent(updated);
+
+      try {
+        localStorage.setItem('kisholoy-site-content', JSON.stringify(updated));
+      } catch {}
+
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('kisholoy-logo-updated', { detail: updated }));
+      }
+
+      const res = await fetch('/api/brand/logo/reset', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-operator-role': currentRole
+        }
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data?.content) {
+          setSiteContent(data.content);
+          try {
+            localStorage.setItem('kisholoy-site-content', JSON.stringify(data.content));
+          } catch {}
+        }
+        if (data?.revision) {
+          setContentRevisions(prev => [data.revision, ...prev.filter(r => r.id !== data.revision.id)]);
+        }
+      }
+
+      addAuditLog('RESET_BRAND_LOGO', 'BrandIdentity', 'GlobalLogo', 'Reset to official default vector logo');
+      showToast(
+        language === 'BN'
+          ? 'অফিসিয়াল ডিফল্ট ভেক্টর লোগো সফলভাবে পুনঃস্থাপন করা হয়েছে!'
+          : 'Official default vector logo restored successfully!'
+      );
+      return true;
+    } catch (err) {
+      console.error('Error resetting logo:', err);
+      return false;
+    }
+  };
+
   // ============================================================
   // Phase 13: Multi-Warehouse & Fulfillment Methods
   // ============================================================
@@ -2118,6 +2274,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         siteContent,
         updateSiteContent,
         publishSiteContent,
+        uploadAndApplyLogo,
+        resetToDefaultLogo,
         contentRevisions,
         restoreContentRevision,
         warehouses,

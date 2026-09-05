@@ -10,6 +10,7 @@ interface BrandLogoProps {
   size?: 'sm' | 'md' | 'lg' | 'xl';
   className?: string;
   linkToHome?: boolean;
+  linkTo?: string;
 }
 
 export const OfficialKisholoyVector: React.FC<{
@@ -29,7 +30,7 @@ export const OfficialKisholoyVector: React.FC<{
       xmlns="http://www.w3.org/2000/svg"
       viewBox="0 0 920 370"
       style={{ maxHeight: `${height}px`, width: 'auto' }}
-      className={`h-7 sm:h-9 lg:h-10 w-auto max-w-[130px] object-contain flex-shrink-0 transition-transform duration-300 group-hover:scale-105 ${className}`}
+      className={`w-auto object-contain flex-shrink-0 transition-transform duration-300 group-hover:scale-105 ${className}`}
       aria-label="কিশলয় লোগো (Kisholoy Official Logo)"
     >
       <g id="kisholoy-wordmark">
@@ -90,7 +91,8 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({
   taglineClassName = '',
   size = 'md',
   className = '',
-  linkToHome = true
+  linkToHome = true,
+  linkTo
 }) => {
   const { siteContent, language } = useApp();
   const [imageError, setImageError] = useState(false);
@@ -105,9 +107,14 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({
 
   // Resolve logo image URL - defaults to the official brand vector
   const defaultOfficialUrl = variant === 'dark' ? '/brand/kisholoy-logo-dark.svg' : '/brand/kisholoy-logo.svg';
-  const activeLogoUrl = variant === 'dark' && siteContent.logoDarkUrl 
+  let activeLogoUrl = variant === 'dark' && siteContent.logoDarkUrl 
     ? siteContent.logoDarkUrl 
     : (siteContent.logoUrl || defaultOfficialUrl);
+
+  // If raw SVG code was provided, convert safely to data URI
+  if (activeLogoUrl && activeLogoUrl.trim().startsWith('<svg')) {
+    activeLogoUrl = `data:image/svg+xml;utf8,${encodeURIComponent(activeLogoUrl.trim())}`;
+  }
 
   const isOfficialAsset = !activeLogoUrl || 
     activeLogoUrl === '/brand/kisholoy-logo.svg' || 
@@ -121,6 +128,7 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({
       motto: 'text-[9px]',
       emblem: 'w-7 h-7',
       imgHeight: Math.min(32, customHeight),
+      imgClass: 'h-6 sm:h-7 lg:h-8 max-w-[110px]',
       gap: 'gap-2'
     },
     md: {
@@ -128,6 +136,7 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({
       motto: 'text-[10px]',
       emblem: 'w-9 h-9',
       imgHeight: customHeight,
+      imgClass: 'h-8 sm:h-9 lg:h-10 max-w-[140px]',
       gap: 'gap-2.5'
     },
     lg: {
@@ -135,6 +144,7 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({
       motto: 'text-xs',
       emblem: 'w-11 h-11',
       imgHeight: Math.max(50, customHeight),
+      imgClass: 'h-11 sm:h-13 lg:h-14 max-w-[180px]',
       gap: 'gap-3'
     },
     xl: {
@@ -142,6 +152,7 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({
       motto: 'text-xs sm:text-sm',
       emblem: 'w-14 h-14',
       imgHeight: Math.max(64, customHeight),
+      imgClass: 'h-14 sm:h-16 lg:h-20 max-w-[240px]',
       gap: 'gap-4'
     }
   }[size];
@@ -225,7 +236,7 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({
       {/* 1. Official Asset Vector rendering (zero network latency, crisp vector) */}
       {(logoType === 'IMAGE' || logoType === 'BOTH_IMAGE_AND_TEXT') && isOfficialAsset && (
         <div className="relative flex-shrink-0 flex items-center">
-          <OfficialKisholoyVector variant={variant} height={sizeConfig.imgHeight} />
+          <OfficialKisholoyVector variant={variant} height={sizeConfig.imgHeight} className={sizeConfig.imgClass} />
         </div>
       )}
 
@@ -237,7 +248,7 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({
             alt={brandName}
             style={{ maxHeight: `${sizeConfig.imgHeight}px` }}
             onError={() => setImageError(true)}
-            className="h-7 sm:h-9 lg:h-10 w-auto max-w-[130px] object-contain transition-transform duration-300 group-hover:scale-105 rounded-md"
+            className={`${sizeConfig.imgClass} w-auto object-contain transition-transform duration-300 group-hover:scale-105 rounded-md`}
             loading="eager"
           />
         </div>
@@ -279,6 +290,14 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({
       )}
     </div>
   );
+
+  if (linkTo) {
+    return (
+      <Link to={linkTo} className="inline-block focus:outline-none rounded-lg" aria-label={`${brandName}`}>
+        {content}
+      </Link>
+    );
+  }
 
   if (linkToHome) {
     return (

@@ -8,7 +8,7 @@ import {
 import { useApp } from '../context/AppContext';
 import { SiteContent, ContentRevision } from '../types';
 import { BrandLogo } from '../components/brand/BrandLogo';
-import { AdminModalShell } from '../components/admin/AdminModalShell';
+import { BrandLogoManager } from '../components/brand/BrandLogoManager';
 
 type CmsSection = 
   | 'brand' 
@@ -272,6 +272,9 @@ export function ContentAdmin() {
                   <h3 className="text-base font-bold text-stone-900">Brand Identity & Legal Registrations</h3>
                   <p className="text-xs text-stone-500">Configure public store name, motto, trademark identifiers, and visual logos.</p>
                 </div>
+
+                {/* Universal Brand Logo Studio with Realtime Multi-Surface Sync */}
+                <BrandLogoManager />
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
                   <div>
@@ -846,7 +849,7 @@ export function ContentAdmin() {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 bg-stone-50 rounded-xl border border-stone-200">
                     <div className="space-y-3">
                       <span className="font-bold text-stone-800 text-xs block">Primary Action Button</span>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <div className="grid grid-cols-2 gap-2">
                         <input
                           type="text"
                           placeholder="Text (EN)"
@@ -873,7 +876,7 @@ export function ContentAdmin() {
 
                     <div className="space-y-3">
                       <span className="font-bold text-stone-800 text-xs block">Secondary Action Button</span>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <div className="grid grid-cols-2 gap-2">
                         <input
                           type="text"
                           placeholder="Text (EN)"
@@ -1814,12 +1817,8 @@ export function ContentAdmin() {
       {/* ========================================================================= */}
       {/* 1. Modal: Live Storefront Preview Simulator */}
       {/* ========================================================================= */}
-      <AdminModalShell
-        open={!!previewModalOpen}
-        onClose={() => setPreviewModalOpen(false)}
-        label="Live storefront preview"
-        overlayClassName="fixed inset-0 z-50 bg-stone-950/80 backdrop-blur-sm flex flex-col items-center justify-center p-2 sm:p-4 animate-in fade-in duration-150"
-      >
+      {previewModalOpen && (
+        <div className="fixed inset-0 z-50 bg-stone-950/80 backdrop-blur-sm flex flex-col items-center justify-center p-2 sm:p-4 animate-in fade-in duration-150">
           <div className="w-full max-w-6xl bg-stone-900 rounded-2xl border border-stone-700 shadow-2xl flex flex-col h-[92vh] overflow-hidden">
             {/* Top Toolbar */}
             <div className="px-4 py-3 bg-stone-950 border-b border-stone-800 flex items-center justify-between text-white shrink-0">
@@ -1998,17 +1997,14 @@ export function ContentAdmin() {
               </div>
             </div>
           </div>
-      </AdminModalShell>
+        </div>
+      )}
 
       {/* ========================================================================= */}
       {/* 2. Modal: Confirm Publish to Live Store */}
       {/* ========================================================================= */}
-      <AdminModalShell
-        open={!!publishModalOpen}
-        onClose={() => setPublishModalOpen(false)}
-        label="Publish content"
-        overlayClassName="fixed inset-0 z-50 bg-stone-950/70 backdrop-blur-xs flex items-center justify-center p-4"
-      >
+      {publishModalOpen && (
+        <div className="fixed inset-0 z-50 bg-stone-950/70 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl max-w-md w-full p-6 space-y-4 border border-stone-300 shadow-2xl animate-in zoom-in-95 duration-150">
             <div className="flex items-center gap-3 border-b border-stone-200 pb-3">
               <div className="p-2.5 rounded-full bg-teal-100 text-teal-900">
@@ -2070,17 +2066,14 @@ export function ContentAdmin() {
               </button>
             </div>
           </div>
-      </AdminModalShell>
+        </div>
+      )}
 
       {/* ========================================================================= */}
       {/* 3. Modal: Artisanal Image Asset Selector */}
       {/* ========================================================================= */}
-      <AdminModalShell
-        open={!!imagePickerTarget}
-        onClose={() => setImagePickerTarget(null)}
-        label="Choose image"
-        overlayClassName="fixed inset-0 z-50 bg-stone-950/70 backdrop-blur-xs flex items-center justify-center p-4"
-      >
+      {imagePickerTarget && (
+        <div className="fixed inset-0 z-50 bg-stone-950/70 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl max-w-3xl w-full p-6 space-y-4 border border-stone-300 shadow-2xl max-h-[90vh] flex flex-col">
             <div className="flex items-center justify-between border-b border-stone-200 pb-3 shrink-0">
               <div className="flex items-center gap-2">
@@ -2128,7 +2121,8 @@ export function ContentAdmin() {
               </button>
             </div>
           </div>
-      </AdminModalShell>
+        </div>
+      )}
     </div>
   );
 }

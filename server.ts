@@ -113,7 +113,8 @@ async function startServer() {
     next();
   });
 
-  app.use(express.json());
+  app.use(express.json({ limit: '25mb' }));
+  app.use(express.urlencoded({ extended: true, limit: '25mb' }));
 
   // Phase 21: Server-side authentication & authorization.
   // `attachAuthContext` resolves the caller (staff / customer / supplier) into
@@ -2016,6 +2017,57 @@ async function startServer() {
 
       serverDb.addAuditLog('UPLOAD_MEDIA_ASSET', 'ContentCMS', assetRecord.assetId, `Uploaded media asset: ${assetRecord.name}`);
       res.json({ success: true, asset: assetRecord });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  // Centralized Brand Logo Management API (Universal Global Update)
+  app.post('/api/brand/logo', (req, res) => {
+    try {
+      const { logoUrl, logoDarkUrl, logoHeight, logoType, logoEmblemStyle, operator, summary } = req.body;
+      if (!logoUrl) {
+        return res.status(400).json({ error: 'logoUrl is required' });
+      }
+
+      const current = serverDb.getContent();
+      const updates: any = {
+        logoUrl,
+        logoDarkUrl: logoDarkUrl !== undefined ? logoDarkUrl : current.logoDarkUrl,
+        logoHeight: logoHeight ? Number(logoHeight) : (current.logoHeight || 44),
+        logoType: logoType || current.logoType || 'IMAGE'
+      };
+      if (logoEmblemStyle) updates.logoEmblemStyle = logoEmblemStyle;
+
+      const op = operator || (req.headers['x-operator-role'] as string) || 'SUPER_ADMIN';
+      const sum = summary || 'Updated official brand logo globally across storefront and admin panel';
+
+      const result = serverDb.updateContent({ ...current, ...updates }, op, sum);
+      serverDb.addAuditLog('UPDATE_BRAND_LOGO', 'BrandIdentity', 'GlobalLogo', sum, op);
+      res.json({ success: true, content: result.content, revision: result.revision, message: 'Brand logo updated globally' });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.post('/api/brand/logo/reset', (req, res) => {
+    try {
+      const op = (req.headers['x-operator-role'] as string) || 'SUPER_ADMIN';
+      const current = serverDb.getContent();
+      const defaultUpdates = {
+        logoUrl: '/brand/kisholoy-logo.svg',
+        logoDarkUrl: '/brand/kisholoy-logo-dark.svg',
+        logoType: 'IMAGE' as const,
+        logoHeight: 46,
+        logoEmblemStyle: 'leaf_sprout' as const
+      };
+      const result = serverDb.updateContent(
+        { ...current, ...defaultUpdates },
+        op,
+        'Reset brand logo to official Kisholoy vector default'
+      );
+      serverDb.addAuditLog('RESET_BRAND_LOGO', 'BrandIdentity', 'GlobalLogo', 'Reset to official vector logo', op);
+      res.json({ success: true, content: result.content, revision: result.revision, message: 'Reset to official logo' });
     } catch (e: any) {
       res.status(500).json({ error: e.message });
     }
