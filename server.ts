@@ -3979,10 +3979,13 @@ async function startServer() {
 
   app.post('/api/suppliers/portal/change-password', requireSupplierSelf('supplierId'), (req, res) => {
     try {
-      const { supplierId, newPassword, operator } = req.body;
+      const { supplierId, currentPassword, newPassword } = req.body;
       if (!supplierId || !newPassword) return res.status(400).json({ error: 'Supplier ID and new password required' });
+      if (!currentPassword) return res.status(400).json({ error: 'Current password is required' });
 
-      const result = supplierEngine.setSupplierPortalPassword(supplierId, newPassword, operator || 'Supplier Self-Service');
+      // Self-service path: must prove possession of the current password, so
+      // a stolen session token cannot take over the account.
+      const result = supplierEngine.changeOwnPortalPassword(supplierId, currentPassword, newPassword);
       if (!result.success) return res.status(400).json({ error: result.error });
 
       res.json({ success: true, message: 'Password updated successfully' });
@@ -3994,10 +3997,15 @@ async function startServer() {
   app.post('/api/suppliers/:id/set-portal-password', (req, res) => {
     try {
       const operator = req.body.operator || 'SUPER_ADMIN';
-      const { newPassword } = req.body;
-      const result = supplierEngine.setSupplierPortalPassword(req.params.id, newPassword, operator);
+      // Admins issue a temporary password rather than choosing one for the
+      // vendor; it is shown once here and stored only as a hash.
+      const result = supplierEngine.issueTemporaryPortalPassword(req.params.id, operator);
       if (!result.success) return res.status(400).json({ error: result.error });
-      res.json({ success: true, message: 'Supplier portal password set successfully' });
+      res.json({
+        success: true,
+        temporaryPassword: result.temporaryPassword,
+        message: 'Temporary password issued. Share it securely; the supplier must change it at next login.'
+      });
     } catch (e: any) {
       res.status(500).json({ error: e.message });
     }

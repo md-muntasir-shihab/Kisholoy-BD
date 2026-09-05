@@ -84,6 +84,11 @@ export const ROUTE_PERMISSIONS: RoutePermissionRule[] = [
   // NOT fall under SUPPLIER_MANAGE, which INVENTORY_MANAGER holds via
   // 'suppliers:write' so it can receive stock. Require the security authority.
   { methods: WRITE, pattern: /^\/api\/suppliers\/[^/]+\/portal-token/, permission: 'SECURITY_ADMIN', note: 'vendor impersonation' },
+  // Resetting a vendor's portal password is account takeover if misused, so it
+  // sits with the security authority rather than SUPPLIER_MANAGE (which
+  // INVENTORY_MANAGER holds for stock receiving).
+  { methods: WRITE, pattern: /^\/api\/suppliers\/[^/]+\/set-portal-password/, permission: 'SECURITY_ADMIN', note: 'vendor account takeover' },
+  { methods: WRITE, pattern: /^\/api\/suppliers\/[^/]+\/toggle-portal/, permission: 'SECURITY_ADMIN', note: 'vendor portal access' },
   { methods: WRITE, pattern: /^\/api\/suppliers\/.*\/(pos|purchase-orders)/, permission: 'PURCHASE_CREATE' },
   { methods: WRITE, pattern: /^\/api\/suppliers\/.*settlement/, permission: 'suppliers:pay', note: 'paying a vendor' },
   { methods: WRITE, pattern: /^\/api\/suppliers/, permission: 'SUPPLIER_MANAGE' },

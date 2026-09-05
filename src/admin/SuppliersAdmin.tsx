@@ -1058,7 +1058,10 @@ export function SuppliersAdmin() {
                       </span>
                     </div>
                     <div className="text-[11px] text-stone-500 font-mono mt-0.5">
-                      Login Email: <strong className="text-stone-800">{s.portalAccess?.loginEmail || s.email}</strong> • Default Password: <code className="text-stone-600 font-mono">kisholoy2026</code>
+                      Login Email: <strong className="text-stone-800">{s.portalAccess?.loginEmail || s.email}</strong>
+                      {s.portalAccess?.mustChangePassword && (
+                        <span className="text-amber-700"> • {language === 'BN' ? 'অস্থায়ী পাসওয়ার্ডে আছে' : 'on a temporary password'}</span>
+                      )}
                     </div>
                   </div>
                   <div className="flex flex-wrap items-center gap-2">

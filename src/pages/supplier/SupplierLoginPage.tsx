@@ -70,7 +70,7 @@ export function SupplierLoginPage() {
   const { language, setLanguage, showToast } = useApp();
 
   const [email, setEmail] = useState('supplier.jamdani@kisholoy.com');
-  const [password, setPassword] = useState('kisholoy2026');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -120,7 +120,7 @@ export function SupplierLoginPage() {
 
   const handleQuickDemoSelect = (demo: DemoSupplierAccount) => {
     setEmail(demo.email);
-    setPassword('kisholoy2026');
+    setPassword('');
     setError(null);
   };
 
@@ -296,7 +296,9 @@ export function SupplierLoginPage() {
                       {language === 'BN' ? 'পাসওয়ার্ড (Password)' : 'Security Password'}
                     </label>
                     <span className="text-[11px] text-stone-500">
-                      Default: <code className="text-amber-300 bg-stone-950 px-1 py-0.5 rounded font-mono">kisholoy2026</code>
+                      {language === 'BN'
+                        ? 'পাসওয়ার্ড না জানলে কিশলয় প্রশাসনের সাথে যোগাযোগ করুন'
+                        : 'Contact Kisholoy administration if you need a password'}
                     </span>
                   </div>
                   <div className="relative">

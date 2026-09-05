@@ -330,3 +330,88 @@ is why the no-loading count moves 57 → 6 rather than 57 → 8.
 **Gates:** `tsc --noEmit` clean · build green (`dist/server.cjs` 849.8 kB) ·
 smoke 98/9 unchanged · all 8 admin routes 200 · every rewritten module
 re-verified through Vite's transform pipeline (58 inline JSX rewrites).
+
+---
+
+## Batch 6 — S2: supplier portal authentication
+
+Closing the last open S2. What started as "a hardcoded password" turned out to
+be four defects stacked on the same code path, one of which was a full
+authentication bypass.
+
+### The bypass
+
+```js
+const configuredPassword = supplier.portalAccess?.password || 'kisholoy2026';
+if (pass && pass.trim() !== configuredPassword && pass.trim() !== 'kisholoy2026') {
+  return { success: false, error: 'Incorrect password.' };
+}
+```
+
+1. **Empty password authenticated as any supplier.** The `pass &&` guard means
+   an absent or blank password skipped verification entirely — `POST` the email
+   alone and you were logged in as that vendor. Verified before the fix.
+2. **`'kisholoy2026'` was accepted unconditionally**, even for a supplier who
+   had set their own password. It was a permanent backdoor no vendor could close.
+3. **Passwords were stored and compared in plaintext**, and the whole
+   `portalAccess` object — password included — was returned by
+   `GET /api/suppliers` and `GET /api/suppliers/:id`.
+4. **`POST /api/suppliers/:id/set-portal-password` had no RBAC rule**, so it
+   fell through to the generic `SUPPLIER_MANAGE` write rule that
+   INVENTORY_MANAGER holds for stock receiving. Any such account could reset a
+   vendor's password and take over the portal.
+
+### The fix
+
+- **`server/supplierCredentials.ts`** — scrypt (N=16384, 16-byte salt, 64-byte
+  key), constant-time compare via `timingSafeEqual`, stored as
+  `scrypt$N$salt$key`.
+- **A password is now always required**; the empty-password branch is gone.
+- **No shared fallback.** Absent credentials mean authentication fails, full
+  stop. Seeded demo suppliers read from `KISHOLOY_SUPPLIER_SEED_PASSWORD`,
+  defaulting to `ChangeMe@2026` in development only — in production with no env
+  value the seed hash is random per boot, so those accounts are unusable rather
+  than silently sharing a known password.
+- **Hashes never leave the server.** `publicPortalAccess()` strips
+  `passwordHash`, applied at source in `getAllSuppliers()` and
+  `getSupplierById()` rather than at each call site. Verified: 0 occurrences in
+  the list, detail and login responses.
+- **Admin resets mint the password.** `set-portal-password` no longer accepts a
+  password from the request body — staff never choose a vendor's password. It
+  generates a 12-character temporary one (ambiguous glyphs removed, since these
+  get read out over the phone), returns it exactly once, and sets
+  `mustChangePassword`.
+- **Self-service change requires the current password**, so a leaked session
+  token cannot lock the real supplier out of their own account.
+- **RBAC**: `set-portal-password` and `toggle-portal` now require
+  `SECURITY_ADMIN`, alongside the existing `portal-token` rule.
+- **UI**: the admin supplier list no longer prints the password (it shows an
+  "on a temporary password" flag instead), and the portal login form no longer
+  pre-fills one.
+- Login failures are audit-logged, and the wrong-password and unknown-email
+  responses are now identical so the endpoint stops confirming which vendor
+  emails are registered.
+
+### Verification (live)
+
+| probe | result |
+|---|---|
+| old shared password | rejected |
+| **empty password** (the bypass) | rejected |
+| password field omitted | rejected |
+| correct password | authenticates |
+| unknown email | identical message to wrong password |
+| `passwordHash` in list/detail/login responses | **0** |
+| admin reset — anonymous / INVENTORY_MANAGER / SUPER_ADMIN | 401 / 403 / 200 |
+| reset → temp login → change → old rejected, new works | full lifecycle passes |
+| wrong current password / weak new password | rejected |
+| sup-001 token changing sup-002's password | 403 |
+| supplier token hitting admin reset | 403 |
+
+**Gates:** `tsc --noEmit` clean · build green (849.8 kB) · smoke 98/9 unchanged.
+
+**Note for deployment:** set `KISHOLOY_SUPPLIER_SEED_PASSWORD`, or issue each
+real supplier a temporary password from the admin panel. Existing records
+carrying the old plaintext field have no `passwordHash` and therefore cannot log
+in until reset — deliberate, since the alternative is honouring a password that
+is public knowledge.

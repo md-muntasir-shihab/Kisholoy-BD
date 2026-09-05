@@ -1960,7 +1960,14 @@ export interface Supplier {
     loginEmail?: string;
     lastLoginAt?: string;
     loginIsolated: boolean; // isolated from internal staff/customer DB
-    password?: string;
+    /**
+     * scrypt hash of the portal password (`scrypt$N$salt$key`). Never a
+     * plaintext password, and never serialised to any client.
+     */
+    passwordHash?: string;
+    passwordUpdatedAt?: string;
+    /** Set while the supplier is still on an admin-issued temporary password. */
+    mustChangePassword?: boolean;
   };
 
   purchaseOrdersCount?: number;
