@@ -201,14 +201,11 @@ export function FinanceAdmin() {
       });
       const data = await res.json();
       if (data.success) {
-        addExpense({
-          date: new Date().toISOString().split('T')[0],
-          category: newExpense.category,
-          vendor: newExpense.vendor,
-          amount: amountNum,
-          reference: newExpense.reference,
-          notes: newExpense.notes
-        });
+        // Adopt the SERVER record so local state and the ledger share one id.
+        // Building a local copy here is what made the P&L drift (F-302).
+        if (data.expense) {
+          addExpense(data.expense);
+        }
         setShowExpenseModal(false);
         setNewExpense({
           category: 'PACKAGING',
@@ -217,8 +214,9 @@ export function FinanceAdmin() {
           reference: '',
           notes: ''
         });
-        showToast('Expense recorded and logged to ledger.');
         fetchSummary();
+      } else {
+        showToast(data.error || 'Failed to record expense', 'info');
       }
     } catch (err) {
       showToast('Failed to record expense', 'info');

@@ -74,23 +74,10 @@ export function PaymentsAdmin() {
             }
           }
         } catch {
-          // fallback assessment
-          map[ord.id] = {
-            riskScore: ord.paymentMethod === 'COD' && ord.total > 7000 ? 65 : 10,
-            riskRating: ord.paymentMethod === 'COD' && ord.total > 7000 ? 'HIGH' : 'LOW',
-            flags: ord.paymentMethod === 'COD' && ord.total > 7000 ? ['High-value COD Order'] : [],
-            reasons: ord.paymentMethod === 'COD' && ord.total > 7000 ? ['High-value COD order requiring verification'] : ['Baseline check normal'],
-            recommendation: ord.paymentMethod === 'COD' && ord.total > 7000 ? 'REQUIRE_ADVANCE_SHIPPING_FEE' : 'AUTO_APPROVE',
-            breakdown: {
-              phoneScore: 0,
-              addressScore: 0,
-              valueScore: ord.paymentMethod === 'COD' && ord.total > 7000 ? 50 : 0,
-              velocityScore: 0,
-              historyScore: 0,
-              emailScore: 0
-            },
-            evaluatedAt: new Date().toISOString()
-          };
+          // Do NOT invent a score here. A locally-guessed rating ignores the
+          // blacklist, velocity and history signals the engine applies, and
+          // showing it as if it came from the engine is worse than showing
+          // nothing. Leave the order unassessed and let the UI say so (F-303).
         }
       }
       setFraudAssessments(map);
@@ -451,12 +438,10 @@ export function PaymentsAdmin() {
 
             <div className="divide-y divide-stone-200 text-xs">
               {orders.slice(0, 8).map((ord) => {
-                const assessment = fraudAssessments[ord.id] || {
-                  riskScore: 15,
-                  riskRating: 'LOW',
-                  flags: [],
-                  recommendation: 'AUTO_APPROVE'
-                };
+                // No fabricated default: an order the engine has not scored is
+                // reported as unavailable rather than silently shown as LOW.
+                const assessment = fraudAssessments[ord.id];
+                const unassessed = !assessment;
 
                 return (
                   <div key={ord.id} className="p-4 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:bg-stone-50">
@@ -471,7 +456,12 @@ export function PaymentsAdmin() {
                       <div className="text-stone-500 text-[11px]">
                         Destination: {ord.shippingAddress.thana}, {ord.shippingAddress.district}
                       </div>
-                      {assessment.flags.length > 0 && (
+                      {unassessed && (
+                        <div className="mt-1 text-[10px] text-stone-500 bg-stone-100 border border-stone-200 rounded px-1.5 py-0.5 inline-block">
+                          Risk score unavailable — engine unreachable
+                        </div>
+                      )}
+                      {assessment && assessment.flags.length > 0 && (
                         <div className="flex flex-wrap gap-1 mt-1">
                           {assessment.flags.map((flag, idx) => (
                             <span key={idx} className="bg-red-50 text-red-700 border border-red-200 px-1.5 py-0.5 rounded text-[10px]">
@@ -486,21 +476,23 @@ export function PaymentsAdmin() {
                       <div className="text-right">
                         <span className="text-[10px] text-stone-500 block uppercase">Risk Score</span>
                         <span className={`font-mono font-bold text-base ${
+                          unassessed ? 'text-stone-400' :
                           assessment.riskRating === 'HIGH' ? 'text-red-700' :
                           assessment.riskRating === 'MEDIUM' ? 'text-amber-700' :
                           'text-emerald-700'
                         }`}>
-                          {assessment.riskScore} / 100
+                          {unassessed ? '— / 100' : `${assessment.riskScore} / 100`}
                         </span>
                       </div>
 
                       <div className="text-right">
                         <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold block ${
+                          unassessed ? 'bg-stone-100 text-stone-500 border border-stone-300' :
                           assessment.recommendation === 'REQUIRE_ADVANCE_SHIPPING_FEE' ? 'bg-red-100 text-red-900 border border-red-300' :
                           assessment.recommendation === 'REQUIRE_PHONE_VERIFICATION' ? 'bg-amber-100 text-amber-900 border border-amber-300' :
                           'bg-emerald-100 text-emerald-900 border border-emerald-300'
                         }`}>
-                          {assessment.recommendation.replace(/_/g, ' ')}
+                          {unassessed ? 'NOT ASSESSED' : assessment.recommendation.replace(/_/g, ' ')}
                         </span>
                       </div>
                     </div>

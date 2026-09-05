@@ -1535,12 +1535,30 @@ async function startServer() {
     if (!category || !vendor || typeof amount !== 'number' || amount <= 0 || !reference) {
       return res.status(400).json({ error: 'Valid category, vendor, positive amount, and reference are required.' });
     }
+    // Idempotency: `reference` is the accounting document number, so the same
+    // reference must not create a second cost row. A double-click or a retry
+    // on a flaky connection previously duplicated the expense and understated
+    // profit (F-304). Mirrors the guard already used by /api/payments/refund.
+    const cleanReference = reference.trim();
+    const duplicate = serverDb.expenses.find(
+      e => e.reference?.trim().toLowerCase() === cleanReference.toLowerCase()
+    );
+    if (duplicate) {
+      return res.status(409).json({
+        success: false,
+        error: `An expense with reference "${cleanReference}" already exists — duplicate prevented.`,
+        errorBn: `"${cleanReference}" রেফারেন্সে খরচ ইতিমধ্যে রেকর্ড করা আছে — ডুপ্লিকেট আটকানো হয়েছে।`,
+        code: 'DUPLICATE_REFERENCE',
+        expense: duplicate,
+      });
+    }
+
     const expense = serverDb.addExpense({
       date: new Date().toISOString().split('T')[0],
       category,
       vendor: vendor.trim(),
       amount,
-      reference: reference.trim(),
+      reference: cleanReference,
       notes: notes?.trim(),
       recordedBy: recordedBy || 'Finance Manager'
     });

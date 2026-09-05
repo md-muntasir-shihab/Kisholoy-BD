@@ -43,9 +43,9 @@ interface AppContextType {
   addProduct: (product: Omit<Product, 'id'>) => void;
   updateProduct: (id: string, updates: Partial<Product>) => void;
   deleteProduct: (id: string) => void;
-  addCategory: (category: Omit<Category, 'id'>) => void;
+  addCategory: (category: Omit<Category, 'id'>) => Promise<boolean>;
   updateCategory: (id: string, updates: Partial<Category>) => void;
-  deleteCategory?: (id: string) => void;
+  deleteCategory: (id: string) => Promise<boolean>;
   
   // Cart
   cart: CartItem[];
@@ -100,7 +100,7 @@ interface AppContextType {
   
   // Finance & Expenses & Settlements
   expenses: ExpenseRecord[];
-  addExpense: (expense: Omit<ExpenseRecord, 'id'>) => void;
+  addExpense: (expense: Omit<ExpenseRecord, 'id'> | ExpenseRecord) => void;
   deleteExpense: (id: string) => void;
   settlements: SettlementRecord[];
   addSettlement: (settlement: Omit<SettlementRecord, 'id'>) => void;
@@ -675,21 +675,39 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   // Categories CRUD
-  const addCategory = (catData: Omit<Category, 'id'>) => {
-    const newCat: Category = {
-      ...catData,
-      id: `cat-${Date.now()}`
-    };
-    setCategories(prev => [...prev, newCat]);
-    // Sync with backend API
-    fetch('/api/categories', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...newCat, operator: currentRole })
-    }).catch(err => console.warn('Failed to sync category to server:', err));
+  /**
+   * Create a category. The server is the source of truth: we adopt the record
+   * it returns (so the id is the persisted one) and roll back the optimistic
+   * row if the write fails, rather than leaving a phantom category on screen.
+   */
+  const addCategory = async (catData: Omit<Category, 'id'>): Promise<boolean> => {
+    const optimisticId = `cat-${Date.now()}`;
+    const optimistic: Category = { ...catData, id: optimisticId };
+    setCategories(prev => [...prev, optimistic]);
 
-    addAuditLog('CREATE_CATEGORY', 'Category', newCat.slug, `Added category "${newCat.name}"`);
-    showToast('Category created');
+    try {
+      const res = await fetch('/api/categories', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...optimistic, operator: currentRole })
+      });
+      const data = await res.json().catch(() => null);
+
+      if (!res.ok || !data?.success || !data.category) {
+        setCategories(prev => prev.filter(c => c.id !== optimisticId));
+        showToast(data?.error || 'Could not save the category. Please try again.');
+        return false;
+      }
+
+      setCategories(prev => prev.map(c => (c.id === optimisticId ? data.category : c)));
+      addAuditLog('CREATE_CATEGORY', 'Category', data.category.slug, `Added category "${data.category.name}"`);
+      showToast('Category created');
+      return true;
+    } catch {
+      setCategories(prev => prev.filter(c => c.id !== optimisticId));
+      showToast('Network error — the category was not saved.');
+      return false;
+    }
   };
 
   const updateCategory = (id: string, updates: Partial<Category>) => {
@@ -704,13 +722,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     showToast('Category updated');
   };
 
-  const deleteCategory = (id: string) => {
+  const deleteCategory = async (id: string): Promise<boolean> => {
     const target = categories.find(c => c.id === id);
+    const snapshot = categories;
     setCategories(prev => prev.filter(c => c.id !== id));
-    // Sync with backend API
-    fetch(`/api/categories/${id}?operator=${encodeURIComponent(currentRole)}`, {
-      method: 'DELETE'
-    }).catch(err => console.warn('Failed to sync category deletion to server:', err));
+
+    try {
+      const res = await fetch(`/api/categories/${id}?operator=${encodeURIComponent(currentRole)}`, {
+        method: 'DELETE'
+      });
+      if (!res.ok) {
+        setCategories(snapshot); // restore — the server still has it
+        const data = await res.json().catch(() => null);
+        showToast(data?.error || 'Could not delete the category.');
+        return false;
+      }
+    } catch {
+      setCategories(snapshot);
+      showToast('Network error — the category was not deleted.');
+      return false;
+    }
 
     addAuditLog('DELETE_CATEGORY', 'Category', target?.slug || id, `Deleted category "${target?.name}"`);
     showToast('Category removed');
@@ -1135,11 +1166,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  const addExpense = (expense: Omit<ExpenseRecord, 'id'>) => {
-    const newExp: ExpenseRecord = {
-      ...expense,
-      id: `exp-${Date.now()}`
-    };
+  /**
+   * Record an expense in local state.
+   *
+   * Callers that already persisted the row must pass the SERVER record so both
+   * sides share one id. Previously FinanceAdmin POSTed and then called this
+   * with the raw form values, minting a second `exp-<Date.now()>` copy that
+   * never reconciled with the ledger — the P&L on screen silently drifted from
+   * the persisted one (F-302).
+   */
+  const addExpense = (expense: Omit<ExpenseRecord, 'id'> | ExpenseRecord) => {
+    const newExp: ExpenseRecord = 'id' in expense && expense.id
+      ? (expense as ExpenseRecord)
+      : { ...(expense as Omit<ExpenseRecord, 'id'>), id: `exp-${Date.now()}` };
     setExpenses(prev => [newExp, ...prev]);
     addAuditLog('ADD_EXPENSE', 'Finance', newExp.reference, `Added expense ৳${newExp.amount} for ${newExp.category}`);
     showToast('Expense recorded');

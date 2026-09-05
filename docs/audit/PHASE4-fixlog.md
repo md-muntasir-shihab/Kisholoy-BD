@@ -122,3 +122,59 @@ divergent copy).
 **Gates:** `tsc --noEmit` clean · build green (`dist/server.cjs` 841.0 kB) ·
 smoke 98/9 unchanged · 10-point regression battery green (staff write 200, anon
 write 401, public read 200, checkout 400-not-401, all three ownership guards 403).
+
+---
+
+## Batch 3 — per-route RBAC + the four PHASE 3 S2 defects
+
+### S1-1 completed: per-route permissions
+
+Batch 2 left a **blanket** staff gate: any signed-in staffer could call any
+endpoint, so a SUPPORT rep could delete products and an ORDER_MANAGER could mint
+staff accounts. Rather than hand-annotating 164 routes, the mapping lives in a
+reviewable table (`server/routePermissions.ts`) that `enforceStaffSurface`
+consults after establishing the session; denials emit a `PERMISSION_DENIED`
+audit row naming the role, route and missing permission.
+
+Verified against the five seeded roles (all `Kisholoy@2026!`):
+
+| Action | SUPER | ORDER | INVENTORY | FINANCE | SUPPORT |
+|---|---|---|---|---|---|
+| `DELETE /api/products/:id` | 404* | **403** | 404* | **403** | **403** |
+| `PUT /api/products/:id` | 200 | **403** | 200 | **403** | **403** |
+| `POST /api/payments/refund` | 500* | **403** | **403** | 500* | **403** |
+| `POST /api/finance/expenses` | 200 | **403** | **403** | 200 | **403** |
+| `POST /api/security/users/create` | 400* | **403** | **403** | **403** | **403** |
+| `POST /api/system/backups/create` | 200 | **403** | **403** | **403** | **403** |
+| `POST /api/suppliers/:id/portal-token` | 200 | **403** | **403** | **403** | **403** |
+
+\* non-403 codes are the route's own validation on a deliberately bogus id, not
+an authorisation result.
+
+**One rule was tightened during testing.** Supplier impersonation
+(`portal-token`) initially required `SUPPLIER_MANAGE`, which INVENTORY_MANAGER
+holds via `suppliers:write` so it can receive stock — it could therefore open the
+vendor hub as any supplier. Receiving stock is not impersonation, so the rule now
+requires `SECURITY_ADMIN` (403 for INVENTORY_MANAGER, 200 for SUPER_ADMIN).
+
+**No false lockouts:** each role still performs its own work — ORDER_MANAGER
+reads orders and advances status (200), INVENTORY_MANAGER updates products and
+warehouses (200), FINANCE reads the P&L and transactions (200), SUPPORT reads
+customers and orders (200).
+
+### PHASE 3 S2 fixes
+
+| # | Defect | Fix | Evidence |
+|---|---|---|---|
+| F-301 | Categories created/deleted in the admin never persisted — `CategoriesAdmin` wrote to React state while full CRUD sat unused at `server.ts:465-510`. | Screen now calls the context helpers. Both were rewritten to be optimistic-with-rollback: adopt the server's record (so ids match), restore the previous list and toast an error on failure. | `POST /api/categories` 4→5 persisted; helper adopts returned record |
+| F-302 | Expenses were written twice — POST to the server, then a second local copy with a different `exp-<Date.now()>` id. The P&L on screen drifted from the ledger and delete-by-id could not match. | `FinanceAdmin` adopts `data.expense` from the response; `addExpense` accepts a server record instead of always minting an id. Failures now surface `data.error`. | server and UI share one id |
+| F-303 | On a fraud-engine failure `PaymentsAdmin` fabricated a score (`COD && total>7000 ? HIGH : LOW`) and rendered a `riskScore: 15` default — an invented number shown as if it came from the engine, ignoring blacklist/velocity/history. | Fallback deleted; unscored orders render "Risk score unavailable — engine unreachable", `— / 100`, `NOT ASSESSED`. | no client-side scoring path remains |
+| F-304 | No idempotency on expense creation: the same `reference` twice produced two cost rows (verified 3→5), understating profit. | Server rejects a duplicate `reference` with 409 `DUPLICATE_REFERENCE` (bilingual) and returns the existing row — mirrors the refund guard. | 1st 200, 2nd 409, count 3→4 |
+
+**Gates:** `tsc --noEmit` clean · build green (`dist/server.cjs` 849.8 kB) ·
+smoke 98/9 unchanged · storefront unaffected (`/api/products`, `/api/categories`,
+`/api/content`, `/api/orders/track` all 200; checkout 400-not-401).
+
+**Remaining from PHASE 3:** F-305 (33 silent catches), F-306 (71 mutations with
+no in-flight state), F-307 (41 modals with no Esc/focus-trap), F-308 (responsive,
+belongs to PHASE 5), F-309 (3 English-only screens).

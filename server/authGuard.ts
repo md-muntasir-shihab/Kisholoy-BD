@@ -23,6 +23,7 @@ import type { Request, Response, NextFunction } from 'express';
 import { securityEngine } from './securityEngine';
 import { serverDb } from './db';
 import { verifySessionToken } from './sessionTokens';
+import { requiredPermissionFor } from './routePermissions';
 import type { Role } from '../src/types';
 
 export interface AuthContext {
@@ -149,7 +150,31 @@ export function enforceStaffSurface(req: Request, res: Response, next: NextFunct
   if (!needsStaff) return next();
 
   const auth = req.auth;
-  if (auth?.kind === 'STAFF') return next();
+  if (auth?.kind === 'STAFF') {
+    // Staff session established — now check the *specific* authority this
+    // route needs, so a SUPPORT rep cannot delete products just by being
+    // signed in. Routes with no rule fall through as staff-only.
+    const rule = requiredPermissionFor(req.method, path);
+    if (rule?.permission && auth.role && !securityEngine.hasPermission(auth.role, rule.permission)) {
+      securityEngine.logAudit({
+        operator: auth.userName || auth.userId || 'UNKNOWN',
+        role: auth.role,
+        action: 'PERMISSION_DENIED',
+        category: 'AUTH',
+        severity: 'WARNING',
+        resource: 'API',
+        resourceId: path,
+        details: `Role ${auth.role} attempted ${req.method} ${path} without ${rule.permission}${rule.note ? ` (${rule.note})` : ''}.`,
+        ipAddress: clientIpOf(req),
+      });
+      return deny(
+        res, 403, 'PERMISSION_DENIED',
+        `Your role (${auth.role}) does not have the required permission: ${rule.permission}.`,
+        `আপনার ভূমিকা (${auth.role}) এই কাজের অনুমতি রাখে না: ${rule.permission}।`
+      );
+    }
+    return next();
+  }
 
   // A customer or supplier token is a valid identity but not staff authority.
   if (auth?.kind === 'CUSTOMER' || auth?.kind === 'SUPPLIER') {

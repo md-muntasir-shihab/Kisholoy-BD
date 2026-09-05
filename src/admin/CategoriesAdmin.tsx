@@ -4,40 +4,42 @@ import { useApp } from '../context/AppContext';
 import { Category } from '../types';
 
 export function CategoriesAdmin() {
-  const { categories, products, setCategories, showToast, logAudit } = useApp();
+  // Use the context CRUD helpers, not setCategories: they persist to
+  // /api/categories and emit the audit trail. Writing straight to state made
+  // every created or deleted category vanish on reload (F-301).
+  const { categories, products, addCategory, deleteCategory } = useApp();
   const [name, setName] = useState('');
   const [nameBn, setNameBn] = useState('');
   const [description, setDescription] = useState('');
   const [image, setImage] = useState('');
+  const [saving, setSaving] = useState(false);
 
-  const handleAddCategory = (e: React.FormEvent) => {
+  const handleAddCategory = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) return;
+    if (!name.trim() || saving) return;
 
     const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
-    const newCat: Category = {
-      id: `cat-${Date.now()}`,
-      name,
-      nameBn: nameBn || name,
-      slug,
-      description,
-      image: image || 'https://images.unsplash.com/photo-1584917865442-de89df76afd3?auto=format&fit=crop&q=80&w=800',
-      itemCount: 0
-    };
-
-    setCategories([...categories, newCat]);
-    logAudit('CREATE_CATEGORY', 'Category', `Created category: ${name}`);
-    showToast(`Category "${name}" created successfully`);
-    setName('');
-    setNameBn('');
-    setDescription('');
-    setImage('');
+    setSaving(true);
+    try {
+      await addCategory({
+        name,
+        nameBn: nameBn || name,
+        slug,
+        description,
+        image: image || 'https://images.unsplash.com/photo-1584917865442-de89df76afd3?auto=format&fit=crop&q=80&w=800',
+        itemCount: 0,
+      });
+      setName('');
+      setNameBn('');
+      setDescription('');
+      setImage('');
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const handleDelete = (id: string) => {
-    setCategories(categories.filter((c) => c.id !== id));
-    logAudit('DELETE_CATEGORY', 'Category', `Deleted category ID: ${id}`);
-    showToast('Category deleted');
+  const handleDelete = async (id: string) => {
+    await deleteCategory(id);
   };
 
   return (
