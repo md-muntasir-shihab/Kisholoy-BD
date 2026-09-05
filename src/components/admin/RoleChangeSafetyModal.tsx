@@ -2,6 +2,7 @@ import React from 'react';
 import { AlertTriangle, ShieldAlert, ArrowRight, Check, X, ShieldCheck } from 'lucide-react';
 import { Role } from '../../types';
 import { useApp } from '../../context/AppContext';
+import { useModalA11y } from '../../hooks/useModalA11y';
 
 interface RoleChangeSafetyModalProps {
   isOpen: boolean;
@@ -22,6 +23,13 @@ export const RoleChangeSafetyModal: React.FC<RoleChangeSafetyModalProps> = ({
   newRole,
   isProcessing = false
 }) => {
+  // F-307: Escape to close, focus trap, focus restore and ARIA dialog roles.
+  const { containerRef, dialogProps } = useModalA11y({
+    open: isOpen,
+    onClose,
+    label: 'Role Change Safety',
+  });
+
   const { language } = useApp();
 
   if (!isOpen) return null;
@@ -98,7 +106,7 @@ export const RoleChangeSafetyModal: React.FC<RoleChangeSafetyModalProps> = ({
   const impact = getImpactSummary(currentRole, newRole);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-900/60 backdrop-blur-xs animate-in fade-in duration-150">
+    <div ref={containerRef} {...dialogProps} className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-900/60 backdrop-blur-xs animate-in fade-in duration-150">
       <div className="bg-white w-full max-w-lg rounded-2xl shadow-xl border border-stone-200 overflow-hidden flex flex-col">
         
         {/* Header */}

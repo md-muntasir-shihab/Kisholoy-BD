@@ -6,6 +6,7 @@
  */
 
 import React, { useState, useRef } from 'react';
+import { useModalA11y } from '../hooks/useModalA11y';
 import { 
   UploadCloud, FileSpreadsheet, Download, Trash2, AlertCircle, 
   CheckCircle2, X, FileText, ArrowRight, RefreshCw, AlertTriangle, 
@@ -52,6 +53,13 @@ export function BulkSupplierImportModal({
   language,
   notify
 }: BulkSupplierImportModalProps) {
+  // F-307: Escape to close, focus trap, focus restore and ARIA dialog roles.
+  const { containerRef, dialogProps } = useModalA11y({
+    open: isOpen,
+    onClose,
+    label: 'Bulk Supplier Import',
+  });
+
   const [inputMode, setInputMode] = useState<'upload' | 'paste'>('upload');
   const [dragActive, setDragActive] = useState(false);
   const [fileName, setFileName] = useState<string | null>(null);
@@ -478,10 +486,10 @@ Sylhet Cane & Bamboo Crafts,Farhan Chowdhury,+8801644556677,cane@sylhetcrafts.bd
   const invalidCount = parsedRows.length - validCount;
 
   return (
-    <div className="fixed inset-0 z-50 bg-stone-900/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+    <div ref={containerRef} {...dialogProps} className="fixed inset-0 z-50 bg-stone-900/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
       <div className="bg-white rounded-2xl max-w-4xl w-full border border-stone-200 shadow-xl overflow-hidden my-8 animate-in fade-in zoom-in-95 duration-150">
         {/* Modal Header */}
-        <div className="bg-stone-900 text-white p-5 flex items-center justify-between">
+        <div className="bg-stone-900 text-white p-4 sm:p-5 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="p-2.5 bg-teal-800 rounded-xl">
               <UploadCloud className="w-5 h-5 text-teal-200" />
@@ -506,7 +514,7 @@ Sylhet Cane & Bamboo Crafts,Farhan Chowdhury,+8801644556677,cane@sylhetcrafts.bd
         </div>
 
         {/* Action / Template Download Bar */}
-        <div className="bg-stone-50 border-b border-stone-200 px-6 py-3 flex flex-wrap items-center justify-between gap-3 text-xs">
+        <div className="bg-stone-50 border-b border-stone-200 px-4 sm:px-6 py-3 flex flex-wrap items-center justify-between gap-3 text-xs">
           <div className="flex items-center gap-2">
             <span className="font-semibold text-stone-600">
               {language === 'BN' ? 'রেফারেন্স টেমপ্লেট:' : 'Download Sample Templates:'}
@@ -550,7 +558,7 @@ Sylhet Cane & Bamboo Crafts,Farhan Chowdhury,+8801644556677,cane@sylhetcrafts.bd
         </div>
 
         {/* Modal Body */}
-        <div className="p-6 space-y-6 max-h-[calc(85vh-200px)] overflow-y-auto">
+        <div className="p-4 sm:p-6 space-y-4 sm:space-y-6 max-h-[calc(85vh-200px)] overflow-y-auto">
           {/* File Upload Zone */}
           {inputMode === 'upload' ? (
             <div>
@@ -790,7 +798,7 @@ Sylhet Cane & Bamboo Crafts,Farhan Chowdhury,+8801644556677,cane@sylhetcrafts.bd
         </div>
 
         {/* Modal Footer */}
-        <div className="bg-stone-50 border-t border-stone-200 p-4 px-6 flex items-center justify-between">
+        <div className="bg-stone-50 border-t border-stone-200 p-4 sm:px-6 flex flex-wrap gap-3 items-center justify-between">
           <div className="text-xs text-stone-500">
             {language === 'BN'
               ? 'ডুপ্লিকেট চেক: বিদ্যমান ফোন নম্বর বা কোম্পানির নামের সাথে মেলালে স্বয়ংক্রিয়ভাবে সংরক্ষিত তথ্য সুরক্ষিত থাকবে।'

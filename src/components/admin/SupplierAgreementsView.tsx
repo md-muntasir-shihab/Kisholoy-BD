@@ -6,6 +6,8 @@ import {
 import { Supplier, SupplierAgreement, SupplierSettlementMethod, SupplierCalculationBasis } from '../../types';
 import { useApp } from '../../context/AppContext';
 import { SUPPLIER_HELP_DEFINITIONS, SupplierFunctionHelp } from '../../admin/supplierHelpData';
+import { AdminModalShell } from './AdminModalShell';
+import { usePendingAction } from '../../hooks/usePendingAction';
 
 interface SupplierAgreementsViewProps {
   suppliers: Supplier[];
@@ -18,6 +20,8 @@ export const SupplierAgreementsView: React.FC<SupplierAgreementsViewProps> = ({
 }) => {
   const { language, showToast, currentRole, products } = useApp();
   const [agreements, setAgreements] = useState<SupplierAgreement[]>([]);
+  // F-306: blocks duplicate submits while a mutation is in flight.
+  const { run, isPending, isBusy } = usePendingAction();
   const [loading, setLoading] = useState(false);
   const [selectedSupplierFilter, setSelectedSupplierFilter] = useState<string>('ALL');
 
@@ -134,7 +138,7 @@ export const SupplierAgreementsView: React.FC<SupplierAgreementsViewProps> = ({
     }
   };
 
-  const handleDelete = async (agrId: string) => {
+  const handleDelete = async (agrId: string) =>  run('handleDelete', async () => {
     if (!confirm('Are you sure you want to delete this commercial agreement?')) return;
     try {
       const res = await fetch(`/api/suppliers/agreements/${agrId}?operator=${encodeURIComponent(currentRole)}`, {
@@ -150,7 +154,8 @@ export const SupplierAgreementsView: React.FC<SupplierAgreementsViewProps> = ({
     } catch (err: any) {
       showToast?.(err.message || 'Error deleting agreement.');
     }
-  };
+  
+  });
 
   const filteredAgreements = agreements.filter(a => {
     if (selectedSupplierFilter === 'ALL') return true;
@@ -355,8 +360,12 @@ export const SupplierAgreementsView: React.FC<SupplierAgreementsViewProps> = ({
       )}
 
       {/* Create / Edit Agreement Modal */}
-      {createModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-900/60 backdrop-blur-xs animate-in fade-in duration-150">
+      <AdminModalShell
+        open={!!createModalOpen}
+        onClose={() => setCreateModalOpen(null)}
+        label="Create Edit Agreement Modal"
+        overlayClassName="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-900/60 backdrop-blur-xs animate-in fade-in duration-150"
+      >
           <div className="bg-white w-full max-w-lg rounded-2xl shadow-2xl border border-stone-200 overflow-hidden flex flex-col max-h-[90vh]">
             <div className="px-6 py-4 bg-teal-900 text-white flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -565,8 +574,7 @@ export const SupplierAgreementsView: React.FC<SupplierAgreementsViewProps> = ({
               </div>
             </form>
           </div>
-        </div>
-      )}
+      </AdminModalShell>
     </div>
   );
 };

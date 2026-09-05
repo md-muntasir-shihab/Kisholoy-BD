@@ -34,6 +34,7 @@ import {
 import { useApp } from '../context/AppContext';
 import { Order, OrderStatus } from '../types';
 import { ReturnRefundPrintModal } from '../components/print/ReturnRefundPrintModal';
+import { AdminModalShell } from '../components/admin/AdminModalShell';
 
 export interface RmaRecord {
   id: string;
@@ -777,8 +778,12 @@ export function ReturnsRefundsAdmin() {
       </div>
 
       {/* MODAL 1: RMA Physical Inspection & QC */}
-      {inspectModalRma && (
-        <div className="fixed inset-0 z-50 bg-stone-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+      <AdminModalShell
+        open={!!inspectModalRma}
+        onClose={() => setInspectModalRma(null)}
+        label="MODAL 1 RMA Physical Inspection & QC"
+        overlayClassName="fixed inset-0 z-50 bg-stone-900/60 backdrop-blur-xs flex items-center justify-center p-4"
+      >
           <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-stone-200 space-y-5 animate-in fade-in zoom-in-95 duration-150">
             <div className="flex items-center justify-between border-b border-stone-200 pb-3">
               <div>
@@ -905,12 +910,15 @@ export function ReturnsRefundsAdmin() {
               </button>
             </div>
           </div>
-        </div>
-      )}
+      </AdminModalShell>
 
       {/* MODAL 2: Execute Refund Disbursement */}
-      {refundModalRma && (
-        <div className="fixed inset-0 z-50 bg-stone-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+      <AdminModalShell
+        open={!!refundModalRma}
+        onClose={() => setRefundModalRma(null)}
+        label="MODAL 2 Execute Refund Disbursement"
+        overlayClassName="fixed inset-0 z-50 bg-stone-900/60 backdrop-blur-xs flex items-center justify-center p-4"
+      >
           <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-stone-200 space-y-5 animate-in fade-in zoom-in-95 duration-150">
             <div className="flex items-center justify-between border-b border-stone-200 pb-3">
               <div>
@@ -1046,12 +1054,15 @@ export function ReturnsRefundsAdmin() {
               </button>
             </div>
           </div>
-        </div>
-      )}
+      </AdminModalShell>
 
       {/* MODAL 3: Create New RMA Case */}
-      {createModalOpen && (
-        <div className="fixed inset-0 z-50 bg-stone-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+      <AdminModalShell
+        open={!!createModalOpen}
+        onClose={() => setCreateModalOpen(null)}
+        label="MODAL 3 Create New RMA Case"
+        overlayClassName="fixed inset-0 z-50 bg-stone-900/60 backdrop-blur-xs flex items-center justify-center p-4"
+      >
           <form onSubmit={handleCreateRma} className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-stone-200 space-y-4 animate-in fade-in zoom-in-95 duration-150">
             <div className="flex items-center justify-between border-b border-stone-200 pb-3">
               <h3 className="text-lg font-serif font-bold text-stone-900">
@@ -1134,8 +1145,7 @@ export function ReturnsRefundsAdmin() {
               </button>
             </div>
           </form>
-        </div>
-      )}
+      </AdminModalShell>
 
       {/* Unified Return / Refund Document Print Modal */}
       {printRma && (

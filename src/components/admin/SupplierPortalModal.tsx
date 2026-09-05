@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import { Supplier } from '../../types';
 import { useApp } from '../../context/AppContext';
+import { useModalA11y } from '../../hooks/useModalA11y';
 
 interface SupplierPortalModalProps {
   isOpen: boolean;
@@ -17,13 +18,20 @@ export const SupplierPortalModal: React.FC<SupplierPortalModalProps> = ({
   onClose,
   supplier
 }) => {
+  // F-307: Escape to close, focus trap, focus restore and ARIA dialog roles.
+  const { containerRef, dialogProps } = useModalA11y({
+    open: isOpen,
+    onClose,
+    label: 'Supplier Portal',
+  });
+
   const { language } = useApp();
   const [activeTab, setActiveTab] = useState<'products' | 'orders' | 'payments' | 'profile'>('products');
 
   if (!isOpen || !supplier) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-900/60 backdrop-blur-xs animate-in fade-in duration-150">
+    <div ref={containerRef} {...dialogProps} className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-900/60 backdrop-blur-xs animate-in fade-in duration-150">
       <div className="bg-white w-full max-w-4xl rounded-2xl shadow-2xl border border-stone-200 overflow-hidden flex flex-col max-h-[90vh]">
         
         {/* Header with isolated boundary banner */}

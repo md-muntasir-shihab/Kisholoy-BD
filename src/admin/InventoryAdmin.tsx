@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { Product, InventoryTransaction, BatchRestockItem } from '../types';
+import { AdminModalShell } from '../components/admin/AdminModalShell';
 
 export function InventoryAdmin() {
   const { 
@@ -1098,8 +1099,12 @@ export function InventoryAdmin() {
       )}
 
       {/* Single Product Stock Adjust Modal */}
-      {adjustModalProduct && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+      <AdminModalShell
+        open={!!adjustModalProduct}
+        onClose={() => setAdjustModalProduct(null)}
+        label="Single Product Stock Adjust Modal"
+        overlayClassName="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4"
+      >
           <div className="bg-white rounded-2xl max-w-lg w-full p-6 space-y-5 shadow-2xl animate-in fade-in zoom-in duration-150">
             <div className="flex justify-between items-start pb-3 border-b border-stone-200">
               <div>
@@ -1299,12 +1304,15 @@ export function InventoryAdmin() {
               </div>
             </form>
           </div>
-        </div>
-      )}
+      </AdminModalShell>
 
       {/* Barcode & SKU Thermal Tag Generator Modal */}
-      {barcodeProduct && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+      <AdminModalShell
+        open={!!barcodeProduct}
+        onClose={() => setBarcodeProduct(null)}
+        label="Barcode & SKU Thermal Tag Generator Modal"
+        overlayClassName="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4"
+      >
           <div className="bg-white rounded-2xl max-w-sm w-full p-6 space-y-5 shadow-2xl">
             <div className="flex justify-between items-center pb-2 border-b border-stone-200">
               <div className="flex items-center gap-2">
@@ -1372,8 +1380,7 @@ export function InventoryAdmin() {
               </button>
             </div>
           </div>
-        </div>
-      )}
+      </AdminModalShell>
     </div>
   );
 }

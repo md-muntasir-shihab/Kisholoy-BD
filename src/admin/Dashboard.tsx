@@ -408,7 +408,7 @@ export function Dashboard() {
 
   /* ---------------- Render ---------------- */
   return (
-    <div id="admin-dashboard-container" className="space-y-8 max-w-7xl mx-auto pb-12">
+    <div id="admin-dashboard-container" role="region" aria-label="Dashboard overview" className="space-y-8 max-w-7xl mx-auto pb-12">
       {/* Header Banner */}
       <div id="dashboard-header-banner" className="bg-white p-6 sm:p-8 rounded-3xl border border-stone-200/90 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="space-y-2">

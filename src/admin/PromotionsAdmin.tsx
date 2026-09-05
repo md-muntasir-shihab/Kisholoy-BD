@@ -6,6 +6,8 @@ import {
   TrendingUp, Award, ShoppingBag, Eye, RefreshCw, X, ChevronRight
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
+import { AdminModalShell } from '../components/admin/AdminModalShell';
+import { usePendingAction } from '../hooks/usePendingAction';
 import { 
   CouponRule, FlashDeal, CustomerLoyaltyWallet, 
   CouponDiscountType, CouponStatus, LoyaltyTier 
@@ -15,6 +17,10 @@ export function PromotionsAdmin() {
   const { products, categories, showToast, logAudit } = useApp();
 
   const [activeTab, setActiveTab] = useState<'COUPONS' | 'FLASH_DEALS' | 'LOYALTY' | 'SIMULATOR'>('COUPONS');
+
+  // F-306: blocks duplicate submits while a mutation is in flight.
+
+  const { run, isPending, isBusy } = usePendingAction();
   const [loading, setLoading] = useState(true);
 
   // Coupons State
@@ -107,7 +113,7 @@ export function PromotionsAdmin() {
   };
 
   // Toggle coupon status
-  const handleToggleStatus = async (coupon: CouponRule) => {
+  const handleToggleStatus = async (coupon: CouponRule) =>  run('handleToggleStatus', async () => {
     const newStatus: CouponStatus = coupon.status === 'ACTIVE' ? 'DISABLED' : 'ACTIVE';
     try {
       const res = await fetch(`/api/promotions/coupons/${coupon.id}`, {
@@ -123,10 +129,10 @@ export function PromotionsAdmin() {
     } catch (e) {
       showToast('Failed to update coupon status.');
     }
-  };
+    });
 
   // Delete coupon
-  const handleDeleteCoupon = async (id: string, code: string) => {
+  const handleDeleteCoupon = async (id: string, code: string) =>  run('handleDeleteCoupon', async () => {
     if (!confirm(`Are you sure you want to delete coupon "${code}"?`)) return;
     try {
       const res = await fetch(`/api/promotions/coupons/${id}`, {
@@ -142,10 +148,10 @@ export function PromotionsAdmin() {
     } catch (e) {
       showToast('Failed to delete coupon.');
     }
-  };
+    });
 
   // Save Coupon (Create or Edit)
-  const handleSaveCoupon = async (e: React.FormEvent) => {
+  const handleSaveCoupon = async (e: React.FormEvent) =>  run('handleSaveCoupon', async () => {
     e.preventDefault();
     try {
       if (editingCoupon) {
@@ -189,7 +195,7 @@ export function PromotionsAdmin() {
     } catch (err: any) {
       alert(err.message || 'Network error saving coupon');
     }
-  };
+    });
 
   // Open Edit Modal
   const openEditModal = (coupon: CouponRule) => {
@@ -242,7 +248,7 @@ export function PromotionsAdmin() {
   };
 
   // Adjust Points Submit
-  const handleAdjustPointsSubmit = async (e: React.FormEvent) => {
+  const handleAdjustPointsSubmit = async (e: React.FormEvent) =>  run('handleAdjustPointsSubmit', async () => {
     e.preventDefault();
     try {
       const res = await fetch('/api/promotions/loyalty/adjust', {
@@ -271,7 +277,7 @@ export function PromotionsAdmin() {
     } catch (e: any) {
       alert(e.message || 'Error communicating with server');
     }
-  };
+    });
 
   // Run Simulator
   const runSimulator = async () => {
@@ -981,8 +987,12 @@ export function PromotionsAdmin() {
       )}
 
       {/* CREATE / EDIT COUPON MODAL */}
-      {showCouponModal && (
-        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4 backdrop-blur-xs">
+      <AdminModalShell
+        open={!!showCouponModal}
+        onClose={() => setShowCouponModal(false)}
+        label="CREATE EDIT COUPON MODAL"
+        overlayClassName="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4 backdrop-blur-xs"
+      >
           <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-stone-200 shadow-2xl p-6 space-y-4">
             <div className="flex justify-between items-center border-b border-stone-100 pb-3">
               <div>
@@ -1170,12 +1180,15 @@ export function PromotionsAdmin() {
               </div>
             </form>
           </div>
-        </div>
-      )}
+      </AdminModalShell>
 
       {/* LOYALTY POINTS ADJUSTMENT MODAL */}
-      {showAdjustPointsModal && (
-        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4 backdrop-blur-xs">
+      <AdminModalShell
+        open={!!showAdjustPointsModal}
+        onClose={() => setShowAdjustPointsModal(false)}
+        label="LOYALTY POINTS ADJUSTMENT MODAL"
+        overlayClassName="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4 backdrop-blur-xs"
+      >
           <div className="bg-white rounded-2xl max-w-md w-full border border-stone-200 shadow-2xl p-6 space-y-4">
             <div className="flex justify-between items-center border-b border-stone-100 pb-3">
               <div>
@@ -1257,12 +1270,15 @@ export function PromotionsAdmin() {
               </div>
             </form>
           </div>
-        </div>
-      )}
+      </AdminModalShell>
 
       {/* WALLET HISTORY DRAWER */}
-      {selectedWallet && (
-        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4 backdrop-blur-xs">
+      <AdminModalShell
+        open={!!selectedWallet}
+        onClose={() => setSelectedWallet(null)}
+        label="WALLET HISTORY DRAWER"
+        overlayClassName="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4 backdrop-blur-xs"
+      >
           <div className="bg-white rounded-2xl max-w-xl w-full max-h-[85vh] overflow-y-auto border border-stone-200 shadow-2xl p-6 space-y-4">
             <div className="flex justify-between items-center border-b border-stone-100 pb-3">
               <div>
@@ -1323,8 +1339,7 @@ export function PromotionsAdmin() {
               </button>
             </div>
           </div>
-        </div>
-      )}
+      </AdminModalShell>
     </div>
   );
 }

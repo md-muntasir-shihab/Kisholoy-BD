@@ -7,6 +7,8 @@ import {
 import { useApp } from '../context/AppContext';
 import { PrintOrderDocumentsModal } from '../components/print/PrintOrderDocumentsModal';
 import { Order, CustomCourierConfig } from '../types';
+import { AdminModalShell } from '../components/admin/AdminModalShell';
+import { usePendingAction } from '../hooks/usePendingAction';
 
 export function ShipmentsAdmin() {
   const { 
@@ -26,6 +28,8 @@ export function ShipmentsAdmin() {
 
   // State for active view and filtering
   const [activeSubTab, setActiveSubTab] = useState<'pending' | 'dispatched' | 'couriers'>('pending');
+  // F-306: blocks duplicate submits while a mutation is in flight.
+  const { run, isPending, isBusy } = usePendingAction();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCourierFilter, setSelectedCourierFilter] = useState('ALL');
 
@@ -154,7 +158,7 @@ export function ShipmentsAdmin() {
   };
 
   // Execute Consignment Booking
-  const handleExecuteDispatch = async (e: React.FormEvent) => {
+  const handleExecuteDispatch = async (e: React.FormEvent) =>  run('handleExecuteDispatch', async () => {
     e.preventDefault();
     if (!dispatchModalOrder) return;
 
@@ -199,7 +203,7 @@ export function ShipmentsAdmin() {
     } finally {
       setIsDispatching(null);
     }
-  };
+    });
 
   // Webhook simulator
   const handleSimulateWebhook = async (e: React.FormEvent) => {
@@ -678,8 +682,12 @@ export function ShipmentsAdmin() {
       )}
 
       {/* MODAL 1: ADD / EDIT COURIER PARTNER */}
-      {isCourierModalOpen && (
-        <div className="fixed inset-0 z-50 bg-stone-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+      <AdminModalShell
+        open={!!isCourierModalOpen}
+        onClose={() => setIsCourierModalOpen(false)}
+        label="MODAL 1 ADD EDIT COURIER PARTNER"
+        overlayClassName="fixed inset-0 z-50 bg-stone-900/60 backdrop-blur-xs flex items-center justify-center p-4"
+      >
           <form onSubmit={handleSaveCourier} className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-stone-200 space-y-4 animate-in fade-in zoom-in-95 duration-150">
             <div className="flex items-center justify-between border-b border-stone-200 pb-3">
               <div>
@@ -843,12 +851,15 @@ export function ShipmentsAdmin() {
               </button>
             </div>
           </form>
-        </div>
-      )}
+      </AdminModalShell>
 
       {/* MODAL 2: DISPATCH PARCEL MODAL */}
-      {dispatchModalOrder && (
-        <div className="fixed inset-0 z-50 bg-stone-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+      <AdminModalShell
+        open={!!dispatchModalOrder}
+        onClose={() => setDispatchModalOrder(null)}
+        label="MODAL 2 DISPATCH PARCEL MODAL"
+        overlayClassName="fixed inset-0 z-50 bg-stone-900/60 backdrop-blur-xs flex items-center justify-center p-4"
+      >
           <form onSubmit={handleExecuteDispatch} className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-stone-200 space-y-4 animate-in fade-in zoom-in-95 duration-150">
             <div className="flex items-center justify-between border-b border-stone-200 pb-3">
               <div>
@@ -936,8 +947,7 @@ export function ShipmentsAdmin() {
               </button>
             </div>
           </form>
-        </div>
-      )}
+      </AdminModalShell>
 
       {/* UNIFIED PRINT DOCUMENTS MODAL */}
       {labelOrder && (

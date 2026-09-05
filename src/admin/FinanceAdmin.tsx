@@ -9,6 +9,8 @@ import { useApp } from '../context/AppContext';
 import { Order, ExpenseRecord, SettlementRecord, SettlementStatus, FinancialSummary, ReconciliationAnomaly } from '../types';
 import { DateRangeFilterBar } from '../components/admin/DateRangeFilterBar';
 import { DateWiseDataHubModal } from '../components/admin/DateWiseDataHubModal';
+import { AdminModalShell } from '../components/admin/AdminModalShell';
+import { usePendingAction } from '../hooks/usePendingAction';
 import { 
   DateFilterConfig, 
   filterItemsByDate, 
@@ -27,6 +29,10 @@ export function FinanceAdmin() {
   const isBn = language === 'BN';
 
   const [activeTab, setActiveTab] = useState<'pnl' | 'expenses' | 'settlements' | 'reconciliation'>('pnl');
+
+  // F-306: blocks duplicate submits while a mutation is in flight.
+
+  const { run, isPending, isBusy } = usePendingAction();
   const [showDataHub, setShowDataHub] = useState(false);
 
   // Date Filter State
@@ -180,7 +186,7 @@ export function FinanceAdmin() {
   const totalFilteredExpensesAmount = filteredExpenses.reduce((sum, e) => sum + e.amount, 0);
 
   // Expense Handlers
-  const handleCreateExpense = async (e: React.FormEvent) => {
+  const handleCreateExpense = async (e: React.FormEvent) =>  run('handleCreateExpense', async () => {
     e.preventDefault();
     const amountNum = parseFloat(newExpense.amount);
     if (!newExpense.vendor || isNaN(amountNum) || amountNum <= 0 || !newExpense.reference) {
@@ -222,9 +228,9 @@ export function FinanceAdmin() {
     } catch (err) {
       showToast('Failed to record expense', 'info');
     }
-  };
+    });
 
-  const handleDeleteExpense = async (id: string) => {
+  const handleDeleteExpense = async (id: string) =>  run('handleDeleteExpense', async () => {
     if (!window.confirm('Are you sure you want to delete this expense record?')) return;
     try {
       await fetch(`/api/finance/expenses/${id}`, { method: 'DELETE' });
@@ -233,10 +239,11 @@ export function FinanceAdmin() {
     } catch (err) {
       showToast('Failed to delete expense', 'info');
     }
-  };
+  
+  });
 
   // Settlement Handlers
-  const handleCreateSettlement = async (e: React.FormEvent) => {
+  const handleCreateSettlement = async (e: React.FormEvent) =>  run('handleCreateSettlement', async () => {
     e.preventDefault();
     const grossNum = parseFloat(newSettlement.grossAmount);
     const feeNum = parseFloat(newSettlement.gatewayFee) || (grossNum * 0.02);
@@ -288,9 +295,9 @@ export function FinanceAdmin() {
     } catch (err) {
       showToast('Failed to create settlement batch', 'info');
     }
-  };
+    });
 
-  const handleConfirmPayout = async () => {
+  const handleConfirmPayout = async () =>  run('handleConfirmPayout', async () => {
     if (!settlingRecord) return;
     try {
       const res = await fetch(`/api/finance/settlements/${settlingRecord.id}/status`, {
@@ -312,7 +319,8 @@ export function FinanceAdmin() {
     } catch (err) {
       showToast('Failed to update settlement status', 'info');
     }
-  };
+  
+  });
 
   // CSV Export for P&L and Expenses
   const handleExportPnLCsv = () => {
@@ -976,8 +984,12 @@ export function FinanceAdmin() {
       )}
 
       {/* Modal: Record Expense */}
-      {showExpenseModal && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+      <AdminModalShell
+        open={!!showExpenseModal}
+        onClose={() => setShowExpenseModal(false)}
+        label="Modal Record Expense"
+        overlayClassName="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+      >
           <div className="bg-white rounded-xl max-w-md w-full p-6 space-y-4 shadow-xl border border-stone-200">
             <h3 className="text-base font-serif font-bold text-stone-900">Record Operational Expense</h3>
             <form onSubmit={handleCreateExpense} className="space-y-3 text-xs">
@@ -1064,12 +1076,15 @@ export function FinanceAdmin() {
               </div>
             </form>
           </div>
-        </div>
-      )}
+      </AdminModalShell>
 
       {/* Modal: New Settlement Batch */}
-      {showSettlementModal && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+      <AdminModalShell
+        open={!!showSettlementModal}
+        onClose={() => setShowSettlementModal(false)}
+        label="Modal New Settlement Batch"
+        overlayClassName="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+      >
           <div className="bg-white rounded-xl max-w-md w-full p-6 space-y-4 shadow-xl border border-stone-200">
             <h3 className="text-base font-serif font-bold text-stone-900">Create Settlement Batch</h3>
             <form onSubmit={handleCreateSettlement} className="space-y-3 text-xs">
@@ -1151,12 +1166,15 @@ export function FinanceAdmin() {
               </div>
             </form>
           </div>
-        </div>
-      )}
+      </AdminModalShell>
 
       {/* Modal: Mark Settled & Input UTR */}
-      {settlingRecord && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+      <AdminModalShell
+        open={!!settlingRecord}
+        onClose={() => setSettlingRecord(null)}
+        label="Modal Mark Settled & Input UTR"
+        overlayClassName="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+      >
           <div className="bg-white rounded-xl max-w-md w-full p-6 space-y-4 shadow-xl border border-stone-200">
             <h3 className="text-base font-serif font-bold text-stone-900">Confirm Bank Remittance Payout</h3>
             <p className="text-xs text-stone-500">
@@ -1193,8 +1211,7 @@ export function FinanceAdmin() {
               </div>
             </div>
           </div>
-        </div>
-      )}
+      </AdminModalShell>
 
       {/* Date-wise Master Data Hub Modal */}
       {showDataHub && (

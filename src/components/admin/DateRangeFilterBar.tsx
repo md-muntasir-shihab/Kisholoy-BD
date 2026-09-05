@@ -155,7 +155,7 @@ export function DateRangeFilterBar({
   };
 
   return (
-    <div className={`bg-stone-900 text-stone-100 rounded-2xl p-3 sm:p-4 border border-stone-800 shadow-md ${className}`}>
+    <div role="group" aria-label="Date range filters" className={`bg-stone-900 text-stone-100 rounded-2xl p-3 sm:p-4 border border-stone-800 shadow-md ${className}`}>
       {/* Top Header & Presets Row */}
       <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-3">
         

@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import { Product, Category, Supplier } from '../../types';
 import { productUpdateSchema, formatZodError } from '../../lib/validations';
+import { useModalA11y } from '../../hooks/useModalA11y';
 
 interface ProductEditModalProps {
   product: Product | null;
@@ -25,6 +26,13 @@ export function ProductEditModal({
   suppliers,
   language
 }: ProductEditModalProps) {
+  // F-307: Escape to close, focus trap, focus restore and ARIA dialog roles.
+  const { containerRef, dialogProps } = useModalA11y({
+    open: isOpen,
+    onClose,
+    label: 'Product Edit',
+  });
+
   if (!isOpen || !product) return null;
 
   const [activeTab, setActiveTab] = useState<'general' | 'finance' | 'logistics' | 'merchandising'>('general');
@@ -139,7 +147,7 @@ export function ProductEditModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-stone-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-in fade-in duration-150">
+    <div ref={containerRef} {...dialogProps} className="fixed inset-0 z-50 bg-stone-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-in fade-in duration-150">
       <div className="bg-white rounded-2xl max-w-3xl w-full max-h-[92vh] flex flex-col shadow-2xl overflow-hidden my-auto border border-stone-100">
         
         {/* Header */}

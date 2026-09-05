@@ -8,6 +8,7 @@ import {
 import { useApp } from '../context/AppContext';
 import { SiteContent, ContentRevision } from '../types';
 import { BrandLogo } from '../components/brand/BrandLogo';
+import { AdminModalShell } from '../components/admin/AdminModalShell';
 
 type CmsSection = 
   | 'brand' 
@@ -1813,8 +1814,12 @@ export function ContentAdmin() {
       {/* ========================================================================= */}
       {/* 1. Modal: Live Storefront Preview Simulator */}
       {/* ========================================================================= */}
-      {previewModalOpen && (
-        <div className="fixed inset-0 z-50 bg-stone-950/80 backdrop-blur-sm flex flex-col items-center justify-center p-2 sm:p-4 animate-in fade-in duration-150">
+      <AdminModalShell
+        open={!!previewModalOpen}
+        onClose={() => setPreviewModalOpen(false)}
+        label="Live storefront preview"
+        overlayClassName="fixed inset-0 z-50 bg-stone-950/80 backdrop-blur-sm flex flex-col items-center justify-center p-2 sm:p-4 animate-in fade-in duration-150"
+      >
           <div className="w-full max-w-6xl bg-stone-900 rounded-2xl border border-stone-700 shadow-2xl flex flex-col h-[92vh] overflow-hidden">
             {/* Top Toolbar */}
             <div className="px-4 py-3 bg-stone-950 border-b border-stone-800 flex items-center justify-between text-white shrink-0">
@@ -1993,14 +1998,17 @@ export function ContentAdmin() {
               </div>
             </div>
           </div>
-        </div>
-      )}
+      </AdminModalShell>
 
       {/* ========================================================================= */}
       {/* 2. Modal: Confirm Publish to Live Store */}
       {/* ========================================================================= */}
-      {publishModalOpen && (
-        <div className="fixed inset-0 z-50 bg-stone-950/70 backdrop-blur-xs flex items-center justify-center p-4">
+      <AdminModalShell
+        open={!!publishModalOpen}
+        onClose={() => setPublishModalOpen(null)}
+        label="Publish content"
+        overlayClassName="fixed inset-0 z-50 bg-stone-950/70 backdrop-blur-xs flex items-center justify-center p-4"
+      >
           <div className="bg-white rounded-2xl max-w-md w-full p-6 space-y-4 border border-stone-300 shadow-2xl animate-in zoom-in-95 duration-150">
             <div className="flex items-center gap-3 border-b border-stone-200 pb-3">
               <div className="p-2.5 rounded-full bg-teal-100 text-teal-900">
@@ -2062,14 +2070,17 @@ export function ContentAdmin() {
               </button>
             </div>
           </div>
-        </div>
-      )}
+      </AdminModalShell>
 
       {/* ========================================================================= */}
       {/* 3. Modal: Artisanal Image Asset Selector */}
       {/* ========================================================================= */}
-      {imagePickerTarget && (
-        <div className="fixed inset-0 z-50 bg-stone-950/70 backdrop-blur-xs flex items-center justify-center p-4">
+      <AdminModalShell
+        open={!!imagePickerTarget}
+        onClose={() => setImagePickerTarget(null)}
+        label="Choose image"
+        overlayClassName="fixed inset-0 z-50 bg-stone-950/70 backdrop-blur-xs flex items-center justify-center p-4"
+      >
           <div className="bg-white rounded-2xl max-w-3xl w-full p-6 space-y-4 border border-stone-300 shadow-2xl max-h-[90vh] flex flex-col">
             <div className="flex items-center justify-between border-b border-stone-200 pb-3 shrink-0">
               <div className="flex items-center gap-2">
@@ -2117,8 +2128,7 @@ export function ContentAdmin() {
               </button>
             </div>
           </div>
-        </div>
-      )}
+      </AdminModalShell>
     </div>
   );
 }

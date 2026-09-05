@@ -16,6 +16,8 @@ import {
 } from '../types';
 import { AdminHelpButton } from '../components/admin/AdminHelpModal';
 import { NOTIFICATION_HELP_DATA } from '../data/notificationHelpData';
+import { AdminModalShell } from '../components/admin/AdminModalShell';
+import { usePendingAction } from '../hooks/usePendingAction';
 
 export function OperationsAdmin() {
   const { showToast, logAudit } = useApp();
@@ -24,6 +26,8 @@ export function OperationsAdmin() {
   const [activeTab, setActiveTab] = useState<
     'NOTIFICATIONS_HUB' | 'TEMPLATES' | 'GATEWAYS_CONFIG' | 'DELIVERY_LOGS' | 'QUEUE' | 'DLQ' | 'WEBHOOKS'
   >('NOTIFICATIONS_HUB');
+  // F-306: blocks duplicate submits while a mutation is in flight.
+  const { run, isPending, isBusy } = usePendingAction();
   
   const [loading, setLoading] = useState(true);
 
@@ -192,7 +196,7 @@ export function OperationsAdmin() {
   };
 
   // Test Gateway Connection
-  const handleTestConnection = async (channel: NotificationChannel, provider: string) => {
+  const handleTestConnection = async (channel: NotificationChannel, provider: string) =>  run('handleTestConnection', async () => {
     try {
       setTestingGateway(channel);
       setGatewayTestResult(null);
@@ -213,10 +217,10 @@ export function OperationsAdmin() {
     } finally {
       setTestingGateway(null);
     }
-  };
+    });
 
   // Topup SMS credit balance
-  const handleTopupBalance = async (amount: number) => {
+  const handleTopupBalance = async (amount: number) =>  run('handleTopupBalance', async () => {
     try {
       setTopupLoading(true);
       const res = await fetch('/api/notifications/topup', {
@@ -239,10 +243,10 @@ export function OperationsAdmin() {
     } finally {
       setTopupLoading(false);
     }
-  };
+    });
 
   // Retry notification log
-  const handleRetryNotification = async (id: string) => {
+  const handleRetryNotification = async (id: string) =>  run('handleRetryNotification', async () => {
     try {
       const res = await fetch(`/api/notifications/logs/${id}/retry`, { method: 'POST' });
       const data = await res.json();
@@ -255,7 +259,7 @@ export function OperationsAdmin() {
     } catch (e) {
       showToast('Error retrying notification');
     }
-  };
+    });
 
   // Save Gateway Config
   const handleSaveGatewayConfig = async (e: React.FormEvent) => {
@@ -281,7 +285,7 @@ export function OperationsAdmin() {
   };
 
   // Save Notification Template
-  const handleSaveTemplate = async () => {
+  const handleSaveTemplate = async () =>  run('handleSaveTemplate', async () => {
     if (!editingTemplate) return;
     try {
       const res = await fetch(`/api/notifications/templates/${editingTemplate.id}`, {
@@ -299,10 +303,10 @@ export function OperationsAdmin() {
     } catch (e) {
       showToast('Failed to save template');
     }
-  };
+    });
 
   // Manual tick of automation worker
-  const handleTickWorker = async () => {
+  const handleTickWorker = async () =>  run('handleTickWorker', async () => {
     try {
       setTickingWorker(true);
       const res = await fetch('/api/operations/tick', { method: 'POST' });
@@ -316,10 +320,10 @@ export function OperationsAdmin() {
     } finally {
       setTickingWorker(false);
     }
-  };
+    });
 
   // Retry job
-  const handleRetryJob = async (jobId: string) => {
+  const handleRetryJob = async (jobId: string) =>  run('handleRetryJob', async () => {
     try {
       setRetryingJob(jobId);
       const res = await fetch(`/api/operations/jobs/${jobId}/retry`, { method: 'POST' });
@@ -333,10 +337,10 @@ export function OperationsAdmin() {
     } finally {
       setRetryingJob(null);
     }
-  };
+    });
 
   // Send webhook test ping
-  const handleSendTestPing = async (endpointId: string) => {
+  const handleSendTestPing = async (endpointId: string) =>  run('handleSendTestPing', async () => {
     try {
       setTestingWebhookId(endpointId);
       const res = await fetch(`/api/webhooks/endpoints/${endpointId}/ping`, { method: 'POST' });
@@ -352,10 +356,10 @@ export function OperationsAdmin() {
     } finally {
       setTestingWebhookId(null);
     }
-  };
+    });
 
   // Create Webhook
-  const handleCreateWebhook = async (e: React.FormEvent) => {
+  const handleCreateWebhook = async (e: React.FormEvent) =>  run('handleCreateWebhook', async () => {
     e.preventDefault();
     try {
       const res = await fetch('/api/webhooks/endpoints', {
@@ -373,10 +377,10 @@ export function OperationsAdmin() {
     } catch (e) {
       showToast('Error registering webhook');
     }
-  };
+    });
 
   // Delete Webhook
-  const handleDeleteWebhook = async (id: string, name: string) => {
+  const handleDeleteWebhook = async (id: string, name: string) =>  run('handleDeleteWebhook', async () => {
     if (!window.confirm(`Delete webhook endpoint "${name}"?`)) return;
     try {
       const res = await fetch(`/api/webhooks/endpoints/${id}`, { method: 'DELETE' });
@@ -388,7 +392,7 @@ export function OperationsAdmin() {
     } catch (e) {
       showToast('Failed to delete endpoint');
     }
-  };
+    });
 
   const filteredLogs = notificationLogs.filter(log => {
     if (logChannelFilter === 'ALL') return true;
@@ -1576,8 +1580,12 @@ export function OperationsAdmin() {
       {/* MODALS & PAYLOAD INSPECTORS                                               */}
       {/* ========================================================================= */}
       {/* Inspect Notification Log Modal */}
-      {selectedNotificationLog && (
-        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4 backdrop-blur-xs">
+      <AdminModalShell
+        open={!!selectedNotificationLog}
+        onClose={() => setSelectedNotificationLog(null)}
+        label="Inspect Notification Log Modal"
+        overlayClassName="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4 backdrop-blur-xs"
+      >
           <div className="bg-white rounded-2xl max-w-xl w-full p-6 shadow-2xl space-y-4 border border-stone-200">
             <div className="flex justify-between items-center border-b border-stone-200 pb-3">
               <div>
@@ -1622,12 +1630,15 @@ export function OperationsAdmin() {
               </div>
             </div>
           </div>
-        </div>
-      )}
+      </AdminModalShell>
 
       {/* Register Webhook Modal */}
-      {showAddWebhookModal && (
-        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4 backdrop-blur-xs">
+      <AdminModalShell
+        open={!!showAddWebhookModal}
+        onClose={() => setShowAddWebhookModal(false)}
+        label="Register Webhook Modal"
+        overlayClassName="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4 backdrop-blur-xs"
+      >
           <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4">
             <div className="flex justify-between items-center border-b border-stone-200 pb-3">
               <h3 className="text-base font-serif font-bold text-stone-900">Register Outbound Webhook</h3>
@@ -1690,12 +1701,15 @@ export function OperationsAdmin() {
               </div>
             </form>
           </div>
-        </div>
-      )}
+      </AdminModalShell>
 
       {/* Inspect Task Payload Modal */}
-      {selectedJobPayload && (
-        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4 backdrop-blur-xs">
+      <AdminModalShell
+        open={!!selectedJobPayload}
+        onClose={() => setSelectedJobPayload(null)}
+        label="Inspect Task Payload Modal"
+        overlayClassName="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4 backdrop-blur-xs"
+      >
           <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4">
             <div className="flex justify-between items-center border-b border-stone-200 pb-3">
               <div>
@@ -1715,8 +1729,7 @@ export function OperationsAdmin() {
               </pre>
             </div>
           </div>
-        </div>
-      )}
+      </AdminModalShell>
     </div>
   );
 }

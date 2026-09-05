@@ -34,6 +34,8 @@ import {
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { CrmCustomerDetails, CrmCustomerNote, CustomerSegmentType, Order } from '../../types';
+import { useModalA11y } from '../../hooks/useModalA11y';
+import { usePendingAction } from '../../hooks/usePendingAction';
 
 interface Customer360ModalProps {
   customerId: string | null;
@@ -50,10 +52,21 @@ export function Customer360Modal({
   onOpenMessageModal,
   onCustomerUpdated
 }: Customer360ModalProps) {
+  // F-307: Escape to close, focus trap, focus restore and ARIA dialog roles.
+  const { containerRef, dialogProps } = useModalA11y({
+    open: !!customerId,
+    onClose,
+    label: 'Customer360',
+  });
+
   const { language, orders: globalOrders, currentRole, showToast } = useApp();
   const isBn = language === 'BN';
 
   const [activeTab, setActiveTab] = useState<TabType>('overview');
+
+  // F-306: blocks duplicate submits while a mutation is in flight.
+
+  const { run, isPending, isBusy } = usePendingAction();
   const [loading, setLoading] = useState<boolean>(true);
   const [details, setDetails] = useState<CrmCustomerDetails | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -231,7 +244,7 @@ export function Customer360Modal({
   };
 
   // Toggle tag
-  const handleToggleTag = async (tag: string) => {
+  const handleToggleTag = async (tag: string) =>  run('handleToggleTag', async () => {
     if (!details) return;
     try {
       const res = await fetch(`/api/customers/${details.customer.id}/tags`, {
@@ -253,7 +266,7 @@ export function Customer360Modal({
       setDetails((prev) => (prev ? { ...prev, tags: updatedTags } : prev));
       showToast(isBn ? 'ট্যাগ আপডেট হয়েছে' : 'Customer tag toggled');
     }
-  };
+    });
 
   // Toggle status
   const handleStatusToggle = async () => {
@@ -409,8 +422,7 @@ export function Customer360Modal({
   };
 
   return (
-    <div
-      id="customer-360-modal-overlay"
+    <div ref={containerRef} {...dialogProps} id="customer-360-modal-overlay"
       className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6 overflow-y-auto"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();

@@ -1,6 +1,7 @@
 import React from 'react';
 import { Trash2, AlertTriangle, X } from 'lucide-react';
 import { Product } from '../../types';
+import { useModalA11y } from '../../hooks/useModalA11y';
 
 interface ProductDeleteConfirmModalProps {
   product: Product | null;
@@ -19,10 +20,17 @@ export function ProductDeleteConfirmModal({
   onConfirm,
   language
 }: ProductDeleteConfirmModalProps) {
+  // F-307: Escape to close, focus trap, focus restore and ARIA dialog roles.
+  const { containerRef, dialogProps } = useModalA11y({
+    open: isOpen,
+    onClose,
+    label: 'Product Delete Confirm',
+  });
+
   if (!isOpen || (!product && bulkCount === 0)) return null;
 
   return (
-    <div className="fixed inset-0 z-50 bg-stone-900/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-150">
+    <div ref={containerRef} {...dialogProps} className="fixed inset-0 z-50 bg-stone-900/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-150">
       <div className="bg-white rounded-2xl max-w-md w-full shadow-2xl overflow-hidden border border-stone-200">
         
         <div className="p-6">

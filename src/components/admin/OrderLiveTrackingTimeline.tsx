@@ -208,7 +208,7 @@ export function OrderLiveTrackingTimeline({ order, onStatusSync, isBn = false }:
   }
 
   return (
-    <div className="bg-sky-50/50 rounded-2xl border border-sky-200 p-4 space-y-4 text-xs">
+    <div role="region" aria-label="Live delivery tracking timeline" className="bg-sky-50/50 rounded-2xl border border-sky-200 p-4 space-y-4 text-xs">
       {/* Top Header & Status Badge */}
       <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-sky-200/80">
         <div className="flex items-center gap-2">

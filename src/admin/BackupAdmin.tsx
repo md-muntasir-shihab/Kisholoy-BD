@@ -23,6 +23,8 @@ import {
   GoogleDriveFileItem
 } from '../types';
 import { BACKUP_HELP_DEFINITIONS, BackupFunctionHelp } from './backupHelpData';
+import { AdminModalShell } from '../components/admin/AdminModalShell';
+import { usePendingAction } from '../hooks/usePendingAction';
 
 export function BackupAdmin() {
   const { language, currentRole, showToast, logAudit, products, orders, customers } = useApp();
@@ -30,6 +32,8 @@ export function BackupAdmin() {
 
   // Tab State
   const [activeTab, setActiveTab] = useState<'snapshots' | 'google_drive' | 'dr_pipeline' | 'export_import' | 'system_health'>('snapshots');
+  // F-306: blocks duplicate submits while a mutation is in flight.
+  const { run, isPending, isBusy } = usePendingAction();
 
   // Every panel on this screen loads independently and used to fail silently,
   // leaving empty cards that look like "no backups" rather than "not loaded"
@@ -188,7 +192,7 @@ export function BackupAdmin() {
     }
   };
 
-  const handleDisconnectDrive = async () => {
+  const handleDisconnectDrive = async () =>  run('handleDisconnectDrive', async () => {
     try {
       const res = await fetch('/api/system/drive/disconnect', {
         method: 'POST',
@@ -203,7 +207,8 @@ export function BackupAdmin() {
     } catch (e: any) {
       showToast(`Error disconnecting Drive: ${e.message}`);
     }
-  };
+  
+  });
 
   const handleSyncDriveNow = async () => {
     setSyncingDrive(true);
@@ -485,7 +490,7 @@ export function BackupAdmin() {
   };
 
   // Handle Export
-  const handleTriggerExport = async (entity: 'PRODUCTS' | 'ORDERS' | 'CUSTOMERS' | 'FINANCE', format: 'CSV' | 'JSON') => {
+  const handleTriggerExport = async (entity: 'PRODUCTS' | 'ORDERS' | 'CUSTOMERS' | 'FINANCE', format: 'CSV' | 'JSON') =>  run('handleTriggerExport', async () => {
     setExportingEntity(`${entity}_${format}`);
     try {
       const res = await fetch('/api/system/export', {
@@ -511,7 +516,7 @@ export function BackupAdmin() {
     } finally {
       setExportingEntity(null);
     }
-  };
+    });
 
   // Handle Bulk Import Validation (Dry Run)
   const handleValidateImport = async (dryRun: boolean) => {
@@ -1957,8 +1962,14 @@ export function BackupAdmin() {
       {/* ========================================================================= */}
       {/* RESTORE MODAL (High-Risk Operation with Dry-Run & Safeguards) */}
       {/* ========================================================================= */}
-      {restoreModalOpen && selectedSnapshotForRestore && (
-        <div className="fixed inset-0 z-50 bg-stone-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+      <AdminModalShell
+        open={!!(restoreModalOpen && selectedSnapshotForRestore)}
+        onClose={() => setRestoreModalOpen(null)}
+        label=""
+        closeOnEscape={false}
+        closeOnBackdrop={false}
+        overlayClassName="fixed inset-0 z-50 bg-stone-900/60 backdrop-blur-xs flex items-center justify-center p-4"
+      >
           <div className="bg-white rounded-2xl border border-stone-200 shadow-xl max-w-2xl w-full p-6 space-y-5 animate-in fade-in zoom-in-95 duration-150">
             {/* Modal Header */}
             <div className="flex items-start justify-between">
@@ -2097,14 +2108,17 @@ export function BackupAdmin() {
               </>
             )}
           </div>
-        </div>
-      )}
+      </AdminModalShell>
 
       {/* ========================================================================= */}
       {/* 11-POINT ADMIN FUNCTION EXPLANATION (ⓘ HELP MODAL) */}
       {/* ========================================================================= */}
-      {selectedHelp && (
-        <div className="fixed inset-0 z-50 bg-stone-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+      <AdminModalShell
+        open={!!selectedHelp}
+        onClose={() => setSelectedHelp(null)}
+        label=""
+        overlayClassName="fixed inset-0 z-50 bg-stone-900/60 backdrop-blur-xs flex items-center justify-center p-4"
+      >
           <div className="bg-white rounded-2xl border border-stone-200 shadow-2xl max-w-2xl w-full p-6 space-y-4 max-h-[90vh] overflow-y-auto animate-in fade-in zoom-in-95 duration-150">
             {/* Header */}
             <div className="flex items-start justify-between border-b border-stone-200 pb-3">
@@ -2241,8 +2255,7 @@ export function BackupAdmin() {
               </button>
             </div>
           </div>
-        </div>
-      )}
+      </AdminModalShell>
     </div>
   );
 }

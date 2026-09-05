@@ -98,6 +98,7 @@ export function CategoriesAdmin() {
               <input
                 type="url"
                 value={image}
+                aria-label="image"
                 onChange={(e) => setImage(e.target.value)}
                 placeholder="https://images.unsplash.com/..."
                 className="w-full p-2.5 border border-stone-300 rounded-lg"

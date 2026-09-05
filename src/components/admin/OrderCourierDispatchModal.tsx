@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { Order, CustomCourierConfig } from '../../types';
 import { useApp } from '../../context/AppContext';
+import { useModalA11y } from '../../hooks/useModalA11y';
 
 interface OrderCourierDispatchModalProps {
   isOpen: boolean;
@@ -39,6 +40,13 @@ export function OrderCourierDispatchModal({
   onSuccess,
   onPrintLabel
 }: OrderCourierDispatchModalProps) {
+  // F-307: Escape to close, focus trap, focus restore and ARIA dialog roles.
+  const { containerRef, dialogProps } = useModalA11y({
+    open: isOpen,
+    onClose,
+    label: 'Order Courier Dispatch',
+  });
+
   const { customCouriers, showToast, language, syncServerOrder } = useApp();
   const isBn = language === 'BN';
 
@@ -173,7 +181,7 @@ export function OrderCourierDispatchModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+    <div ref={containerRef} {...dialogProps} className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
       <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[92vh] flex flex-col shadow-2xl border border-stone-200 overflow-hidden my-auto">
         {/* Header */}
         <div className="px-6 py-4 bg-stone-900 text-white flex items-center justify-between">

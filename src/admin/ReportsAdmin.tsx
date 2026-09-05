@@ -1059,6 +1059,7 @@ export function ReportsAdmin() {
                 <span className="text-xs text-stone-500">{lang === 'BN' ? 'অর্ডার:' : 'Order:'}</span>
                 <select
                   value={selectedOrderForDoc}
+                  aria-label="order for doc"
                   onChange={(e) => setSelectedOrderForDoc(e.target.value)}
                   className="px-2 py-1.5 border border-stone-200 rounded-lg text-xs font-mono bg-stone-50"
                 >

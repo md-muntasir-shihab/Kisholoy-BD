@@ -234,3 +234,99 @@ smoke 98/9 unchanged · storefront and auth regression battery green.
 **Remaining from PHASE 3:** F-306 (79 mutations with no in-flight state),
 F-307 (41 modals with no Esc/focus-trap), F-308 (responsive → PHASE 5),
 F-309 (3 English-only screens).
+
+---
+
+## Batch 5 — F-306, F-307, F-308, F-309
+
+Closes the remaining PHASE 3 findings. All four are cross-cutting defects, so
+each was fixed with one shared primitive plus a codemod, rather than 100+
+hand-edits that would drift apart over time.
+
+### F-306 — duplicate submits (S3)
+
+`src/hooks/usePendingAction.ts`. `run(key, action)` refuses re-entry while the
+same key is in flight. The guard is a `useRef<Set<string>>`, **not** the
+`pending` state: state updates are async, so two clicks in the same tick would
+both observe `pending === null` and both fire. That window is exactly how
+duplicate expenses, double dispatches and repeated status flips were produced.
+
+Applied to **51 mutation handlers** across 13 files (OperationsAdmin 9,
+FraudRiskDashboard 7, MarketingAdmin 7, UsersAdmin 6, FinanceAdmin 4,
+PromotionsAdmin 4, SupplierSettlementsView 4, SuppliersAdmin 4, BackupAdmin 2,
+ShipmentsAdmin 1, Customer360Modal 1, SupplierAgreementsView 1,
+SupplyBatchesView 1) via `scripts/audit/apply-pending-guard.mjs`.
+
+The 6 sites still reported as "no loading state" were checked individually and
+deliberately left alone: five are GET loaders (`fetchSchedule`, `fetchDrMetrics`,
+`loadPurchaseOrders`, `handleRunDiagnostics`, `handleRunReconciliation`) where a
+repeat is idempotent, and `handleSmsInputChange` runs per keystroke.
+
+### F-307 — modal accessibility (S3)
+
+`src/hooks/useModalA11y.ts` provides Escape-to-close, a Tab/Shift+Tab focus
+trap, focus-on-open, focus-restore-on-close, a body scroll lock and the
+`role="dialog"` / `aria-modal` / `aria-label` wiring.
+
+Two delivery mechanisms, because the codebase has two modal shapes:
+
+- **17 standalone `*Modal.tsx` components** call the hook directly
+  (`scripts/audit/apply-modal-a11y.mjs`, extended to handle both
+  `export function X({…})` and `export const X: React.FC = ({…}) =>`, plus
+  modals gated on a nullable entity prop instead of an `isOpen` flag).
+- **58 overlays declared inline inside admin screens** are wrapped in the new
+  `src/components/admin/AdminModalShell.tsx`
+  (`scripts/audit/wrap-inline-modals.mjs`). These have no component boundary
+  and each owns its own open-state variable, so wrapping was the low-risk
+  route.
+
+The hook is always called *before* the `if (!isOpen) return null` early return —
+rules of hooks.
+
+Destructive dialogs opt out of dismissal so a stray Escape or backdrop click
+cannot abandon a half-finished irreversible action: **backup restore**,
+**supplier MFA payment**, **settlement payout** and **manual IP quarantine**
+set `closeOnEscape={false} closeOnBackdrop={false}`. Backdrop dismissal
+elsewhere fires on `mousedown` at the overlay itself, so a text selection that
+drags onto the backdrop does not close the form.
+
+### F-308 — responsive (S3)
+
+`BulkSupplierImportModal` and `CustomerQuickMessageModal` were fixed-padding
+with unconditional multi-column grids; both now use `sm:`-prefixed padding and
+collapse to a single column on phones. Aggregate: **2 → 0** files.
+
+### F-309 — English-only screens (S3)
+
+`SettingsAdmin` (8 strings), `PaymentsAdmin` (33) and `BusinessDocumentModal`
+(10) are bilingual. The courier manifest stays bilingual rather than
+Bengali-only because the printed sheet is handed to a rider.
+
+### Accessibility sweep
+
+`aria-label`s on unlabelled filter selects/search inputs (CustomersAdmin,
+CategoriesAdmin, ReportsAdmin) and landmark roles on Dashboard, SettingsAdmin,
+DateRangeFilterBar and OrderLiveTrackingTimeline. Aggregate: **32 → 0** files.
+
+### Analyzer corrections (F-310)
+
+Two more false-positive classes: handlers guarded by `usePendingAction().run()`
+were counted as unguarded, and modals delegating to `useModalA11y` /
+`AdminModalShell` were counted as having no ARIA. Both are now recognised, which
+is why the no-loading count moves 57 → 6 rather than 57 → 8.
+
+### Result — PHASE 3 aggregate now clean
+
+| finding | before | after |
+|---|---|---|
+| possibly unwired | 0 | 0 |
+| mutation w/o refetch | 0 | 0 |
+| silent catch / no catch | 1 + 1 | 1 + 1 (both intentional) |
+| no in-flight state | 57 | 6 (all idempotent GETs) |
+| files lacking i18n | 3 | **0** |
+| files lacking responsive | 2 | **0** |
+| files lacking aria/role | 32 | **0** |
+
+**Gates:** `tsc --noEmit` clean · build green (`dist/server.cjs` 849.8 kB) ·
+smoke 98/9 unchanged · all 8 admin routes 200 · every rewritten module
+re-verified through Vite's transform pipeline (58 inline JSX rewrites).

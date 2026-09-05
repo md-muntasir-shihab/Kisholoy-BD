@@ -7,6 +7,8 @@ import {
 import { Supplier, SupplyBatch, SupplierSettlementMethod } from '../../types';
 import { useApp } from '../../context/AppContext';
 import { SUPPLIER_HELP_DEFINITIONS, SupplierFunctionHelp } from '../../admin/supplierHelpData';
+import { AdminModalShell } from './AdminModalShell';
+import { usePendingAction } from '../../hooks/usePendingAction';
 
 interface SupplyBatchesViewProps {
   suppliers: Supplier[];
@@ -19,6 +21,8 @@ export const SupplyBatchesView: React.FC<SupplyBatchesViewProps> = ({
 }) => {
   const { language, showToast, currentRole, products } = useApp();
   const [batches, setBatches] = useState<SupplyBatch[]>([]);
+  // F-306: blocks duplicate submits while a mutation is in flight.
+  const { run, isPending, isBusy } = usePendingAction();
   const [loading, setLoading] = useState(false);
   const [selectedSupplierFilter, setSelectedSupplierFilter] = useState<string>('ALL');
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
@@ -87,7 +91,7 @@ export const SupplyBatchesView: React.FC<SupplyBatchesViewProps> = ({
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) =>  run('handleSubmit', async () => {
     e.preventDefault();
     if (!supplierId || !productId || receivedQuantity <= 0) {
       showToast?.('Please specify supplier, product and a positive quantity.');
@@ -126,7 +130,8 @@ export const SupplyBatchesView: React.FC<SupplyBatchesViewProps> = ({
     } catch (err: any) {
       showToast?.(err.message || 'Error recording batch.');
     }
-  };
+  
+  });
 
   const filteredBatches = batches.filter(b => {
     const matchesSupplier = selectedSupplierFilter === 'ALL' || b.supplierId === selectedSupplierFilter;
@@ -327,8 +332,12 @@ export const SupplyBatchesView: React.FC<SupplyBatchesViewProps> = ({
       </div>
 
       {/* Intake Batch Modal */}
-      {createModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-900/60 backdrop-blur-xs animate-in fade-in duration-150">
+      <AdminModalShell
+        open={!!createModalOpen}
+        onClose={() => setCreateModalOpen(null)}
+        label="Intake Batch Modal"
+        overlayClassName="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-900/60 backdrop-blur-xs animate-in fade-in duration-150"
+      >
           <div className="bg-white w-full max-w-lg rounded-2xl shadow-2xl border border-stone-200 overflow-hidden flex flex-col max-h-[90vh]">
             <div className="px-6 py-4 bg-teal-900 text-white flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -489,8 +498,7 @@ export const SupplyBatchesView: React.FC<SupplyBatchesViewProps> = ({
               </div>
             </form>
           </div>
-        </div>
-      )}
+      </AdminModalShell>
     </div>
   );
 };

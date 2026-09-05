@@ -7,6 +7,8 @@
 import React, { useRef } from 'react';
 import { Printer, Download, X, FileText } from 'lucide-react';
 import { Order, SiteContent, TaxVatSummary } from '../../types';
+import { useModalA11y } from '../../hooks/useModalA11y';
+import { useApp } from '../../context/AppContext';
 
 interface BusinessDocumentModalProps {
   type: 'COURIER_MANIFEST' | 'TAX_STATEMENT';
@@ -25,6 +27,18 @@ export function BusinessDocumentModal({
   taxSummary,
   onClose
 }: BusinessDocumentModalProps) {
+  const { language } = useApp();
+  // Courier manifests are handed to a rider, so labels stay bilingual rather
+  // than Bengali-only (F-309).
+  const isBn = language === 'BN';
+
+  // F-307: mounted only while open, so the dialog is always open here.
+  const { containerRef, dialogProps } = useModalA11y({
+    open: true,
+    onClose,
+    label: 'Business document',
+  });
+
   const printRef = useRef<HTMLDivElement>(null);
 
   const handlePrint = () => {
@@ -49,7 +63,7 @@ export function BusinessDocumentModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-2 sm:p-4 overflow-y-auto backdrop-blur-xs">
+    <div ref={containerRef} {...dialogProps} className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-2 sm:p-4 overflow-y-auto backdrop-blur-xs">
       <style>{`
         @media print {
           body * { visibility: hidden !important; }
@@ -120,18 +134,18 @@ export function BusinessDocumentModal({
                 <thead>
                   <tr className="bg-stone-100 text-stone-800 font-bold border-b border-stone-300">
                     <th className="p-2 border-r border-stone-300 w-8 text-center">#</th>
-                    <th className="p-2 border-r border-stone-300">Consignment ID</th>
-                    <th className="p-2 border-r border-stone-300">Order Ref</th>
-                    <th className="p-2 border-r border-stone-300">Customer Name & Phone</th>
-                    <th className="p-2 border-r border-stone-300">District</th>
+                    <th className="p-2 border-r border-stone-300">{isBn ? 'কনসাইনমেন্ট আইডি' : 'Consignment ID'}</th>
+                    <th className="p-2 border-r border-stone-300">{isBn ? 'অর্ডার রেফ' : 'Order Ref'}</th>
+                    <th className="p-2 border-r border-stone-300">{isBn ? 'গ্রাহকের নাম ও ফোন' : 'Customer Name & Phone'}</th>
+                    <th className="p-2 border-r border-stone-300">{isBn ? 'জেলা' : 'District'}</th>
                     <th className="p-2 border-r border-stone-300 text-right">COD Due (৳)</th>
-                    <th className="p-2 text-center w-16">Rider Tick</th>
+                    <th className="p-2 text-center w-16">{isBn ? 'রাইডার টিক' : 'Rider Tick'}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-stone-200">
                   {ordersList.length === 0 ? (
                     <tr>
-                      <td colSpan={7} className="p-4 text-center text-stone-400">No active parcels to manifest</td>
+                      <td colSpan={7} className="p-4 text-center text-stone-400">{isBn ? 'ম্যানিফেস্ট করার মতো সক্রিয় পার্সেল নেই' : 'No active parcels to manifest'}</td>
                     </tr>
                   ) : (
                     ordersList.map((o, idx) => (
@@ -169,12 +183,12 @@ export function BusinessDocumentModal({
 
               <div className="grid grid-cols-2 pt-8 text-center text-[10px] text-stone-500">
                 <div>
-                  <div className="w-40 border-t border-stone-400 mx-auto pt-1 font-semibold text-stone-700">Dispatch Executive</div>
-                  <div>Kisholoy Central Hub</div>
+                  <div className="w-40 border-t border-stone-400 mx-auto pt-1 font-semibold text-stone-700">{isBn ? 'ডিসপ্যাচ এক্সিকিউটিভ' : 'Dispatch Executive'}</div>
+                  <div>{isBn ? 'কিশলয় সেন্ট্রাল হাব' : 'Kisholoy Central Hub'}</div>
                 </div>
                 <div>
-                  <div className="w-40 border-t border-stone-400 mx-auto pt-1 font-semibold text-stone-700">Courier Pickup Rider</div>
-                  <div>Steadfast Rider Signature & Mobile</div>
+                  <div className="w-40 border-t border-stone-400 mx-auto pt-1 font-semibold text-stone-700">{isBn ? 'কুরিয়ার পিকআপ রাইডার' : 'Courier Pickup Rider'}</div>
+                  <div>{isBn ? 'স্টেডফাস্ট রাইডার স্বাক্ষর ও মোবাইল' : 'Steadfast Rider Signature & Mobile'}</div>
                 </div>
               </div>
             </div>

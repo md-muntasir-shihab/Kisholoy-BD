@@ -123,8 +123,8 @@ function fileTraits(rel) {
   return {
     i18n: /language\s*===\s*'BN'|labelBn|Bn\b|isBn/.test(s),
     responsive: /\b(sm:|md:|lg:|xl:)/.test(s),
-    aria: /aria-[a-z]+=|role=/.test(s),
-    escKey: /'Escape'|"Escape"|key === 'Esc/.test(s),
+    aria: /aria-[a-z]+=|role=/.test(s) || /useModalA11y|AdminModalShell/.test(s),
+    escKey: /'Escape'|"Escape"|key === 'Esc/.test(s) || /useModalA11y|AdminModalShell/.test(s),
     overflowTable: /overflow-x-auto|overflow-auto/.test(s),
     fixedWidth: /\bw-\[\d{3,}px\]|min-w-\[\d{4,}px\]/.test(s),
   };
@@ -175,8 +175,17 @@ for (const r of rows) {
   const errorUX = !hasApi ? 'n/a' : !hasCatch ? 'NO-CATCH' : surfaces ? 'yes' : 'SILENT-CATCH';
 
   // 10. loading + disabled
-  const setsLoading = /set(Loading|Saving|Submitting|Busy|Processing)\w*\(true\)/i.test(body);
-  const loading = !hasApi || isEffect ? 'n/a' : setsLoading ? 'yes' : 'NO';
+  // Screens name their in-flight flag freely (setCreatingSnapshot,
+  // setIsDispatching, setRestoring, setSimulating...). Matching only a fixed
+  // vocabulary reported handlers that DO guard themselves as unguarded, so
+  // accept any boolean/id flag raised at the top of the handler.
+  const setsLoading =
+    /set(Loading|Saving|Submitting|Busy|Processing|Creating|Deleting|Updating|Restoring|Running|Verifying|Dispatching|Simulating|Sending|Importing|Evaluating|Checking|Connecting|Syncing|Executing|Generating)\w*\(\s*(true|[a-zA-Z_$][\w.$]*\.id|[a-zA-Z_$][\w.$]*)\s*\)/i.test(body)
+    || /setIs[A-Z]\w*\(\s*true\s*\)/.test(body);
+  // F-306: handlers wrapped in usePendingAction().run('key', ...) are guarded
+  // by the hook's in-flight ref, which is stronger than a hand-rolled flag.
+  const guardedByHook = /=>\s*run\(\s*['"`]/.test(body) || /\brun\(\s*['"`][^'"`]+['"`]\s*,\s*async/.test(body);
+  const loading = !hasApi || isEffect ? 'n/a' : (setsLoading || guardedByHook) ? 'yes' : 'NO';
 
   const traits = fileTraits(rel) || {};
 

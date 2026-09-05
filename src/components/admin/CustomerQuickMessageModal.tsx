@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, Send, MessageCircle, Phone, Mail, FileText, CheckCircle2, Sparkles, ExternalLink } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
+import { useModalA11y } from '../../hooks/useModalA11y';
 
 interface CustomerQuickMessageModalProps {
   isOpen: boolean;
@@ -20,6 +21,13 @@ export function CustomerQuickMessageModal({
   onClose,
   customer
 }: CustomerQuickMessageModalProps) {
+  // F-307: Escape to close, focus trap, focus restore and ARIA dialog roles.
+  const { containerRef, dialogProps } = useModalA11y({
+    open: isOpen,
+    onClose,
+    label: 'Customer Quick Message',
+  });
+
   const { language, currentRole, showToast } = useApp();
   const isBn = language === 'BN';
 
@@ -107,8 +115,7 @@ export function CustomerQuickMessageModal({
   };
 
   return (
-    <div
-      id="customer-quick-message-modal-overlay"
+    <div ref={containerRef} {...dialogProps} id="customer-quick-message-modal-overlay"
       className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
@@ -119,7 +126,7 @@ export function CustomerQuickMessageModal({
         className="bg-white rounded-2xl border border-stone-200 shadow-2xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in-95 duration-150"
       >
         {/* Header */}
-        <div className="bg-stone-900 text-white px-6 py-4 flex items-center justify-between border-b border-stone-800">
+        <div className="bg-stone-900 text-white px-4 sm:px-6 py-4 flex items-center justify-between border-b border-stone-800">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-lg bg-teal-900 flex items-center justify-center text-teal-300">
               <MessageCircle className="w-4 h-4" />
@@ -139,13 +146,13 @@ export function CustomerQuickMessageModal({
         </div>
 
         {/* Form Body */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-4 text-xs">
+        <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-4 text-xs">
           {/* Channel Selector */}
           <div className="space-y-1.5">
             <label className="font-bold text-stone-700 block">
               {isBn ? 'যোগাযোগের মাধ্যম নির্বাচন করুন' : 'Select Communication Channel'}
             </label>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
               <button
                 type="button"
                 onClick={() => setChannel('WHATSAPP')}
@@ -192,7 +199,7 @@ export function CustomerQuickMessageModal({
             <label className="font-bold text-stone-700 block">
               {isBn ? 'রেডিমেড টেমপ্লেট নির্বাচন' : 'Quick Template Library'}
             </label>
-            <div className="grid grid-cols-2 gap-1.5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
               {[
                 { id: 'order_followup', label: isBn ? 'অর্ডার ফলো-আপ' : 'Order Follow-up' },
                 { id: 'address_verify', label: isBn ? 'ঠিকানা যাচাই' : 'Address Verification' },

@@ -538,6 +538,7 @@ export function CustomersAdmin() {
             <Search className="w-4 h-4 text-stone-400 absolute left-3 top-2.5" />
             <input
               type="text"
+              aria-label={isBn ? 'গ্রাহক সার্চ' : 'Search customers'}
               placeholder={
                 isBn
                   ? 'নাম, মোবাইল নম্বর (+880), ইমেইল বা জেলা দিয়ে সার্চ করুন...'
@@ -562,6 +563,7 @@ export function CustomersAdmin() {
             {/* District Filter */}
             <select
               value={selectedDistrict}
+              aria-label="Filter by district"
               onChange={(e) => setSelectedDistrict(e.target.value)}
               className="text-xs px-2.5 py-1.5 border border-stone-300 rounded-lg bg-white focus:outline-none focus:border-teal-800"
             >
@@ -588,6 +590,7 @@ export function CustomersAdmin() {
             {/* Status Filter */}
             <select
               value={selectedStatus}
+              aria-label="Filter by status"
               onChange={(e) => setSelectedStatus(e.target.value)}
               className="text-xs px-2.5 py-1.5 border border-stone-300 rounded-lg bg-white focus:outline-none focus:border-teal-800"
             >
@@ -599,6 +602,7 @@ export function CustomersAdmin() {
             {/* Sorting Dropdown */}
             <select
               value={sortBy}
+              aria-label="Filter by sort by"
               onChange={(e) => setSortBy(e.target.value as any)}
               className="text-xs px-2.5 py-1.5 border border-stone-300 rounded-lg bg-white focus:outline-none focus:border-teal-800"
             >

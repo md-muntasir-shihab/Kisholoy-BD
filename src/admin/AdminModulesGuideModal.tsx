@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { ADMIN_SECTIONS_DATA, AdminModuleItem, getSectionBadgeCount } from './adminModulesData';
 import { useApp } from '../context/AppContext';
+import { useModalA11y } from '../hooks/useModalA11y';
 
 interface AdminModulesGuideModalProps {
   isOpen: boolean;
@@ -14,6 +15,13 @@ interface AdminModulesGuideModalProps {
 }
 
 export function AdminModulesGuideModal({ isOpen, onClose, initialSectionId }: AdminModulesGuideModalProps) {
+  // F-307: Escape to close, focus trap, focus restore and ARIA dialog roles.
+  const { containerRef, dialogProps } = useModalA11y({
+    open: isOpen,
+    onClose,
+    label: 'Admin Modules Guide',
+  });
+
   const { language, orders, products } = useApp();
   const [selectedSection, setSelectedSection] = useState<string>(initialSectionId || 'all');
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -61,8 +69,7 @@ export function AdminModulesGuideModal({ isOpen, onClose, initialSectionId }: Ad
   const isBn = language === 'BN';
 
   return (
-    <div 
-      id="admin-guide-modal-overlay" 
+    <div ref={containerRef} {...dialogProps} id="admin-guide-modal-overlay" 
       className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6 overflow-y-auto animate-in fade-in duration-200"
     >
       <div 

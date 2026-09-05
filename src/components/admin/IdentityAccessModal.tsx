@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { Role } from '../../types';
+import { useModalA11y } from '../../hooks/useModalA11y';
 
 interface IdentityAccessModalProps {
   isOpen: boolean;
@@ -18,6 +19,13 @@ export const IdentityAccessModal: React.FC<IdentityAccessModalProps> = ({
   onClose,
   onLogout
 }) => {
+  // F-307: Escape to close, focus trap, focus restore and ARIA dialog roles.
+  const { containerRef, dialogProps } = useModalA11y({
+    open: isOpen,
+    onClose,
+    label: 'Identity Access',
+  });
+
   const { currentRole, setCurrentRole, language, showToast } = useApp();
   const [activeTab, setActiveTab] = useState<'overview' | 'permissions' | 'boundaries' | 'security' | 'switcher'>('overview');
   const [activeHelpPopup, setActiveHelpPopup] = useState<string | null>(null);
@@ -285,7 +293,7 @@ export const IdentityAccessModal: React.FC<IdentityAccessModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-900/60 backdrop-blur-xs animate-in fade-in duration-150">
+    <div ref={containerRef} {...dialogProps} className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-900/60 backdrop-blur-xs animate-in fade-in duration-150">
       <div className="bg-white w-full max-w-2xl rounded-2xl shadow-xl border border-stone-200 flex flex-col max-h-[90vh] overflow-hidden">
         
         {/* Modal Header */}
