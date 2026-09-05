@@ -1329,7 +1329,7 @@ export function MarketingAdmin() {
             <div className="space-y-3 text-xs">
               <div>
                 <label className="font-bold text-stone-700 block mb-1">Communication Channel</label>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                <div className="grid grid-cols-3 gap-2">
                   {(['SMS', 'WHATSAPP', 'EMAIL'] as const).map(ch => (
                     <button
                       key={ch}

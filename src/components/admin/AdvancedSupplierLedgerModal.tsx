@@ -1327,7 +1327,7 @@ export const AdvancedSupplierLedgerModal: React.FC<AdvancedSupplierLedgerModalPr
             </div>
           </div>
 
-          <div className="overflow-x-auto -mx-3 px-3 sm:mx-0 sm:px-0"><table className="w-full text-left text-xs border-collapse border">
+          <div className="overflow-x-auto"><table className="w-full text-left text-xs border-collapse border">
             <thead>
               <tr className="bg-stone-100 border">
                 <th className="p-2 border">Date</th>

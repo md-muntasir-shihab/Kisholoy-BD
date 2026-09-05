@@ -983,7 +983,7 @@ export function MarketingCommandCenter() {
               </div>
               <span className="text-[9px] font-black px-2 py-0.5 rounded-full bg-teal-100 text-teal-800 dark:bg-teal-950/50 dark:text-teal-300">{isBn ? 'অর্ডার ডেটা অপরিবর্তিত' : 'Orders untouched'}</span>
             </div>
-            <div className="overflow-x-auto -mx-3 px-3 sm:mx-0 sm:px-0"><table className="w-full text-left text-[11px] mt-1">
+            <div className="overflow-x-auto"><table className="w-full text-left text-[11px] mt-1">
               <thead>
                 <tr className="text-[9px] uppercase tracking-wider text-stone-500 dark:text-slate-400 border-b border-stone-200 dark:border-slate-800">
                   <th className="py-2 px-3 font-black">{isBn ? 'অর্ডার' : 'Order'}</th>

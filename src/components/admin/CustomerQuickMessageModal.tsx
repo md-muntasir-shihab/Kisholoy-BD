@@ -152,7 +152,7 @@ export function CustomerQuickMessageModal({
             <label className="font-bold text-stone-700 block">
               {isBn ? 'যোগাযোগের মাধ্যম নির্বাচন করুন' : 'Select Communication Channel'}
             </label>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            <div className="grid grid-cols-3 gap-2">
               <button
                 type="button"
                 onClick={() => setChannel('WHATSAPP')}

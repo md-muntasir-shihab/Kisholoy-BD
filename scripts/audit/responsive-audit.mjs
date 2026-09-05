@@ -58,6 +58,13 @@ for (const file of files) {
     // a 5-step tracker side by side is fine on a phone.
     const body = s.slice(m.index + m[0].length, m.index + m[0].length + 900);
     if (!/<(input|select|textarea|label)\b/.test(body)) continue;
+    // A segmented control (a row of short toggle buttons, e.g. SMS/WhatsApp/
+    // Email) is not a form row: it reads fine three-up at 375px and stacking
+    // it only adds scrolling. The nearby <label> belongs to the field above.
+    // body starts at the closing `">` of the className attribute; skip it.
+    const firstChild = body.replace(/^"?\s*>?\s*/, '');
+    const isToggleRow = /^\{\s*\(?\[/.test(firstChild) || /^<button\b/.test(firstChild);
+    if (isToggleRow && !/<(input|select|textarea)\b/.test(body.slice(0, 400))) continue;
     add(file, 'form-grid-no-stack', `grid-cols-${m[2]} with form fields and no sm: fallback`);
   }
 

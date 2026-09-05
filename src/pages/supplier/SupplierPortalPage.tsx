@@ -1348,7 +1348,7 @@ export function SupplierPortalPage() {
                 <h4 className="font-bold text-xs uppercase tracking-wider text-stone-700 border-b border-stone-200 pb-2">
                   1. Sourced Batches & Warehouse Inventory Status
                 </h4>
-                <div className="overflow-x-auto -mx-3 px-3 sm:mx-0 sm:px-0"><table className="w-full text-left text-xs text-stone-700 border border-stone-200">
+                <div className="overflow-x-auto"><table className="w-full text-left text-xs text-stone-700 border border-stone-200">
                   <thead className="bg-stone-100 font-semibold border-b border-stone-200 text-[11px]">
                     <tr>
                       <th className="py-2.5 px-3">Batch Number</th>
@@ -1379,7 +1379,7 @@ export function SupplierPortalPage() {
                 <h4 className="font-bold text-xs uppercase tracking-wider text-stone-700 border-b border-stone-200 pb-2">
                   2. Settlement History & Payout Disbursed Vouchers
                 </h4>
-                <div className="overflow-x-auto -mx-3 px-3 sm:mx-0 sm:px-0"><table className="w-full text-left text-xs text-stone-700 border border-stone-200">
+                <div className="overflow-x-auto"><table className="w-full text-left text-xs text-stone-700 border border-stone-200">
                   <thead className="bg-stone-100 font-semibold border-b border-stone-200 text-[11px]">
                     <tr>
                       <th className="py-2.5 px-3">Date</th>
@@ -1586,7 +1586,7 @@ export function SupplierPortalPage() {
                 </div>
               </div>
 
-              <div className="overflow-x-auto -mx-3 px-3 sm:mx-0 sm:px-0"><table className="w-full text-left text-xs border border-stone-200">
+              <div className="overflow-x-auto"><table className="w-full text-left text-xs border border-stone-200">
                 <thead className="bg-stone-100 font-semibold border-b border-stone-200">
                   <tr>
                     <th className="p-2.5">Item</th>

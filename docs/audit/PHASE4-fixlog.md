@@ -644,3 +644,34 @@ viewport measurement but the sandbox blocks the browser download, so **nothing
 here has been looked at in an actual 375px browser**. The changes are
 conservative and mechanically symmetric, but a human should still open the
 storefront and two or three admin forms on a phone before this is called done.
+
+## Batch 10 — re-review of 70ea34a (user-requested)
+
+The responsive auditor scored 70ea34a 0/0/0/0. Reading the actual diff found
+four real defects it could not see, plus two mis-targeted grid conversions.
+
+1. `overflow-x-auto -mx-3 px-3 sm:mx-0 sm:px-0` (6 files) — inside a padded
+   card the negative margin drags the table past the card border, and the
+   paired `px-3` re-pads it, so the trick only ever helped a full-bleed
+   layout. Simplified to plain `overflow-x-auto`.
+2. `InventoryAdmin.tsx:731` — the new wrapper sat inside
+   `border rounded-xl overflow-hidden`, which clips horizontal scroll
+   entirely: the table could not scroll at all. Moved the scroll onto the
+   rounding parent (`rounded-xl overflow-x-auto`) and dropped the inner div.
+3. `SuppliersAdmin.tsx:950` — same clipping bug, same fix.
+4. `BulkSupplierImportModal.tsx:682` — the wrapper nested inside
+   `max-h-60 overflow-y-auto` whose header is `sticky top-0`; a second
+   scroller breaks `position: sticky`. Merged into one dual-axis container.
+
+Grid audit: of 48 stacked lines, 43 sit next to a real form field. Two were
+segmented controls (`CustomerQuickMessageModal.tsx:155` SMS/WhatsApp/Email,
+`MarketingAdmin.tsx:1332` status) — short toggle buttons that read fine
+three-up at 375px — and were reverted to `grid-cols-3`. The auditor kept
+flagging the latter, so it now skips a grid whose first child is a button or
+a `.map()` of buttons with no input/select/textarea in the first 400 chars.
+
+Gates after the fixes: tsc 0 · build green · auditor 0/0/0/0 · built CSS
+still emits `.min-w-11`, `.sm\:grid-cols-2`, `.overflow-x-auto`.
+
+Standing limitation: still no real-browser check. The three restructured
+table containers above are the highest-value manual spot-checks.

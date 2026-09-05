@@ -728,8 +728,10 @@ export function InventoryAdmin() {
                 </button>
               </div>
 
-              <div className="border border-stone-200 rounded-xl overflow-hidden">
-                <div className="overflow-x-auto -mx-3 px-3 sm:mx-0 sm:px-0"><table className="w-full text-left text-xs">
+              {/* overflow-x-auto (not overflow-hidden) so the table can scroll
+                  sideways on phones; the rounding still clips visually. */}
+              <div className="border border-stone-200 rounded-xl overflow-x-auto">
+                <table className="w-full text-left text-xs">
                   <thead className="bg-stone-100 text-stone-600 font-bold uppercase tracking-wider border-b border-stone-200">
                     <tr>
                       <th className="p-3 w-1/3">Target SKU / Product</th>
@@ -806,7 +808,7 @@ export function InventoryAdmin() {
                       </tr>
                     ))}
                   </tbody>
-                </table></div>
+                </table>
               </div>
             </div>
 

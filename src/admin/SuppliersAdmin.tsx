@@ -947,13 +947,15 @@ export function SuppliersAdmin() {
             </button>
           </div>
 
-          <div className="border border-stone-200 rounded-lg overflow-hidden">
+          {/* overflow-x-auto, not overflow-hidden: the PO table must be able to
+              scroll sideways on phones while the corners stay rounded. */}
+          <div className="border border-stone-200 rounded-lg overflow-x-auto">
             {allPurchaseOrders.length === 0 ? (
               <div className="p-8 text-center text-stone-400 text-xs">
                 No purchase orders found. Click "Issue New PO" to create one.
               </div>
             ) : (
-              <div className="overflow-x-auto -mx-3 px-3 sm:mx-0 sm:px-0"><table className="w-full text-xs">
+              <table className="w-full text-xs">
                 <thead>
                   <tr className="bg-stone-50 border-b border-stone-200 text-stone-500">
                     <th className="text-left px-4 py-2 font-bold">PO Number</th>
@@ -990,7 +992,7 @@ export function SuppliersAdmin() {
                     </tr>
                   ))}
                 </tbody>
-              </table></div>
+              </table>
             )}
           </div>
         </div>
