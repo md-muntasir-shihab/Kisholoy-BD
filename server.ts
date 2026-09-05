@@ -33,6 +33,7 @@ import {
 import { securityEngine } from './server/securityEngine';
 import { normalizeBdMobilePhone, phoneDigits } from './src/lib/phone';
 import { attachAuthContext, enforceStaffSurface, requireCustomerSelf, requireSupplierSelf, requireAddressOwner, requireNotificationOwner } from './server/authGuard';
+import { authRateLimit } from './server/rateLimit';
 import { issueSessionToken } from './server/sessionTokens';
 import { backupEngine } from './server/backupEngine';
 import { supplierEngine } from './server/supplierEngine';
@@ -111,6 +112,22 @@ async function startServer() {
   // /api write plus the sensitive reads. Client-side ROUTE_PERMISSIONS is now
   // only a UX affordance — the server is the authority.
   app.use(attachAuthContext);
+
+  // Throttle credential-checking endpoints per IP before anything verifies a
+  // password. `securityEngine` locks an individual staff account after 5 bad
+  // attempts, but that is per-account: password spraying across many
+  // usernames never trips it, and the customer/supplier login routes had no
+  // protection at all (CodeQL: "route handler performs authorization, but is
+  // not rate-limited").
+  //
+  // Mounted as a pattern rather than per-route so a login endpoint added
+  // later is covered by default instead of being silently unprotected.
+  const AUTH_SURFACE = /^\/api\/(security\/auth\/|customer\/auth\/(login|register)|suppliers\/portal\/login|suppliers\/[^/]+\/(portal-token|set-portal-password))/;
+  app.use((req, res, next) => {
+    if (req.method !== 'POST' || !AUTH_SURFACE.test(req.path)) return next();
+    return authRateLimit(req, res, next);
+  });
+
   app.use(enforceStaffSurface);
 
   // -------------------------------------------------------------

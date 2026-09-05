@@ -74,3 +74,42 @@ remit. It is recorded here as the top remaining item rather than half-done.
 
 Standing limitation, unchanged: no real-browser verification is possible in
 this environment.
+
+## CodeQL findings on the pull request
+
+CodeQL raised two high-severity alerts against this branch. Both were real.
+
+**1. Missing rate limiting (`server.ts`) — the important one.**
+`securityEngine` locks an individual staff account after 5 failed attempts,
+but that is per *account*: spraying one common password across many usernames
+never trips it, and `/api/customer/auth/*` and the supplier portal login had
+no protection at all.
+
+Added `server/rateLimit.ts` — a dependency-free fixed-window per-IP limiter —
+mounted as a *pattern* over the credential-checking surface (staff auth,
+customer login/register, supplier portal login, portal-token and
+set-portal-password) rather than route by route, so a login endpoint added
+later is covered by default instead of being silently unprotected. Budget is
+10 POSTs per IP per 5 minutes: far above a human mistyping a password,
+far below useful automated guessing.
+
+Verified live: 12 rapid bad logins → `401 ×10` then `429 ×2` with a
+`Retry-After` header; `/api/health` and `/api/products` unaffected; a correct
+staff login still returns 200.
+
+*Known limit:* the window is in-memory and per-process, so it resets on
+restart and does not span instances. A shared store is required before
+running more than one node — noted here rather than pretended away.
+
+**2. Regular expression injection (`scripts/audit/apply-pending-guard.mjs`).**
+A function name read from a CLI-supplied findings file was interpolated
+straight into a `RegExp`, so a name like `handle.*` would have matched
+arbitrary code. Now escaped before interpolation. Low real-world impact (a
+local dev script over a file we generate), but it is a one-line fix.
+
+Gates after both: tsc 0 · build green · smoke 99/9 · responsive auditor 0.
+
+The `SonarCloud analysis` check also fails, but it fails identically on
+`main` and on every prior commit: the workflow is an unconfigured template
+(`-Dsonar.projectKey=` is empty and no `SONAR_TOKEN` secret exists). It is
+not related to this branch and is not something this work can fix.

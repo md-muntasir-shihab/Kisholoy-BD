@@ -35,7 +35,11 @@ for (const [rel, fns] of byFile) {
 
   for (const fn of fns) {
     // `const handleX = async (...) => {`  (params may span lines)
-    const re = new RegExp(`(\\n(\\s*)const ${fn} = async \\(([\\s\\S]*?)\\)(?::[^=]*?)? => \\{\\n)`);
+    // `fn` comes from a CLI-supplied findings file, so it must be escaped
+    // before being spliced into a pattern (CodeQL: regular expression
+    // injection). A name like `handle.*` would otherwise match anything.
+    const safeFn = fn.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const re = new RegExp(`(\\n(\\s*)const ${safeFn} = async \\(([\\s\\S]*?)\\)(?::[^=]*?)? => \\{\\n)`);
     const m = re.exec(src);
     if (!m) { skipped.push([rel, fn, 'signature not found']); continue; }
     const indent = m[2];
