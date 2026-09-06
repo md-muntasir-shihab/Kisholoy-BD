@@ -17,13 +17,35 @@ export default defineConfig(() => {
     },
     build: {
       outDir: 'dist',
-      chunkSizeWarningLimit: 1500,
+      chunkSizeWarningLimit: 5000,
       rollupOptions: {
         output: {
-          manualChunks: {
-            'vendor-react': ['react', 'react-dom', 'react-router-dom'],
-            'vendor-icons': ['lucide-react'],
-            'vendor-charts': ['recharts'],
+          manualChunks(id) {
+            if (id.includes('node_modules')) {
+              if (
+                id.includes('react') ||
+                id.includes('react-dom') ||
+                id.includes('react-router-dom') ||
+                id.includes('motion')
+              ) {
+                return 'vendor-react-core';
+              }
+              if (id.includes('recharts') || id.includes('d3-')) {
+                return 'vendor-charts';
+              }
+              if (id.includes('jspdf') || id.includes('html2canvas')) {
+                return 'vendor-pdf';
+              }
+              if (id.includes('xlsx')) {
+                return 'vendor-excel';
+              }
+              if (id.includes('firebase')) {
+                return 'vendor-firebase';
+              }
+              if (id.includes('bwip-js') || id.includes('@zxing') || id.includes('qrcode')) {
+                return 'vendor-barcode';
+              }
+            }
           },
         },
       },

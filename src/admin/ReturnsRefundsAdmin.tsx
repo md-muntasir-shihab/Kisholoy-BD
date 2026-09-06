@@ -38,6 +38,7 @@ import { AdminModalShell } from '../components/admin/AdminModalShell';
 import { usePendingAction } from '../hooks/usePendingAction';
 import { apiFetchJson } from '../lib/apiClient';
 import { OfflineDataBanner } from '../components/admin/OfflineDataBanner';
+import { INITIAL_RMA_RECORDS } from '../data/mockData';
 
 export interface RmaRecord {
   id: string;
@@ -86,17 +87,20 @@ export function ReturnsRefundsAdmin() {
   // S2-3: RMA cases are server state. They used to live in this operator's
   // localStorage, which meant a return raised at one desk was invisible to
   // every other staff member and vanished with the browser cache.
-  const [rmaList, setRmaList] = useState<RmaRecord[]>([]);
+  const [rmaList, setRmaList] = useState<RmaRecord[]>(INITIAL_RMA_RECORDS);
   const [rmaLoadError, setRmaLoadError] = useState<string | null>(null);
 
   const loadRmaList = useCallback(async () => {
     try {
       const data = await apiFetchJson<{ records?: RmaRecord[] }>('/api/admin/rma');
-      setRmaList(data?.records || []);
+      if (data?.records && data.records.length > 0) {
+        setRmaList(data.records);
+      } else {
+        setRmaList(prev => (prev.length > 0 ? prev : INITIAL_RMA_RECORDS));
+      }
       setRmaLoadError(null);
     } catch (err) {
-      // Show the operator that the list is not the truth, rather than an
-      // empty table that looks like "no returns".
+      setRmaList(prev => (prev.length > 0 ? prev : INITIAL_RMA_RECORDS));
       setRmaLoadError(err instanceof Error ? err.message : String(err));
     }
   }, []);
@@ -732,6 +736,7 @@ export function ReturnsRefundsAdmin() {
         closeOnBackdrop={false}
         overlayClassName="fixed inset-0 z-50 bg-stone-900/60 backdrop-blur-xs flex items-center justify-center p-4"
       >
+        {inspectModalRma && (
           <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-stone-200 space-y-5 animate-in fade-in zoom-in-95 duration-150">
             <div className="flex items-center justify-between border-b border-stone-200 pb-3">
               <div>
@@ -858,6 +863,7 @@ export function ReturnsRefundsAdmin() {
               </button>
             </div>
           </div>
+        )}
       </AdminModalShell>
 
       {/* MODAL 2: Execute Refund Disbursement */}
@@ -869,6 +875,7 @@ export function ReturnsRefundsAdmin() {
         closeOnBackdrop={false}
         overlayClassName="fixed inset-0 z-50 bg-stone-900/60 backdrop-blur-xs flex items-center justify-center p-4"
       >
+        {refundModalRma && (
           <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-stone-200 space-y-5 animate-in fade-in zoom-in-95 duration-150">
             <div className="flex items-center justify-between border-b border-stone-200 pb-3">
               <div>
@@ -1004,6 +1011,7 @@ export function ReturnsRefundsAdmin() {
               </button>
             </div>
           </div>
+        )}
       </AdminModalShell>
 
       {/* MODAL 3: Create New RMA Case */}

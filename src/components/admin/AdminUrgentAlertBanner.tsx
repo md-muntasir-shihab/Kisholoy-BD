@@ -26,7 +26,7 @@ export function AdminUrgentAlertBanner() {
   return (
     <div
       id="admin-urgent-operational-banner"
-      className="bg-rose-50/90 dark:bg-stone-900 border-b border-rose-200/90 dark:border-rose-900/50 px-4 sm:px-6 py-2.5 text-xs text-stone-900 dark:text-stone-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 shadow-2xs transition-colors animate-in fade-in duration-200"
+      className="bg-rose-50/90 dark:bg-slate-900 border-b border-rose-200/90 dark:border-rose-900/50 px-4 sm:px-6 py-2.5 text-xs text-stone-900 dark:text-stone-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 shadow-2xs transition-colors animate-in fade-in duration-200"
     >
       <div className="flex items-center gap-2.5 flex-wrap">
         <span className="flex h-2 w-2 relative">

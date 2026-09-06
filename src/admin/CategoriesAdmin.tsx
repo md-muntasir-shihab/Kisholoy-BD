@@ -2,17 +2,19 @@ import React, { useState } from 'react';
 import { Folders, Plus, Trash2, Edit2, CheckCircle2 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { Category } from '../types';
+import { AdminConfirmDialog } from '../components/admin/AdminConfirmDialog';
 
 export function CategoriesAdmin() {
   // Use the context CRUD helpers, not setCategories: they persist to
   // /api/categories and emit the audit trail. Writing straight to state made
   // every created or deleted category vanish on reload (F-301).
-  const { categories, products, addCategory, deleteCategory } = useApp();
+  const { categories, products, addCategory, deleteCategory, language } = useApp();
   const [name, setName] = useState('');
   const [nameBn, setNameBn] = useState('');
   const [description, setDescription] = useState('');
   const [image, setImage] = useState('');
   const [saving, setSaving] = useState(false);
+  const [categoryToDelete, setCategoryToDelete] = useState<Category | null>(null);
 
   const handleAddCategory = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,9 +40,15 @@ export function CategoriesAdmin() {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    await deleteCategory(id);
+  const handleConfirmDelete = async () => {
+    if (!categoryToDelete) return;
+    await deleteCategory(categoryToDelete.id);
+    setCategoryToDelete(null);
   };
+
+  const linkedProductCount = categoryToDelete 
+    ? products.filter(p => p.categorySlug === categoryToDelete.slug).length 
+    : 0;
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
@@ -140,9 +148,10 @@ export function CategoriesAdmin() {
                         {count} items
                       </span>
                       <button
-                        onClick={() => handleDelete(cat.id)}
-                        className="p-1.5 text-stone-400 hover:text-red-600 rounded"
-                        title="Delete"
+                        onClick={() => setCategoryToDelete(cat)}
+                        className="p-1.5 text-stone-400 hover:text-red-600 rounded transition-colors"
+                        title="Delete Category"
+                        aria-label={`Delete category ${cat.name}`}
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -154,6 +163,43 @@ export function CategoriesAdmin() {
           </div>
         </div>
       </div>
+
+      {/* Delete Category Safety Confirmation Dialog */}
+      <AdminConfirmDialog
+        isOpen={!!categoryToDelete}
+        onClose={() => setCategoryToDelete(null)}
+        onConfirm={handleConfirmDelete}
+        variant="danger"
+        language={language}
+        title={`Delete Category "${categoryToDelete?.name}"?`}
+        titleBn={`"${categoryToDelete?.nameBn || categoryToDelete?.name}" ক্যাটাগরি অপসারণ করবেন?`}
+        description={`Are you sure you want to permanently delete this taxonomy? ${
+          linkedProductCount > 0
+            ? `Warning: There are currently ${linkedProductCount} products linked to this category.`
+            : 'No products are currently linked to this category.'
+        }`}
+        descriptionBn={`আপনি কি নিশ্চিত যে এই ক্যাটাগরিটি মুছে ফেলতে চান? ${
+          linkedProductCount > 0
+            ? `সতর্কতা: বর্তমানে এই ক্যাটাগরির অধীনে ${linkedProductCount}টি পণ্য রয়েছে।`
+            : 'বর্তমানে এই ক্যাটাগরির অধীনে কোনো পণ্য নেই।'
+        }`}
+        confirmLabel="Delete Category"
+        confirmLabelBn="ক্যাটাগরি মুছুন"
+        items={
+          categoryToDelete
+            ? [
+                {
+                  id: categoryToDelete.id,
+                  label: `${categoryToDelete.name} (${categoryToDelete.nameBn || ''})`,
+                  subtext: `Slug: /${categoryToDelete.slug} · ${linkedProductCount} active products`,
+                  imageUrl: categoryToDelete.image,
+                },
+              ]
+            : []
+        }
+        requiresTypedConfirmation={linkedProductCount > 5}
+        confirmationKeyword="DELETE"
+      />
     </div>
   );
 }

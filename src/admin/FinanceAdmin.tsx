@@ -1187,6 +1187,7 @@ export function FinanceAdmin() {
         label="Modal Mark Settled & Input UTR"
         overlayClassName="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
       >
+        {settlingRecord && (
           <div className="bg-white rounded-xl max-w-md w-full p-6 space-y-4 shadow-xl border border-stone-200">
             <h3 className="text-base font-serif font-bold text-stone-900">Confirm Bank Remittance Payout</h3>
             <p className="text-xs text-stone-500">
@@ -1223,6 +1224,7 @@ export function FinanceAdmin() {
               </div>
             </div>
           </div>
+        )}
       </AdminModalShell>
 
       {/* Date-wise Master Data Hub Modal */}

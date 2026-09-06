@@ -76,12 +76,56 @@ export interface ProductEngagement {
   conversionRate: number; // View to Purchase %
 }
 
-export function AnalyticsAdmin() {
+export type AnalyticsActiveTab = 'OVERVIEW' | 'GEO_TRAFFIC' | 'PRODUCTS' | 'LIVE_STREAM' | 'USER_SESSIONS';
+
+interface AnalyticsAdminProps {
+  initialTab?: AnalyticsActiveTab;
+}
+
+export function AnalyticsAdmin({ initialTab }: AnalyticsAdminProps = {}) {
   const { products, orders, customers, language, siteContent } = useApp();
   const isBn = language === 'BN';
 
   // Active Tab View
-  const [activeTab, setActiveTab] = useState<'OVERVIEW' | 'GEO_TRAFFIC' | 'PRODUCTS' | 'LIVE_STREAM' | 'USER_SESSIONS'>('OVERVIEW');
+  const [activeTab, setActiveTab] = useState<AnalyticsActiveTab>(() => {
+    if (initialTab) return initialTab;
+    try {
+      const pathname = window.location.pathname.toLowerCase();
+      if (pathname.includes('traffic')) return 'GEO_TRAFFIC';
+      const raw = new URLSearchParams(window.location.search).get('tab');
+      const t = raw?.toUpperCase();
+      if (t === 'TRAFFIC') return 'GEO_TRAFFIC';
+      if (t && ['OVERVIEW', 'GEO_TRAFFIC', 'PRODUCTS', 'LIVE_STREAM', 'USER_SESSIONS'].includes(t)) {
+        return t as AnalyticsActiveTab;
+      }
+    } catch {
+      /* ignore */
+    }
+    return 'OVERVIEW';
+  });
+
+  useEffect(() => {
+    if (initialTab) {
+      setActiveTab(initialTab);
+      return;
+    }
+    try {
+      const pathname = window.location.pathname.toLowerCase();
+      if (pathname.includes('traffic')) {
+        setActiveTab('GEO_TRAFFIC');
+        return;
+      }
+      const raw = new URLSearchParams(window.location.search).get('tab');
+      const t = raw?.toUpperCase();
+      if (t === 'TRAFFIC') {
+        setActiveTab('GEO_TRAFFIC');
+      } else if (t && ['OVERVIEW', 'GEO_TRAFFIC', 'PRODUCTS', 'LIVE_STREAM', 'USER_SESSIONS'].includes(t)) {
+        setActiveTab(t as AnalyticsActiveTab);
+      }
+    } catch {
+      /* ignore */
+    }
+  }, [initialTab]);
   const [timeRange, setTimeRange] = useState<'REALTIME' | 'TODAY' | '1D' | '2D' | '5D' | '7D' | '30D' | 'ALL'>('TODAY');
   const [isLiveSimulating, setIsLiveSimulating] = useState(true);
   const [simSpeed, setSimSpeed] = useState<number>(5000); // 5 seconds
@@ -238,24 +282,27 @@ export function AnalyticsAdmin() {
 
   // Product Engagement Data
   const productEngagements = useMemo<ProductEngagement[]>(() => {
+    if (!products || products.length === 0) return [];
     return products.map((p, idx) => {
       const impressions = Math.floor((800 + (products.length - idx) * 140) * timeMultiplier);
       const views = Math.round(impressions * 0.42);
       const clicks = Math.round(views * 0.65);
       const cartAdds = Math.round(clicks * 0.35);
-      const purchases = Math.floor((orders.filter(o => o.items.some(it => it.productId === p.id)).length + Math.round(cartAdds * 0.28)) * timeMultiplier);
+      const purchases = Math.floor(
+        ((orders || []).filter(o => (o?.items || []).some(it => it?.productId === p.id)).length + Math.round(cartAdds * 0.28)) * timeMultiplier
+      );
       const ctr = views > 0 ? Number(((clicks / views) * 100).toFixed(1)) : 0;
       const conversionRate = views > 0 ? Number(((purchases / views) * 100).toFixed(1)) : 0;
 
       return {
         id: p.id,
-        title: p.title,
+        title: p.title || 'Product',
         titleBn: p.titleBn,
         sku: p.sku || `KSH-${1000 + idx}`,
-        image: p.images[0] || 'https://images.unsplash.com/photo-1587049352846-4a222e784d38?w=200',
-        category: p.category,
-        price: p.price,
-        stock: p.stock,
+        image: p.images?.[0] || 'https://images.unsplash.com/photo-1587049352846-4a222e784d38?w=200',
+        category: p.category || 'General',
+        price: p.price || 0,
+        stock: p.stock ?? 0,
         impressions,
         views,
         clicks,
@@ -265,7 +312,7 @@ export function AnalyticsAdmin() {
         conversionRate
       };
     }).sort((a, b) => b.clicks - a.clicks);
-  }, [products, orders]);
+  }, [products, orders, timeMultiplier]);
 
   // Hourly Traffic Trend Chart Data
   const hourlyTrafficData = useMemo(() => [
@@ -1166,6 +1213,7 @@ export function AnalyticsAdmin() {
         label=""
         overlayClassName="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4"
       >
+        {selectedVisitor && (
           <div className="bg-white rounded-2xl border border-stone-200 shadow-xl max-w-lg w-full p-6 space-y-4">
             <div className="flex justify-between items-center pb-3 border-b border-stone-100">
               <div className="flex items-center gap-2">
@@ -1230,6 +1278,7 @@ export function AnalyticsAdmin() {
               </button>
             </div>
           </div>
+        )}
       </AdminModalShell>
 
     </div>
@@ -1240,7 +1289,7 @@ export function AnalyticsAdmin() {
 // Helper Generators for Realistic Initial Data & Simulation
 // ---------------------------------------------------------------------------
 
-function generateInitialVisitors(products: Product[]): VisitorSession[] {
+function generateInitialVisitors(products: Product[] = []): VisitorSession[] {
   const districts = ['Dhaka', 'Chittagong', 'Sylhet', 'Gazipur', 'Narayanganj', 'Rajshahi', 'Khulna', 'Comilla', 'Bogura', 'Barisal', 'Rangpur', 'Mymensingh'];
   const isps = ['Grameenphone 4G', 'Banglalink Digital', 'Robi Axiata', 'AmberIT Broadband', 'Link3 Technologies', 'Dot Internet', 'Carnival Internet'];
   const devices: ('Mobile' | 'Desktop' | 'Tablet')[] = ['Mobile', 'Mobile', 'Mobile', 'Desktop', 'Tablet'];
@@ -1250,7 +1299,7 @@ function generateInitialVisitors(products: Product[]): VisitorSession[] {
   return Array.from({ length: 18 }).map((_, i) => {
     const district = districts[Math.floor(Math.random() * districts.length)];
     const device = devices[Math.floor(Math.random() * devices.length)];
-    const product = products[Math.floor(Math.random() * products.length)];
+    const product = products && products.length > 0 ? products[Math.floor(Math.random() * products.length)] : null;
     const pages = [
       'Home Page (হিরো অফার)',
       product ? `Product: ${product.title}` : 'Product: খাঁটি সুন্দরবন মধু',
@@ -1284,11 +1333,11 @@ function generateInitialVisitors(products: Product[]): VisitorSession[] {
   });
 }
 
-function createRandomVisitor(products: Product[]): VisitorSession {
+function createRandomVisitor(products: Product[] = []): VisitorSession {
   const districts = ['Dhaka', 'Chittagong', 'Sylhet', 'Gazipur', 'Rajshahi', 'Khulna', 'Comilla', 'Bogura'];
   const isps = ['Grameenphone 4G', 'Banglalink Digital', 'AmberIT', 'Link3', 'Robi 4G'];
   const district = districts[Math.floor(Math.random() * districts.length)];
-  const product = products[Math.floor(Math.random() * products.length)];
+  const product = products && products.length > 0 ? products[Math.floor(Math.random() * products.length)] : null;
 
   return {
     id: `vis-${Date.now()}`,

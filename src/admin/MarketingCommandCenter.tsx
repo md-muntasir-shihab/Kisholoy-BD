@@ -347,7 +347,7 @@ export function MarketingCommandCenter() {
     setLoading(true);
     const qs = rangeQuery ? `?${rangeQuery}` : '';
     try {
-      const [chRes, spRes, atRes, autoRes, roiRes, recRes, syncRes, campRes] = await Promise.all([
+      const results = await Promise.allSettled([
         api('/api/marketing/command/channels?includeArchived=1'),
         api(`/api/marketing/command/spends?includeVoided=1${rangeQuery ? `&${rangeQuery}` : ''}`),
         api(`/api/marketing/command/attributions${qs}`),
@@ -357,14 +357,20 @@ export function MarketingCommandCenter() {
         api('/api/marketing/command/sync-status'),
         api('/api/marketing/campaigns'),
       ]);
-      if (chRes.success) setChannels(chRes.channels);
-      if (spRes.success) setSpends(spRes.spends);
-      if (atRes.success) setAttributions(atRes.attributions);
-      if (autoRes.success) setAutoOrders(autoRes.rows);
-      if (roiRes.success) setReport(roiRes.report);
-      if (recRes.success) setRecon(recRes.reconciliation);
-      if (syncRes.success) { setConnectors(syncRes.connectors); setSyncNote({ note: syncRes.note, noteBn: syncRes.noteBn }); }
-      if (campRes.success) setCampaigns(campRes.campaigns || []);
+
+      const [chRes, spRes, atRes, autoRes, roiRes, recRes, syncRes, campRes] = results;
+
+      if (chRes.status === 'fulfilled' && chRes.value?.success) setChannels(chRes.value.channels || []);
+      if (spRes.status === 'fulfilled' && spRes.value?.success) setSpends(spRes.value.spends || []);
+      if (atRes.status === 'fulfilled' && atRes.value?.success) setAttributions(atRes.value.attributions || []);
+      if (autoRes.status === 'fulfilled' && autoRes.value?.success) setAutoOrders(autoRes.value.rows || []);
+      if (roiRes.status === 'fulfilled' && roiRes.value?.success) setReport(roiRes.value.report || null);
+      if (recRes.status === 'fulfilled' && recRes.value?.success) setRecon(recRes.value.reconciliation || null);
+      if (syncRes.status === 'fulfilled' && syncRes.value?.success) {
+        setConnectors(syncRes.value.connectors || []);
+        setSyncNote({ note: syncRes.value.note || '', noteBn: syncRes.value.noteBn || '' });
+      }
+      if (campRes.status === 'fulfilled' && campRes.value?.success) setCampaigns(campRes.value.campaigns || []);
     } catch (e: any) {
       console.error('Marketing command center fetch failed', e);
       showToast(isBn ? 'মার্কেটিং কমান্ড সেন্টার ডেটা লোড করা যায়নি' : 'Failed to load Marketing Command Center data');

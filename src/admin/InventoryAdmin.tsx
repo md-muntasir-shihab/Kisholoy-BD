@@ -1109,6 +1109,7 @@ export function InventoryAdmin() {
         closeOnBackdrop={false}
         overlayClassName="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4"
       >
+        {adjustModalProduct && (
           <div className="bg-white rounded-2xl max-w-lg w-full p-6 space-y-5 shadow-2xl animate-in fade-in zoom-in duration-150">
             <div className="flex justify-between items-start pb-3 border-b border-stone-200">
               <div>
@@ -1308,6 +1309,7 @@ export function InventoryAdmin() {
               </div>
             </form>
           </div>
+        )}
       </AdminModalShell>
 
       {/* Barcode & SKU Thermal Tag Generator Modal */}
@@ -1317,6 +1319,7 @@ export function InventoryAdmin() {
         label="Barcode & SKU Thermal Tag Generator Modal"
         overlayClassName="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4"
       >
+        {barcodeProduct && (
           <div className="bg-white rounded-2xl max-w-sm w-full p-6 space-y-5 shadow-2xl">
             <div className="flex justify-between items-center pb-2 border-b border-stone-200">
               <div className="flex items-center gap-2">
@@ -1384,6 +1387,7 @@ export function InventoryAdmin() {
               </button>
             </div>
           </div>
+        )}
       </AdminModalShell>
     </div>
   );

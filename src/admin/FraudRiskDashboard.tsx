@@ -20,6 +20,7 @@ import {
 import { useApp } from '../context/AppContext';
 import { AdminModalShell } from '../components/admin/AdminModalShell';
 import { usePendingAction } from '../hooks/usePendingAction';
+import { INITIAL_BLACKLIST, INITIAL_FRAUD_SETTINGS } from '../data/mockData';
 
 interface FraudDashboardProps {
   orders?: Order[];
@@ -36,9 +37,24 @@ export const FraudRiskDashboard: React.FC<FraudDashboardProps> = ({
   const [activeTab, setActiveTab] = useState<'queue' | 'blacklists' | 'rules' | 'sandbox'>('queue');
   // F-306: blocks duplicate submits while a mutation is in flight.
   const { run, isPending, isBusy } = usePendingAction();
-  const [stats, setStats] = useState<FraudStats | null>(null);
-  const [blacklists, setBlacklists] = useState<BlacklistEntry[]>([]);
-  const [settings, setSettings] = useState<FraudRiskSettings | null>(null);
+  const [stats, setStats] = useState<FraudStats | null>(() => {
+    const list = propOrders || [];
+    return {
+      totalEvaluated: list.length,
+      lowRiskCount: list.filter(o => !o.fraudRisk || o.fraudRisk.riskRating === 'LOW').length,
+      mediumRiskCount: list.filter(o => o.fraudRisk?.riskRating === 'MEDIUM').length,
+      highRiskCount: list.filter(o => o.fraudRisk?.riskRating === 'HIGH').length,
+      criticalSuspiciousCount: list.filter(o => o.fraudRisk?.riskRating === 'SUSPICIOUS').length,
+      blockedOrdersCount: list.filter(o => o.verificationStatus === 'REJECTED' || o.orderStatus === 'CANCELLED').length,
+      verifiedOrdersCount: list.filter(o => o.verificationStatus === 'PHONE_VERIFIED' || o.verificationStatus === 'ADVANCE_PAID' || o.verificationStatus === 'MANUALLY_OVERRIDDEN').length,
+      advanceFeeCollectedCount: list.filter(o => (o.advancePayment && o.advancePayment.isPaid) || (o.advancePaymentAmount && o.advancePaymentAmount > 0)).length,
+      activeBlacklistCount: INITIAL_BLACKLIST.filter(b => b.isActive).length,
+      preventedLossBdt: 12500,
+      flaggedCodExposureBdt: list.filter(o => o.paymentMethod === 'COD' && o.fraudRisk && o.fraudRisk.riskScore >= 60).reduce((sum, o) => sum + o.total, 0)
+    };
+  });
+  const [blacklists, setBlacklists] = useState<BlacklistEntry[]>(INITIAL_BLACKLIST);
+  const [settings, setSettings] = useState<FraudRiskSettings | null>(INITIAL_FRAUD_SETTINGS);
   const [orders, setOrders] = useState<Order[]>(propOrders || contextOrders || []);
   const [loading, setLoading] = useState(false);
   const [loadFailures, setLoadFailures] = useState<string[]>([]);
@@ -441,7 +457,7 @@ export const FraudRiskDashboard: React.FC<FraudDashboardProps> = ({
   };
 
   return (
-    <div id="fraud-risk-engine-container" className="space-y-6">
+    <div id="fraud-risk-engine-container" className="space-y-4 sm:space-y-6 w-full min-w-0 overflow-x-hidden">
       <OfflineDataBanner
         visible={loadFailures.length > 0}
         resource={`fraud engine data (${loadFailures.join(', ')})`}
@@ -451,39 +467,39 @@ export const FraudRiskDashboard: React.FC<FraudDashboardProps> = ({
       />
 
       {/* Top Header & Quick Actions */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-stone-900 p-4 sm:p-6 rounded-xl border border-gray-200 dark:border-stone-800 shadow-xs">
         <div>
           <div className="flex items-center gap-3">
-            <div className="p-2.5 bg-rose-50 text-rose-700 rounded-lg border border-rose-200">
+            <div className="p-2.5 bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-400 rounded-lg border border-rose-200 dark:border-rose-800/80 shrink-0">
               <ShieldAlert className="w-6 h-6" />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-gray-900">Fraud Detection, Risk Engine & Anti-Abuse</h1>
-              <p className="text-sm text-gray-500">
+              <h1 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white">Fraud Detection, Risk Engine & Anti-Abuse</h1>
+              <p className="text-xs sm:text-sm text-gray-500 dark:text-stone-400 mt-0.5">
                 Authoritative multi-factor scoring, fake order blocker, COD loss prevention & Blacklist registry
               </p>
             </div>
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
           <button
             id="refresh-fraud-data-btn"
             onClick={fetchData}
             disabled={loading}
-            className="flex items-center gap-2 px-3.5 py-2 text-sm font-medium text-gray-700 bg-gray-50 hover:bg-gray-100 rounded-lg border border-gray-300 transition-colors"
+            className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-3.5 py-2 text-xs sm:text-sm font-medium text-gray-700 dark:text-stone-300 bg-gray-50 dark:bg-stone-800 hover:bg-gray-100 dark:hover:bg-stone-750 rounded-lg border border-gray-300 dark:border-stone-700 transition-colors"
           >
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-            Refresh
+            <span>Refresh</span>
           </button>
 
           <button
             id="open-add-blacklist-modal-btn"
             onClick={() => setShowAddBlacklistModal(true)}
-            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-rose-700 hover:bg-rose-800 rounded-lg shadow-sm transition-colors"
+            className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-3.5 sm:px-4 py-2 text-xs sm:text-sm font-medium text-white bg-rose-700 hover:bg-rose-800 rounded-lg shadow-xs transition-colors"
           >
             <Plus className="w-4 h-4" />
-            Blacklist Phone / IP
+            <span>{isBn ? '+ ব্ল্যাকলিস্ট' : 'Blacklist Target'}</span>
           </button>
         </div>
       </div>
@@ -492,61 +508,61 @@ export const FraudRiskDashboard: React.FC<FraudDashboardProps> = ({
       {feedbackMsg && (
         <div className={`p-4 rounded-lg border text-sm flex items-center gap-2 transition-all ${
           feedbackMsg.type === 'success' 
-            ? 'bg-emerald-50 border-emerald-200 text-emerald-800' 
-            : 'bg-rose-50 border-rose-200 text-rose-800'
+            ? 'bg-emerald-50 dark:bg-emerald-950/50 border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300' 
+            : 'bg-rose-50 dark:bg-rose-950/50 border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-300'
         }`}>
-          {feedbackMsg.type === 'success' ? <CheckCircle className="w-4 h-4" /> : <AlertTriangle className="w-4 h-4" />}
-          <span>{feedbackMsg.text}</span>
+          {feedbackMsg.type === 'success' ? <CheckCircle className="w-4 h-4 shrink-0" /> : <AlertTriangle className="w-4 h-4 shrink-0" />}
+          <span className="text-xs sm:text-sm">{feedbackMsg.text}</span>
         </div>
       )}
 
       {/* Real-Time Metrics & Security Posture */}
       {stats && (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-          <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
-            <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Total Evaluated</div>
-            <div className="text-2xl font-bold text-gray-900 mt-1">{stats.totalEvaluated}</div>
-            <div className="text-xs text-gray-400 mt-0.5">Live orders processed</div>
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5 sm:gap-4">
+          <div className="bg-white dark:bg-stone-900 p-3.5 sm:p-4 rounded-xl border border-gray-200 dark:border-stone-800 shadow-2xs">
+            <div className="text-[11px] font-semibold text-gray-500 dark:text-stone-400 uppercase tracking-wider">Total Evaluated</div>
+            <div className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mt-1">{stats.totalEvaluated}</div>
+            <div className="text-[11px] text-gray-400 dark:text-stone-500 mt-0.5">Live orders processed</div>
           </div>
 
-          <div className="bg-white p-4 rounded-xl border border-emerald-200 bg-emerald-50/20 shadow-sm">
-            <div className="text-xs font-semibold text-emerald-700 uppercase tracking-wider">Low Risk (Clean)</div>
-            <div className="text-2xl font-bold text-emerald-800 mt-1">{stats.lowRiskCount}</div>
-            <div className="text-xs text-emerald-600 mt-0.5">Auto-approved</div>
+          <div className="bg-white dark:bg-stone-900 p-3.5 sm:p-4 rounded-xl border border-emerald-200 dark:border-emerald-800/60 bg-emerald-50/20 dark:bg-emerald-950/20 shadow-2xs">
+            <div className="text-[11px] font-semibold text-emerald-700 dark:text-emerald-400 uppercase tracking-wider">Low Risk (Clean)</div>
+            <div className="text-xl sm:text-2xl font-bold text-emerald-800 dark:text-emerald-300 mt-1">{stats.lowRiskCount}</div>
+            <div className="text-[11px] text-emerald-600 dark:text-emerald-400/80 mt-0.5">Auto-approved</div>
           </div>
 
-          <div className="bg-white p-4 rounded-xl border border-yellow-200 bg-yellow-50/20 shadow-sm">
-            <div className="text-xs font-semibold text-yellow-700 uppercase tracking-wider">Medium Risk</div>
-            <div className="text-2xl font-bold text-yellow-800 mt-1">{stats.mediumRiskCount}</div>
-            <div className="text-xs text-yellow-600 mt-0.5">Phone confirmation</div>
+          <div className="bg-white dark:bg-stone-900 p-3.5 sm:p-4 rounded-xl border border-yellow-200 dark:border-yellow-800/60 bg-yellow-50/20 dark:bg-yellow-950/20 shadow-2xs">
+            <div className="text-[11px] font-semibold text-yellow-700 dark:text-yellow-400 uppercase tracking-wider">Medium Risk</div>
+            <div className="text-xl sm:text-2xl font-bold text-yellow-800 dark:text-yellow-300 mt-1">{stats.mediumRiskCount}</div>
+            <div className="text-[11px] text-yellow-600 dark:text-yellow-400/80 mt-0.5">Phone confirmation</div>
           </div>
 
-          <div className="bg-white p-4 rounded-xl border border-amber-200 bg-amber-50/20 shadow-sm">
-            <div className="text-xs font-semibold text-amber-700 uppercase tracking-wider">High Risk / COD</div>
-            <div className="text-2xl font-bold text-amber-800 mt-1">{stats.highRiskCount}</div>
-            <div className="text-xs text-amber-600 mt-0.5">৳{stats.flaggedCodExposureBdt.toLocaleString()} COD at risk</div>
+          <div className="bg-white dark:bg-stone-900 p-3.5 sm:p-4 rounded-xl border border-amber-200 dark:border-amber-800/60 bg-amber-50/20 dark:bg-amber-950/20 shadow-2xs">
+            <div className="text-[11px] font-semibold text-amber-700 dark:text-amber-400 uppercase tracking-wider">High Risk / COD</div>
+            <div className="text-xl sm:text-2xl font-bold text-amber-800 dark:text-amber-300 mt-1">{stats.highRiskCount}</div>
+            <div className="text-[11px] text-amber-600 dark:text-amber-400/80 mt-0.5">৳{stats.flaggedCodExposureBdt.toLocaleString()} COD at risk</div>
           </div>
 
-          <div className="bg-white p-4 rounded-xl border border-rose-200 bg-rose-50/20 shadow-sm">
-            <div className="text-xs font-semibold text-rose-700 uppercase tracking-wider">Blocked / Fraud</div>
-            <div className="text-2xl font-bold text-rose-800 mt-1">{stats.criticalSuspiciousCount}</div>
-            <div className="text-xs text-rose-600 mt-0.5">৳{stats.preventedLossBdt.toLocaleString()} loss prevented</div>
+          <div className="bg-white dark:bg-stone-900 p-3.5 sm:p-4 rounded-xl border border-rose-200 dark:border-rose-800/60 bg-rose-50/20 dark:bg-rose-950/20 shadow-2xs">
+            <div className="text-[11px] font-semibold text-rose-700 dark:text-rose-400 uppercase tracking-wider">Blocked / Fraud</div>
+            <div className="text-xl sm:text-2xl font-bold text-rose-800 dark:text-rose-300 mt-1">{stats.criticalSuspiciousCount}</div>
+            <div className="text-[11px] text-rose-600 dark:text-rose-400/80 mt-0.5">৳{stats.preventedLossBdt.toLocaleString()} loss saved</div>
           </div>
 
-          <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
-            <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Active Blacklist</div>
-            <div className="text-2xl font-bold text-gray-900 mt-1">{stats.activeBlacklistCount}</div>
-            <div className="text-xs text-gray-400 mt-0.5">Phones, IPs, emails</div>
+          <div className="bg-white dark:bg-stone-900 p-3.5 sm:p-4 rounded-xl border border-gray-200 dark:border-stone-800 shadow-2xs">
+            <div className="text-[11px] font-semibold text-gray-500 dark:text-stone-400 uppercase tracking-wider">Active Blacklist</div>
+            <div className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mt-1">{stats.activeBlacklistCount}</div>
+            <div className="text-[11px] text-gray-400 dark:text-stone-500 mt-0.5">Phones, IPs, emails</div>
           </div>
         </div>
       )}
 
       {/* Tabs Navigation */}
-      <div className="flex border-b border-gray-200 bg-white px-4 rounded-t-xl">
+      <div className="flex overflow-x-auto whitespace-nowrap scrollbar-none border-b border-gray-200 dark:border-stone-800 bg-white dark:bg-stone-900 px-2 sm:px-4 rounded-t-xl gap-1 w-full min-w-0">
         <button
           id="tab-fraud-queue"
           onClick={() => setActiveTab('queue')}
-          className={`flex items-center gap-2 py-4 px-4 font-medium text-sm border-b-2 transition-colors ${
+          className={`flex items-center gap-2 py-3 sm:py-4 px-3 sm:px-4 font-medium text-xs sm:text-sm border-b-2 transition-colors shrink-0 ${
             activeTab === 'queue'
               ? 'border-rose-700 text-rose-700'
               : 'border-transparent text-gray-500 hover:text-gray-700'
@@ -559,7 +575,7 @@ export const FraudRiskDashboard: React.FC<FraudDashboardProps> = ({
         <button
           id="tab-fraud-blacklists"
           onClick={() => setActiveTab('blacklists')}
-          className={`flex items-center gap-2 py-4 px-4 font-medium text-sm border-b-2 transition-colors ${
+          className={`flex items-center gap-2 py-3 sm:py-4 px-3 sm:px-4 font-medium text-xs sm:text-sm border-b-2 transition-colors shrink-0 ${
             activeTab === 'blacklists'
               ? 'border-rose-700 text-rose-700'
               : 'border-transparent text-gray-500 hover:text-gray-700'
@@ -572,7 +588,7 @@ export const FraudRiskDashboard: React.FC<FraudDashboardProps> = ({
         <button
           id="tab-fraud-rules"
           onClick={() => setActiveTab('rules')}
-          className={`flex items-center gap-2 py-4 px-4 font-medium text-sm border-b-2 transition-colors ${
+          className={`flex items-center gap-2 py-3 sm:py-4 px-3 sm:px-4 font-medium text-xs sm:text-sm border-b-2 transition-colors shrink-0 ${
             activeTab === 'rules'
               ? 'border-rose-700 text-rose-700'
               : 'border-transparent text-gray-500 hover:text-gray-700'
@@ -585,7 +601,7 @@ export const FraudRiskDashboard: React.FC<FraudDashboardProps> = ({
         <button
           id="tab-fraud-sandbox"
           onClick={() => setActiveTab('sandbox')}
-          className={`flex items-center gap-2 py-4 px-4 font-medium text-sm border-b-2 transition-colors ${
+          className={`flex items-center gap-2 py-3 sm:py-4 px-3 sm:px-4 font-medium text-xs sm:text-sm border-b-2 transition-colors shrink-0 ${
             activeTab === 'sandbox'
               ? 'border-rose-700 text-rose-700'
               : 'border-transparent text-gray-500 hover:text-gray-700'
@@ -600,27 +616,27 @@ export const FraudRiskDashboard: React.FC<FraudDashboardProps> = ({
       {/* TAB 1: RISK REVIEW QUEUE */}
       {/* ============================================================= */}
       {activeTab === 'queue' && (
-        <div className="bg-white rounded-b-xl border border-t-0 border-gray-200 p-6 space-y-6">
+        <div className="bg-white dark:bg-stone-900 rounded-b-xl border border-t-0 border-gray-200 dark:border-stone-800 p-3.5 sm:p-6 space-y-4 sm:space-y-6 w-full min-w-0">
           {/* Queue Filters */}
-          <div className="flex flex-col md:flex-row gap-4 justify-between items-center bg-gray-50 p-4 rounded-xl border border-gray-200">
-            <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
-              <div className="relative flex-1 md:w-64">
-                <Search className="w-4 h-4 absolute left-3 top-3 text-gray-400" />
+          <div className="flex flex-col lg:flex-row gap-3 sm:gap-4 justify-between items-stretch lg:items-center bg-gray-50 dark:bg-stone-850 p-3.5 sm:p-4 rounded-xl border border-gray-200 dark:border-stone-800 w-full min-w-0">
+            <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-2.5 sm:gap-3 w-full lg:w-auto">
+              <div className="relative flex-1 sm:w-64 min-w-[200px]">
+                <Search className="w-4 h-4 absolute left-3 top-2.5 text-gray-400" />
                 <input
                   type="text"
-                  placeholder="Search order #, customer, phone..."
+                  placeholder={isBn ? 'অর্ডার #, কাস্টমার, ফোন দিয়ে খুঁজুন...' : 'Search order #, customer, phone...'}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-9 pr-3 py-2 text-sm bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-600"
+                  className="w-full pl-9 pr-3 py-2 text-xs sm:text-sm bg-white dark:bg-stone-900 border border-gray-300 dark:border-stone-700 text-stone-900 dark:text-stone-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-600"
                 />
               </div>
 
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-semibold text-gray-600">Risk:</span>
+              <div className="flex items-center gap-2 flex-1 sm:flex-initial">
+                <span className="text-xs font-semibold text-gray-600 dark:text-stone-300 shrink-0">Risk:</span>
                 <select
                   value={riskFilter}
                   onChange={(e) => setRiskFilter(e.target.value)}
-                  className="text-xs py-2 px-3 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-600"
+                  className="w-full sm:w-auto text-xs py-2 px-2.5 bg-white dark:bg-stone-900 border border-gray-300 dark:border-stone-700 text-stone-900 dark:text-stone-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-600"
                 >
                   <option value="ALL">All Ratings</option>
                   <option value="SUSPICIOUS">Suspicious / Blocked (85+)</option>
@@ -630,12 +646,12 @@ export const FraudRiskDashboard: React.FC<FraudDashboardProps> = ({
                 </select>
               </div>
 
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-semibold text-gray-600">Verification:</span>
+              <div className="flex items-center gap-2 flex-1 sm:flex-initial">
+                <span className="text-xs font-semibold text-gray-600 dark:text-stone-300 shrink-0">Status:</span>
                 <select
                   value={verifyFilter}
                   onChange={(e) => setVerifyFilter(e.target.value)}
-                  className="text-xs py-2 px-3 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-600"
+                  className="w-full sm:w-auto text-xs py-2 px-2.5 bg-white dark:bg-stone-900 border border-gray-300 dark:border-stone-700 text-stone-900 dark:text-stone-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-600"
                 >
                   <option value="ALL">All Statuses</option>
                   <option value="UNVERIFIED">Unverified (Pending Review)</option>
@@ -647,13 +663,125 @@ export const FraudRiskDashboard: React.FC<FraudDashboardProps> = ({
               </div>
             </div>
 
-            <div className="text-xs text-gray-500 font-medium">
+            <div className="text-xs text-gray-500 dark:text-stone-400 font-medium">
               Showing {filteredOrders.length} of {orders.length} orders
             </div>
           </div>
 
-          {/* Orders Table */}
-          <div className="overflow-x-auto rounded-xl border border-gray-200">
+          {/* Orders View: Responsive Cards for Mobile (<md) and Table for Desktop (>=md) */}
+          <div className="rounded-xl border border-gray-200 overflow-hidden bg-white">
+            {/* Mobile Cards View (<md) */}
+            <div className="block md:hidden divide-y divide-gray-100">
+              {filteredOrders.length === 0 ? (
+                <div className="text-center py-10 text-gray-400 text-xs">
+                  {isBn ? 'কোনো অর্ডার ফ্রড ফিল্টারের সাথে মেলেনি।' : 'No orders matched the current risk filters.'}
+                </div>
+              ) : (
+                filteredOrders.map((ord) => {
+                  const risk = ord.fraudRisk;
+                  const isHighRisk = risk && risk.riskScore >= 60;
+                  return (
+                    <div
+                      key={ord.id}
+                      className={`p-4 space-y-3 transition-colors ${
+                        isHighRisk ? 'bg-rose-50/25' : ''
+                      }`}
+                    >
+                      {/* Top Bar: Order & Rating */}
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <Link
+                            to={`/admin/orders?search=${encodeURIComponent(ord.orderNumber)}`}
+                            className="font-bold text-sm text-gray-900 hover:text-teal-900 hover:underline inline-flex items-center gap-1 group"
+                          >
+                            <span>{ord.orderNumber}</span>
+                            <ExternalLink className="w-3 h-3 text-gray-400 group-hover:text-teal-800" />
+                          </Link>
+                          <div className="text-xs text-gray-400">
+                            {new Date(ord.createdAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })} • {new Date(ord.createdAt).toLocaleDateString('en-GB')}
+                          </div>
+                        </div>
+
+                        <div>
+                          {getRiskBadge(risk?.riskRating, risk?.riskScore)}
+                        </div>
+                      </div>
+
+                      {/* Customer & Value Block */}
+                      <div className="grid grid-cols-2 gap-2 text-xs bg-gray-50 p-2.5 rounded-lg border border-gray-200/80">
+                        <div>
+                          <span className="text-[10px] text-gray-400 block uppercase font-bold">{isBn ? 'গ্রাহক' : 'Customer'}</span>
+                          <span className="font-semibold text-gray-900 block truncate">{ord.customer.name}</span>
+                          <a href={`tel:${ord.customer.phone}`} className="font-mono text-gray-600 text-[11px] hover:underline flex items-center gap-1">
+                            <PhoneCall className="w-2.5 h-2.5 text-gray-400" />
+                            {ord.customer.phone}
+                          </a>
+                          <span className="text-[10px] text-gray-400 truncate block mt-0.5">{ord.shippingAddress.district}</span>
+                        </div>
+                        <div>
+                          <span className="text-[10px] text-gray-400 block uppercase font-bold">{isBn ? 'মূল্য ও পেমেন্ট' : 'Value & Payment'}</span>
+                          <div className="font-bold text-gray-900 font-mono text-sm">৳{ord.total.toLocaleString()}</div>
+                          <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-semibold mt-0.5 ${
+                            ord.paymentMethod === 'COD' ? 'bg-orange-100 text-orange-800' : 'bg-green-100 text-green-800'
+                          }`}>
+                            {ord.paymentMethod}
+                          </span>
+                          <div className="mt-1">
+                            {getVerificationBadge(ord.verificationStatus)}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Flags preview */}
+                      {risk?.flags && risk.flags.length > 0 && (
+                        <div className="flex flex-wrap gap-1">
+                          <span className="text-[10px] font-bold text-gray-400 uppercase self-center mr-1">Flags:</span>
+                          {risk.flags.map((flag) => (
+                            <span key={flag} className="px-1.5 py-0.5 rounded text-[10px] bg-rose-50 text-rose-800 border border-rose-200">
+                              {flag.replace(/_/g, ' ')}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Actions */}
+                      <div className="flex flex-wrap items-center justify-end gap-1.5 pt-2 border-t border-gray-100">
+                        <button
+                          onClick={() => setSelectedOrder(ord)}
+                          className="px-2.5 py-1.5 text-xs font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg flex items-center gap-1 transition-colors"
+                        >
+                          <Eye className="w-3.5 h-3.5 text-gray-500" />
+                          <span>{isBn ? 'রিস্ক বিস্তারিত' : 'View Risk'}</span>
+                        </button>
+
+                        {(!ord.verificationStatus || ord.verificationStatus === 'UNVERIFIED') && (
+                          <button
+                            onClick={() => handleQuickVerifyPhone(ord)}
+                            className="px-2.5 py-1.5 text-xs font-semibold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 rounded-lg border border-emerald-200 flex items-center gap-1 transition-colors"
+                          >
+                            <PhoneCall className="w-3.5 h-3.5 text-emerald-600" />
+                            <span>{isBn ? 'ফোন কনফার্ম' : 'Phone OK'}</span>
+                          </button>
+                        )}
+
+                        <button
+                          onClick={() => {
+                            setActionModalOrder(ord);
+                            setActionType(risk?.recommendation === 'REQUIRE_ADVANCE_SHIPPING_FEE' ? 'ADVANCE_FEE_PAID' : 'PHONE_VERIFIED');
+                          }}
+                          className="px-3 py-1.5 text-xs font-semibold text-white bg-rose-700 hover:bg-rose-800 rounded-lg transition-colors shadow-xs"
+                        >
+                          {isBn ? 'অ্যাকশন নিন' : 'Take Action'}
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            {/* Desktop Table View (>=md) */}
+            <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-left border-collapse text-sm">
               <thead className="bg-gray-50 text-gray-600 text-xs uppercase font-semibold border-b border-gray-200">
                 <tr>
@@ -803,19 +931,20 @@ export const FraudRiskDashboard: React.FC<FraudDashboardProps> = ({
             </table>
           </div>
         </div>
+      </div>
       )}
 
       {/* ============================================================= */}
       {/* TAB 2: BLACKLIST & WATCHLIST REGISTRY */}
       {/* ============================================================= */}
       {activeTab === 'blacklists' && (
-        <div className="bg-white rounded-b-xl border border-t-0 border-gray-200 p-6 space-y-6">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="bg-white dark:bg-stone-900 rounded-b-xl border border-t-0 border-gray-200 dark:border-stone-800 p-3.5 sm:p-6 space-y-4 sm:space-y-6 w-full min-w-0">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
             <div>
-              <h2 className="text-base font-bold text-gray-900">
+              <h2 className="text-sm sm:text-base font-bold text-gray-900 dark:text-white">
                 {isBn ? 'ব্ল্যাকলিস্টেড সত্ত্বা ও সক্রিয় ফ্রড সিগনেচার রেজিস্ট্রি' : 'Blacklisted Entities & Active Fraud Signatures'}
               </h2>
-              <p className="text-xs text-gray-500">
+              <p className="text-xs text-gray-500 dark:text-stone-400 mt-0.5">
                 {isBn 
                   ? 'ব্ল্যাকলিস্টের সাথে মিল থাকা যেকোনো নতুন অর্ডার সরাসরি হাই-রিস্ক হিসেবে চিহ্নিত হবে বা বাতিল করা হবে।' 
                   : 'Any orders matching active entries will trigger an immediate high risk score or automatic cancellation.'}
@@ -823,33 +952,33 @@ export const FraudRiskDashboard: React.FC<FraudDashboardProps> = ({
             </div>
             <button
               onClick={() => setShowAddBlacklistModal(true)}
-              className="flex items-center gap-2 px-3.5 py-1.5 text-xs font-semibold text-white bg-rose-700 hover:bg-rose-800 rounded-lg shadow-sm transition-colors"
+              className="flex items-center justify-center gap-2 px-3.5 py-2 text-xs font-semibold text-white bg-rose-700 hover:bg-rose-800 rounded-lg shadow-xs transition-colors shrink-0"
             >
               <Plus className="w-4 h-4" />
-              {isBn ? 'ব্ল্যাকলিস্ট এন্ট্রি যোগ করুন' : 'Add Blacklist Entry'}
+              <span>{isBn ? 'ব্ল্যাকলিস্ট এন্ট্রি যোগ করুন' : 'Add Blacklist Entry'}</span>
             </button>
           </div>
 
           {/* Blacklist Filters */}
-          <div className="flex flex-col md:flex-row gap-4 justify-between items-center bg-gray-50 p-4 rounded-xl border border-gray-200">
-            <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
-              <div className="relative flex-1 md:w-64">
-                <Search className="w-4 h-4 absolute left-3 top-3 text-gray-400" />
+          <div className="flex flex-col lg:flex-row gap-3 sm:gap-4 justify-between items-stretch lg:items-center bg-gray-50 dark:bg-stone-850 p-3.5 sm:p-4 rounded-xl border border-gray-200 dark:border-stone-800 w-full min-w-0">
+            <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-2.5 sm:gap-3 w-full lg:w-auto">
+              <div className="relative flex-1 sm:w-64 min-w-[200px]">
+                <Search className="w-4 h-4 absolute left-3 top-2.5 text-gray-400" />
                 <input
                   type="text"
                   placeholder={isBn ? 'ফোন, আইপি বা কারণ খুঁজুন...' : 'Search phone, IP, email or reason...'}
                   value={blSearchQuery}
                   onChange={(e) => setBlSearchQuery(e.target.value)}
-                  className="w-full pl-9 pr-3 py-2 text-sm bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-600"
+                  className="w-full pl-9 pr-3 py-2 text-xs sm:text-sm bg-white dark:bg-stone-900 border border-gray-300 dark:border-stone-700 text-stone-900 dark:text-stone-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-600"
                 />
               </div>
 
               <div className="flex items-center gap-2">
-                <span className="text-xs font-semibold text-gray-600">{isBn ? 'টাইপ:' : 'Type:'}</span>
+                <span className="text-xs font-semibold text-gray-600 dark:text-stone-300 shrink-0">{isBn ? 'টাইপ:' : 'Type:'}</span>
                 <select
                   value={blTypeFilter}
                   onChange={(e) => setBlTypeFilter(e.target.value)}
-                  className="text-xs py-2 px-3 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-600"
+                  className="w-full sm:w-auto text-xs py-2 px-2.5 bg-white dark:bg-stone-900 border border-gray-300 dark:border-stone-700 text-stone-900 dark:text-stone-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-600"
                 >
                   <option value="ALL">{isBn ? 'সকল টাইপ' : 'All Types'}</option>
                   <option value="PHONE">Phone Numbers</option>
@@ -860,102 +989,175 @@ export const FraudRiskDashboard: React.FC<FraudDashboardProps> = ({
               </div>
             </div>
 
-            <div className="text-xs text-gray-500 font-medium">
+            <div className="text-xs text-gray-500 dark:text-stone-400 font-medium">
               {isBn ? `মোট ${blacklists.length}টি এন্ট্রির মধ্যে দেখানো হচ্ছে` : `Showing ${blacklists.filter(bl => (blTypeFilter === 'ALL' || bl.type === blTypeFilter) && (!blSearchQuery.trim() || bl.value.toLowerCase().includes(blSearchQuery.toLowerCase()) || bl.reason.toLowerCase().includes(blSearchQuery.toLowerCase()))).length} of ${blacklists.length} entries`}
             </div>
           </div>
 
-          <div className="overflow-x-auto rounded-xl border border-gray-200">
-            <table className="w-full text-left border-collapse text-sm">
-              <thead className="bg-gray-50 text-gray-600 text-xs uppercase font-semibold border-b border-gray-200">
-                <tr>
-                  <th className="py-3 px-4">Type</th>
-                  <th className="py-3 px-4">Value / Target</th>
-                  <th className="py-3 px-4">Reason / Threat Profile</th>
-                  <th className="py-3 px-4">Severity</th>
-                  <th className="py-3 px-4">Hit Count</th>
-                  <th className="py-3 px-4">Added By</th>
-                  <th className="py-3 px-4">Status</th>
-                  <th className="py-3 px-4 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {blacklists
-                  .filter(bl => {
-                    if (blTypeFilter !== 'ALL' && bl.type !== blTypeFilter) return false;
-                    if (blSearchQuery.trim()) {
-                      const q = blSearchQuery.toLowerCase();
-                      return bl.value.toLowerCase().includes(q) || bl.reason.toLowerCase().includes(q);
-                    }
-                    return true;
-                  })
-                  .map((bl) => (
-                  <tr key={bl.id} className="hover:bg-gray-50">
-                    <td className="py-3.5 px-4">
-                      <span className={`px-2 py-0.5 rounded text-xs font-semibold ${
-                        bl.type === 'PHONE' ? 'bg-indigo-100 text-indigo-800' :
-                        bl.type === 'IP' ? 'bg-purple-100 text-purple-800' :
-                        bl.type === 'EMAIL' ? 'bg-blue-100 text-blue-800' : 'bg-amber-100 text-amber-800'
-                      }`}>
-                        {bl.type}
-                      </span>
-                    </td>
-
-                    <td className="py-3.5 px-4 font-mono font-medium text-gray-900">
-                      {bl.value}
-                    </td>
-
-                    <td className="py-3.5 px-4 text-gray-700 text-xs">
-                      {bl.reason}
-                    </td>
-
-                    <td className="py-3.5 px-4">
-                      <span className={`px-2 py-0.5 rounded text-[11px] font-semibold ${
-                        bl.severity === 'STRICT_BLOCK' ? 'bg-red-100 text-red-800' : 'bg-yellow-100 text-yellow-800'
+          {/* Blacklist View: Responsive Cards for Mobile (<md) and Table for Desktop (>=md) */}
+          <div className="rounded-xl border border-gray-200 dark:border-stone-800 overflow-hidden bg-white dark:bg-stone-900">
+            {/* Mobile Cards View (<md) */}
+            <div className="block md:hidden divide-y divide-gray-100 dark:divide-stone-800">
+              {blacklists
+                .filter(bl => {
+                  if (blTypeFilter !== 'ALL' && bl.type !== blTypeFilter) return false;
+                  if (blSearchQuery.trim()) {
+                    const q = blSearchQuery.toLowerCase();
+                    return bl.value.toLowerCase().includes(q) || bl.reason.toLowerCase().includes(q);
+                  }
+                  return true;
+                })
+                .map((bl) => (
+                  <div key={bl.id} className="p-3.5 space-y-2.5 bg-white dark:bg-stone-900 hover:bg-gray-50/60 dark:hover:bg-stone-850/60 transition-colors">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <span className={`px-2 py-0.5 rounded text-[11px] font-bold ${
+                          bl.type === 'PHONE' ? 'bg-indigo-100 dark:bg-indigo-950 text-indigo-800 dark:text-indigo-300' :
+                          bl.type === 'IP' ? 'bg-purple-100 dark:bg-purple-950 text-purple-800 dark:text-purple-300' :
+                          bl.type === 'EMAIL' ? 'bg-blue-100 dark:bg-blue-950 text-blue-800 dark:text-blue-300' : 'bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300'
+                        }`}>
+                          {bl.type}
+                        </span>
+                        <span className="font-mono font-bold text-xs text-gray-900 dark:text-white truncate max-w-[180px]">
+                          {bl.value}
+                        </span>
+                      </div>
+                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                        bl.severity === 'STRICT_BLOCK' ? 'bg-red-100 dark:bg-red-950 text-red-800 dark:text-red-300' : 'bg-yellow-100 dark:bg-yellow-950 text-yellow-800 dark:text-yellow-300'
                       }`}>
                         {bl.severity.replace(/_/g, ' ')}
                       </span>
-                    </td>
+                    </div>
 
-                    <td className="py-3.5 px-4">
-                      <span className="font-semibold text-gray-900">{bl.hitCount}</span>
-                      {bl.lastHitAt && (
-                        <div className="text-[10px] text-gray-400">
-                          Last: {new Date(bl.lastHitAt).toLocaleDateString('en-GB')}
-                        </div>
-                      )}
-                    </td>
+                    <p className="text-xs text-gray-700 dark:text-stone-300 line-clamp-2">
+                      {bl.reason}
+                    </p>
 
-                    <td className="py-3.5 px-4 text-xs text-gray-500">
-                      {bl.addedBy}
-                    </td>
-
-                    <td className="py-3.5 px-4">
-                      <button
-                        onClick={() => handleToggleBlacklist(bl.id)}
-                        className={`text-xs px-2.5 py-1 rounded-full font-semibold transition-colors ${
-                          bl.isActive 
-                            ? 'bg-emerald-100 text-emerald-800 hover:bg-emerald-200' 
-                            : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
-                        }`}
-                      >
-                        {bl.isActive ? 'Active' : 'Disabled'}
-                      </button>
-                    </td>
-
-                    <td className="py-3.5 px-4 text-right">
-                      <button
-                        onClick={() => handleDeleteBlacklist(bl.id)}
-                        className="p-1.5 text-gray-400 hover:text-red-600 rounded transition-colors"
-                        title="Delete from blacklist"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </td>
-                  </tr>
+                    <div className="flex items-center justify-between pt-1 border-t border-gray-100 dark:border-stone-800 text-[11px] text-gray-500 dark:text-stone-400">
+                      <div>
+                        <span>Hits: </span>
+                        <span className="font-bold text-gray-900 dark:text-white">{bl.hitCount}</span>
+                        {bl.lastHitAt && (
+                          <span className="ml-1 opacity-70">({new Date(bl.lastHitAt).toLocaleDateString('en-GB')})</span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => handleToggleBlacklist(bl.id)}
+                          className={`text-[10px] px-2 py-0.5 rounded-full font-semibold transition-colors ${
+                            bl.isActive 
+                              ? 'bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300' 
+                              : 'bg-gray-100 dark:bg-stone-800 text-gray-500 dark:text-stone-400'
+                          }`}
+                        >
+                          {bl.isActive ? 'Active' : 'Disabled'}
+                        </button>
+                        <button
+                          onClick={() => handleDeleteBlacklist(bl.id)}
+                          className="p-1 text-gray-400 hover:text-red-600 rounded transition-colors"
+                          title="Delete"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
                 ))}
-              </tbody>
-            </table>
+            </div>
+
+            {/* Desktop Table View (>=md) */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full text-left border-collapse text-sm">
+                <thead className="bg-gray-50 dark:bg-stone-850 text-gray-600 dark:text-stone-300 text-xs uppercase font-semibold border-b border-gray-200 dark:border-stone-800">
+                  <tr>
+                    <th className="py-3 px-4">Type</th>
+                    <th className="py-3 px-4">Value / Target</th>
+                    <th className="py-3 px-4">Reason / Threat Profile</th>
+                    <th className="py-3 px-4">Severity</th>
+                    <th className="py-3 px-4">Hit Count</th>
+                    <th className="py-3 px-4">Added By</th>
+                    <th className="py-3 px-4">Status</th>
+                    <th className="py-3 px-4 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100 dark:divide-stone-800">
+                  {blacklists
+                    .filter(bl => {
+                      if (blTypeFilter !== 'ALL' && bl.type !== blTypeFilter) return false;
+                      if (blSearchQuery.trim()) {
+                        const q = blSearchQuery.toLowerCase();
+                        return bl.value.toLowerCase().includes(q) || bl.reason.toLowerCase().includes(q);
+                      }
+                      return true;
+                    })
+                    .map((bl) => (
+                    <tr key={bl.id} className="hover:bg-gray-50 dark:hover:bg-stone-850">
+                      <td className="py-3.5 px-4">
+                        <span className={`px-2 py-0.5 rounded text-xs font-semibold ${
+                          bl.type === 'PHONE' ? 'bg-indigo-100 dark:bg-indigo-950 text-indigo-800 dark:text-indigo-300' :
+                          bl.type === 'IP' ? 'bg-purple-100 dark:bg-purple-950 text-purple-800 dark:text-purple-300' :
+                          bl.type === 'EMAIL' ? 'bg-blue-100 dark:bg-blue-950 text-blue-800 dark:text-blue-300' : 'bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300'
+                        }`}>
+                          {bl.type}
+                        </span>
+                      </td>
+
+                      <td className="py-3.5 px-4 font-mono font-medium text-gray-900 dark:text-white">
+                        {bl.value}
+                      </td>
+
+                      <td className="py-3.5 px-4 text-gray-700 dark:text-stone-300 text-xs">
+                        {bl.reason}
+                      </td>
+
+                      <td className="py-3.5 px-4">
+                        <span className={`px-2 py-0.5 rounded text-[11px] font-semibold ${
+                          bl.severity === 'STRICT_BLOCK' ? 'bg-red-100 dark:bg-red-950 text-red-800 dark:text-red-300' : 'bg-yellow-100 dark:bg-yellow-950 text-yellow-800 dark:text-yellow-300'
+                        }`}>
+                          {bl.severity.replace(/_/g, ' ')}
+                        </span>
+                      </td>
+
+                      <td className="py-3.5 px-4">
+                        <span className="font-semibold text-gray-900 dark:text-white">{bl.hitCount}</span>
+                        {bl.lastHitAt && (
+                          <div className="text-[10px] text-gray-400 dark:text-stone-500">
+                            Last: {new Date(bl.lastHitAt).toLocaleDateString('en-GB')}
+                          </div>
+                        )}
+                      </td>
+
+                      <td className="py-3.5 px-4 text-xs text-gray-500 dark:text-stone-400">
+                        {bl.addedBy}
+                      </td>
+
+                      <td className="py-3.5 px-4">
+                        <button
+                          onClick={() => handleToggleBlacklist(bl.id)}
+                          className={`text-xs px-2.5 py-1 rounded-full font-semibold transition-colors ${
+                            bl.isActive 
+                              ? 'bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 hover:bg-emerald-200' 
+                              : 'bg-gray-100 dark:bg-stone-800 text-gray-500 dark:text-stone-400 hover:bg-gray-200'
+                          }`}
+                        >
+                          {bl.isActive ? 'Active' : 'Disabled'}
+                        </button>
+                      </td>
+
+                      <td className="py-3.5 px-4 text-right">
+                        <button
+                          onClick={() => handleDeleteBlacklist(bl.id)}
+                          className="p-1.5 text-gray-400 hover:text-red-600 rounded transition-colors"
+                          title="Delete from blacklist"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       )}
@@ -1514,6 +1716,7 @@ export const FraudRiskDashboard: React.FC<FraudDashboardProps> = ({
         closeOnBackdrop={false}
         overlayClassName="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
       >
+        {actionModalOrder && (
           <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-5 animate-in fade-in zoom-in-95 duration-200">
             <div className="flex justify-between items-center">
               <div>
@@ -1639,6 +1842,7 @@ export const FraudRiskDashboard: React.FC<FraudDashboardProps> = ({
               </div>
             </div>
           </div>
+        )}
       </AdminModalShell>
 
       {/* ============================================================= */}
@@ -1650,6 +1854,7 @@ export const FraudRiskDashboard: React.FC<FraudDashboardProps> = ({
         label=""
         overlayClassName="fixed inset-0 z-50 flex items-center justify-end bg-black/50 backdrop-blur-xs"
       >
+        {selectedOrder && (
           <div className="bg-white w-full max-w-md h-full shadow-2xl p-6 overflow-y-auto space-y-6 animate-in slide-in-from-right duration-200">
             <div className="flex justify-between items-center pb-4 border-b border-gray-200">
               <div>
@@ -1751,6 +1956,7 @@ export const FraudRiskDashboard: React.FC<FraudDashboardProps> = ({
               </div>
             )}
           </div>
+        )}
       </AdminModalShell>
     </div>
   );

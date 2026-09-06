@@ -89,8 +89,10 @@ interface AppContextType {
   
   // Customers
   customers: Customer[];
+  setCustomers: React.Dispatch<React.SetStateAction<Customer[]>>;
   updateCustomerStatus: (id: string, status: 'ACTIVE' | 'BLOCKED', reason?: string) => Promise<boolean>;
   addAdminCustomer: (customerData: { name: string; phone: string; email?: string; address?: string; district?: string; thana?: string }) => Promise<Customer | null>;
+  formatPrice?: (amount?: number | null) => string;
   
   // Inventory
   inventoryTransactions: InventoryTransaction[];
@@ -408,11 +410,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           email: fbUser.email || '',
           phone: fbUser.phoneNumber || '01700000000',
           tier: 'GOLD',
-          points: 150,
           joinedDate: new Date().toISOString().split('T')[0],
-          defaultAddressId: 'addr-1',
-          totalOrdersCount: 1,
-          totalSpentAmount: 2500
+          addresses: [],
+          preferences: {
+            newsletterSubscribed: false,
+            smsOrderUpdates: true,
+            whatsappOrderUpdates: true,
+            emailOrderUpdates: true,
+            promotionalOffers: false,
+            preferredLanguage: 'BN',
+          }
         });
       }
     });
@@ -2254,8 +2261,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         updateOrderStatus,
         dispatchCourier,
         customers,
+        setCustomers,
         updateCustomerStatus,
         addAdminCustomer,
+        formatPrice: (amount?: number | null) => {
+          if (amount === undefined || amount === null || isNaN(Number(amount))) return '৳0';
+          return `৳${Number(amount).toLocaleString('en-US')}`;
+        },
         inventoryTransactions,
         adjustInventory,
         adjustStock: adjustInventory,

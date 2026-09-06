@@ -175,7 +175,7 @@ export function OrderConfirmation() {
       </div>
 
       {/* Action Buttons */}
-      <div className="flex flex-col sm:flex-row gap-4 justify-center">
+      <div className="flex flex-col sm:flex-row gap-4 justify-center no-print">
         <Link
           to={`/track-order?order=${order.orderNumber}`}
           className="inline-flex items-center justify-center gap-2 px-6 py-3.5 bg-teal-900 text-white rounded-lg text-sm font-semibold hover:bg-teal-950 shadow-xs"

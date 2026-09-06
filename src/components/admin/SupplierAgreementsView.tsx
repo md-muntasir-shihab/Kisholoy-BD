@@ -39,7 +39,7 @@ export const SupplierAgreementsView: React.FC<SupplierAgreementsViewProps> = ({
   const [supplierCost, setSupplierCost] = useState<number>(1500);
   const [effectiveFrom, setEffectiveFrom] = useState(new Date().toISOString().split('T')[0]);
   const [effectiveTo, setEffectiveTo] = useState('');
-  const [status, setStatus] = useState<'ACTIVE' | 'DRAFT' | 'EXPIRED' | 'TERMINATED'>('ACTIVE');
+  const [status, setStatus] = useState<SupplierAgreement['status']>('ACTIVE');
   const [notes, setNotes] = useState('');
 
   const loadAgreements = async () => {

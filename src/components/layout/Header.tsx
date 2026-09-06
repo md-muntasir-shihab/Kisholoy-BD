@@ -24,7 +24,10 @@ import {
   Settings,
   Check,
   Sun,
-  Moon
+  Moon,
+  Store,
+  Leaf,
+  Tag
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { CustomerAuthModal } from '../auth/CustomerAuthModal';
@@ -35,6 +38,7 @@ export function Header() {
   const { 
     language, 
     setLanguage, 
+    cart,
     cartCount, 
     siteContent, 
     wishlist, 
@@ -42,10 +46,11 @@ export function Header() {
     customerProfile, 
     logoutCustomer,
     theme,
-    setTheme
+    setTheme,
+    categories,
+    products
   } = useApp();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [isCategoriesAccordionOpen, setIsCategoriesAccordionOpen] = useState(true);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -53,11 +58,82 @@ export function Header() {
   const [authModalMode, setAuthModalMode] = useState<'login' | 'register' | 'guest' | 'link_order'>('login');
   const [announcementDismissed, setAnnouncementDismissed] = useState(false);
 
+  const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
+
   const searchInputRef = useRef<HTMLInputElement>(null);
   const accountMenuRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
   const location = useLocation();
   const isBn = language === 'BN';
+  const cartTotal = (cart || []).reduce((sum, item) => sum + (item.product?.price || 0) * (item.quantity || 1), 0);
+
+  // Essential navigation items matching desktop & mobile strictly
+  const navMenuItems = [
+    {
+      id: 'shop',
+      name: isBn ? 'শপ' : 'Shop',
+      path: '/shop',
+      icon: Store,
+      badge: isBn ? 'স্টোর' : 'Store',
+      description: isBn ? 'অনলাইন শপ ও পণ্য সংগ্রহ' : 'Online store & collections',
+      subItems: [
+        { name: isBn ? 'সকল প্রস্তুত স্টক' : 'All Ready Stock', path: '/shop' },
+        { name: isBn ? 'নতুন আগমন' : 'New Arrivals', path: '/shop?filter=new' },
+        { name: isBn ? 'জনপ্রিয় ও নির্বাচিত পণ্য' : 'Featured Masterpieces', path: '/shop?filter=featured' }
+      ]
+    },
+    {
+      id: 'shop-all',
+      name: isBn ? 'শপ অল' : 'Shop All',
+      path: '/shop',
+      icon: ShoppingBag,
+      badge: `${products.length} ${isBn ? 'পণ্য' : 'Items'}`,
+      description: isBn ? 'সম্পূর্ণ পণ্য ক্যাটালগ' : 'Complete catalog collection',
+      subItems: [
+        { name: isBn ? 'সকল ক্যাটাগরি ব্রাউজ করুন' : 'Browse All Categories', path: '/shop' },
+        { name: isBn ? 'বিশেষ ছাড় ও অফার' : 'Discounts & Offers', path: '/shop?filter=sale' }
+      ]
+    },
+    {
+      id: 'apparel',
+      name: isBn ? 'অ্যাপারেল অ্যান্ড শাড়ি' : 'Apparel & Sarees',
+      path: '/category/traditional-clothing',
+      icon: Sparkles,
+      badge: `${products.filter(p => p.categorySlug === 'traditional-clothing').length} ${isBn ? 'টি' : 'Items'}`,
+      description: isBn ? 'ঐতিহ্যবাহী জামদানি, সিল্ক ও তাঁতের পোশাক' : 'Authentic Jamdani, Silk & Handloom',
+      subItems: [
+        { name: isBn ? 'ঢাকাই জামদানি শাড়ি' : 'Dhakai Jamdani Sarees', path: '/category/traditional-clothing' },
+        { name: isBn ? 'রাজশাহী খাঁটি সিল্ক ও তসর' : 'Rajshahi Pure Silk & Tussar', path: '/category/traditional-clothing' },
+        { name: isBn ? 'খাদি ও তাঁতের পাঞ্জাবি' : 'Handloom & Khadi Panjabi', path: '/category/traditional-clothing' }
+      ]
+    },
+    {
+      id: 'handicrafts',
+      name: isBn ? 'হ্যান্ডিক্রাফট অ্যান্ড ডেকোর' : 'Handicrafts & Decor',
+      path: '/category/handicrafts-decor',
+      icon: Layers,
+      badge: `${products.filter(p => p.categorySlug === 'handicrafts-decor').length} ${isBn ? 'টি' : 'Items'}`,
+      description: isBn ? 'মৃৎশিল্প, নকশিকাঁথা, পিতল ও কাঠের শিল্প' : 'Terracotta, Nakshi Kantha & Brass Art',
+      subItems: [
+        { name: isBn ? 'পোড়ামাটির টেরাকোটা ও মৃৎশিল্প' : 'Terracotta & Clay Pottery', path: '/category/handicrafts-decor' },
+        { name: isBn ? 'হাতে সেলাই নকশিকাঁথা' : 'Handcrafted Nakshi Kantha', path: '/category/handicrafts-decor' },
+        { name: isBn ? 'পিতল ও ধাতব নান্দনিক ডেকোর' : 'Traditional Brass & Metal Decor', path: '/category/handicrafts-decor' }
+      ]
+    },
+    {
+      id: 'organic',
+      name: isBn ? 'অর্গানিক প্যান্ট্রি' : 'Organic Pantry',
+      path: '/category/organic-pantry',
+      icon: Leaf,
+      badge: `${products.filter(p => p.categorySlug === 'organic-pantry').length} ${isBn ? 'টি' : 'Items'}`,
+      description: isBn ? 'সুন্দরবনের খাঁটি মধু, গাওয়া ঘি ও প্রাকৃতিক খাদ্য' : 'Sundarban Raw Honey, Ghee & Essentials',
+      subItems: [
+        { name: isBn ? 'সুন্দরবনের প্রাকৃতিক কাঁচা মধু' : 'Sundarban Raw Wild Honey', path: '/category/organic-pantry' },
+        { name: isBn ? 'খাঁটি গাওয়া ঘি ও সরিষার তেল' : 'Artisanal Pure Ghee & Mustard Oil', path: '/category/organic-pantry' },
+        { name: isBn ? 'প্রাকৃতিক পাহাড়ি চা ও মসলা' : 'Organic Hill Tea & Spices', path: '/category/organic-pantry' }
+      ]
+    }
+  ];
 
   // Close menus on route change
   useEffect(() => {
@@ -131,14 +207,6 @@ export function Header() {
     setIsSearchOpen(false);
     setSearchQuery('');
   };
-
-  const navLinks = [
-    { name: isBn ? 'হোম' : 'Home', path: '/' },
-    { name: isBn ? 'সকল পণ্য' : 'Shop All', path: '/shop' },
-    { name: isBn ? 'পোশাক ও শাড়ি' : 'Apparel & Sarees', path: '/category/traditional-clothing' },
-    { name: isBn ? 'হস্তশিল্প ও সাজসজ্জা' : 'Handicrafts & Decor', path: '/category/handicrafts-decor' },
-    { name: isBn ? 'খাঁটি খাদ্য' : 'Organic Pantry', path: '/category/organic-pantry' }
-  ];
 
   const popularSearches = isBn
     ? ['জামদানি শাড়ি', 'সুন্দরবনের মধু', 'নকশিকাঁথা', 'রাজশাহী সিল্ক', 'পিতলের সামগ্রী']
@@ -214,19 +282,19 @@ export function Header() {
             <div className="hidden xl:flex items-center justify-center min-w-0 flex-1 px-1 sm:px-2 lg:px-4">
               <nav className="flex items-center gap-1 min-w-0">
                 <div className="flex items-center gap-0.5 2xl:gap-1 p-1 rounded-full bg-stone-100/70 dark:bg-slate-900/70 border border-stone-200/70 dark:border-slate-800/70 backdrop-blur-md shadow-2xs">
-                  {navLinks.map((link) => {
-                    const isActive = location.pathname === link.path;
+                  {navMenuItems.map((item) => {
+                    const isActive = location.pathname === item.path;
                     return (
                       <Link
-                        key={link.path}
-                        to={link.path}
+                        key={item.id}
+                        to={item.path}
                         className={`whitespace-nowrap px-3 2xl:px-3.5 py-1.5 rounded-full text-xs font-semibold tracking-normal transition-all duration-200 ${
                           isActive
                             ? 'bg-white dark:bg-slate-800 text-teal-950 dark:text-teal-300 font-bold shadow-xs border border-stone-200/80 dark:border-slate-700/80'
                             : 'text-stone-600 dark:text-slate-300 hover:text-teal-950 dark:hover:text-white hover:bg-white/60 dark:hover:bg-slate-800/60'
                         }`}
                       >
-                        {link.name}
+                        {item.name}
                       </Link>
                     );
                   })}
@@ -235,11 +303,11 @@ export function Header() {
             </div>
 
             {/* Right Column (Actions, Utilities: Search, Theme, Account, Cart) */}
-            <div className="flex items-center justify-end gap-1.5 sm:gap-2.5 shrink-0">
+            <div className="flex items-center justify-end gap-2 sm:gap-2.5 md:gap-3 shrink-0 py-0.5">
               {/* Search Trigger Button */}
               <button
                 onClick={() => setIsSearchOpen(true)}
-                className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-stone-200/80 dark:border-slate-800/80 bg-white/70 dark:bg-slate-900/70 backdrop-blur-md text-stone-700 dark:text-slate-200 hover:text-teal-900 dark:hover:text-teal-300 hover:border-teal-700/60 active:scale-95 transition-all shadow-2xs"
+                className="inline-flex h-9 w-9 sm:h-9.5 sm:w-9.5 items-center justify-center rounded-full border border-stone-200/80 dark:border-slate-800/80 bg-white/70 dark:bg-slate-900/70 backdrop-blur-md text-stone-700 dark:text-slate-200 hover:text-teal-900 dark:hover:text-teal-300 hover:border-teal-700/60 active:scale-95 transition-all shadow-2xs shrink-0"
                 aria-label="Search"
                 title={isBn ? 'পণ্য অনুসন্ধান (⌘K)' : 'Search products (⌘K)'}
               >
@@ -247,40 +315,51 @@ export function Header() {
               </button>
 
               {/* Display Mode Switcher (Desktop/Tablet) */}
-              <div className="hidden sm:inline-flex">
+              <div className="hidden sm:inline-flex items-center justify-center">
                 <ThemeButton />
               </div>
 
-              {/* User Account with Interactive Dropdown (Desktop/Tablet) */}
-              <div className="hidden sm:inline-flex relative" ref={accountMenuRef}>
+              {/* User Profile & Account (Unified utility on Mobile & Desktop) */}
+              <div className="inline-flex items-center justify-center relative" ref={accountMenuRef}>
                 <button
                   onClick={() => setIsAccountMenuOpen(!isAccountMenuOpen)}
-                  className={`inline-flex h-9 px-2 sm:px-3 items-center justify-center gap-1.5 rounded-full border backdrop-blur-md text-xs font-semibold shadow-2xs active:scale-95 transition-all ${
+                  className={`inline-flex h-9 sm:h-9.5 px-2.5 sm:px-3.5 items-center justify-center gap-1.5 sm:gap-2 rounded-full border backdrop-blur-md text-xs font-semibold shadow-2xs active:scale-95 transition-all ${
                     isAccountMenuOpen
-                      ? 'border-teal-700 bg-teal-50/80 dark:bg-teal-950/50 text-teal-900 dark:text-teal-300'
-                      : 'border-stone-200/80 dark:border-slate-800/80 bg-white/70 dark:bg-slate-900/70 text-stone-800 dark:text-slate-200 hover:border-teal-700/60 hover:text-teal-900 dark:hover:text-teal-300'
+                      ? 'border-teal-700 bg-teal-50/90 dark:bg-teal-950/80 text-teal-900 dark:text-teal-200'
+                      : 'border-stone-200/90 dark:border-slate-800/90 bg-white/80 dark:bg-slate-900/80 text-stone-800 dark:text-slate-200 hover:border-teal-700/60 hover:text-teal-900 dark:hover:text-teal-300'
                   }`}
                   aria-expanded={isAccountMenuOpen}
-                  title={isBn ? 'ইউজার অ্যাকাউন্ট ও সেবা' : 'User Account & Services'}
+                  title={isBn ? 'প্রোফাইল, কার্ট ও সেবা' : 'Profile, Cart & Services'}
                 >
-                  <User className="w-3.5 h-3.5 text-teal-700 dark:text-teal-400 shrink-0" />
-                  <span className="hidden sm:inline">
+                  <div className="w-5 h-5 rounded-full bg-teal-900 text-white flex items-center justify-center font-bold text-[10px] shrink-0 shadow-2xs">
+                    {currentCustomerId && customerProfile?.name
+                      ? customerProfile.name.slice(0, 1).toUpperCase()
+                      : <User className="w-3 h-3 text-white" />}
+                  </div>
+                  <span className="hidden sm:inline font-semibold">
                     {currentCustomerId
                       ? (customerProfile?.name ? customerProfile.name.split(' ')[0] : (isBn ? 'প্রোফাইল' : 'Profile'))
-                      : (isBn ? 'অ্যাকাউন্ট' : 'Account')}
+                      : (isBn ? 'প্রোফাইল' : 'Profile')}
                   </span>
-                  {wishlist.length > 0 && (
-                    <span className="inline-flex items-center justify-center w-2 h-2 rounded-full bg-rose-500 ring-2 ring-white dark:ring-slate-900" />
-                  )}
+                  
+                  {/* Cart items badge or Wishlist dot indicator directly on Profile button */}
+                  {cartCount > 0 ? (
+                    <span className="min-w-[18px] h-[18px] px-1 rounded-full bg-amber-400 text-stone-950 text-[10px] font-extrabold flex items-center justify-center leading-none shadow-2xs shrink-0">
+                      {cartCount}
+                    </span>
+                  ) : wishlist.length > 0 ? (
+                    <span className="w-2 h-2 rounded-full bg-rose-500 ring-2 ring-white dark:ring-slate-900 shrink-0" />
+                  ) : null}
+
                   <ChevronDown className={`w-3.5 h-3.5 text-stone-400 transition-transform duration-200 ${isAccountMenuOpen ? 'rotate-180 text-teal-700 dark:text-teal-400' : ''}`} />
                 </button>
 
-                {/* User Account Dropdown Menu */}
+                {/* User Profile & Account Dropdown Menu */}
                 {isAccountMenuOpen && (
-                  <div className="absolute right-0 mt-2 w-72 sm:w-80 rounded-2xl bg-white dark:bg-slate-900 border border-stone-200/90 dark:border-slate-800 shadow-2xl p-2.5 z-50 animate-in fade-in zoom-in-95 duration-150 backdrop-blur-xl">
+                  <div className="absolute right-0 top-full mt-2 w-[calc(100vw-24px)] max-w-xs sm:w-84 rounded-2xl bg-white dark:bg-slate-900 border border-stone-200/90 dark:border-slate-800 shadow-2xl p-3 z-50 animate-in fade-in zoom-in-95 duration-150 backdrop-blur-xl max-h-[85vh] overflow-y-auto">
                     {/* Header: Customer Info or Guest Welcome */}
                     {currentCustomerId ? (
-                      <div className="p-3 bg-stone-50/80 dark:bg-slate-800/80 rounded-xl border border-stone-200/60 dark:border-slate-700/60 mb-2">
+                      <div className="p-3 bg-stone-50/90 dark:bg-slate-800/80 rounded-xl border border-stone-200/60 dark:border-slate-700/60 mb-2.5">
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 rounded-full bg-teal-900 text-white flex items-center justify-center font-bold text-sm shadow-xs flex-shrink-0">
                             {customerProfile?.name ? customerProfile.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() : 'KH'}
@@ -306,12 +385,12 @@ export function Header() {
                         </div>
                       </div>
                     ) : (
-                      <div className="p-3 bg-stone-50/80 dark:bg-slate-800/80 rounded-xl border border-stone-200/60 dark:border-slate-700/60 mb-2">
+                      <div className="p-3 bg-stone-50/90 dark:bg-slate-800/80 rounded-xl border border-stone-200/60 dark:border-slate-700/60 mb-2.5">
                         <div className="text-xs font-bold text-stone-900 dark:text-white mb-1">
                           {isBn ? 'স্বাগতম কিশলয়ে!' : 'Welcome to KISHOLOY!'}
                         </div>
                         <p className="text-[11px] text-stone-500 dark:text-slate-400 mb-2.5 leading-snug">
-                          {isBn ? 'অর্ডার ট্র্যাকিং ও ফেভারিট আইটেম সেভ করতে সাইন ইন করুন।' : 'Sign in to track orders and access your favorite items.'}
+                          {isBn ? 'কার্ট, উইশলিস্ট ও অর্ডার ট্র্যাকিং ব্রাউজ করুন।' : 'Access your cart, wishlist, and track orders.'}
                         </p>
                         <div className="flex gap-2">
                           <button
@@ -338,9 +417,80 @@ export function Header() {
                       </div>
                     )}
 
-                    {/* Features Moved Inside User Account */}
+                    {/* Integrated Cart Module inside Profile Menu */}
+                    <div className="p-3 bg-gradient-to-br from-teal-900 to-teal-950 text-white rounded-xl shadow-xs mb-2.5">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <div className="p-1.5 rounded-lg bg-white/10 text-teal-300">
+                            <ShoppingBag className="w-4 h-4" />
+                          </div>
+                          <div>
+                            <span className="font-bold text-xs block text-white">
+                              {isBn ? 'শপিং ব্যাগ / কার্ট' : 'Shopping Bag / Cart'}
+                            </span>
+                            <span className="text-[10px] text-teal-200">
+                              {cartCount} {isBn ? 'টি আইটেম নির্বাচিত' : 'items added'}
+                            </span>
+                          </div>
+                        </div>
+                        <span className="text-xs sm:text-sm font-extrabold text-amber-300">
+                          ৳ {cartTotal.toLocaleString()}
+                        </span>
+                      </div>
+                      <div className="flex gap-2 pt-1 border-t border-white/10">
+                        <Link
+                          to="/cart"
+                          onClick={() => setIsAccountMenuOpen(false)}
+                          className="flex-1 py-1.5 px-2.5 bg-white/15 hover:bg-white/25 text-white rounded-lg text-xs font-semibold text-center transition-colors flex items-center justify-center gap-1"
+                        >
+                          <span>{isBn ? 'কার্ট দেখুন' : 'View Cart'}</span>
+                          <ChevronRight className="w-3.5 h-3.5" />
+                        </Link>
+                        {cartCount > 0 ? (
+                          <Link
+                            to="/checkout"
+                            onClick={() => setIsAccountMenuOpen(false)}
+                            className="flex-1 py-1.5 px-2.5 bg-amber-400 hover:bg-amber-300 text-stone-950 rounded-lg text-xs font-bold text-center transition-colors shadow-2xs flex items-center justify-center gap-1"
+                          >
+                            <span>{isBn ? 'চেকআউট' : 'Checkout'}</span>
+                            <ArrowRight className="w-3.5 h-3.5" />
+                          </Link>
+                        ) : null}
+                      </div>
+                    </div>
+
+                    {/* Features & Options under User Profile */}
                     <div className="space-y-1">
-                      {/* 1. Track Order (অর্ডার ট্র্যাক) */}
+                      {/* 1. Saved Wishlist / Favorites */}
+                      <Link
+                        to="/account?tab=wishlist"
+                        onClick={() => setIsAccountMenuOpen(false)}
+                        className="flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-medium text-stone-700 dark:text-slate-200 hover:bg-rose-50/80 dark:hover:bg-rose-950/40 hover:text-rose-900 dark:hover:text-rose-300 transition-colors group"
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <div className="p-1.5 rounded-lg bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 group-hover:bg-rose-100 dark:group-hover:bg-rose-900/60 transition-colors">
+                            <Heart className="w-4 h-4" />
+                          </div>
+                          <div>
+                            <span className="font-semibold block text-stone-900 dark:text-slate-100">
+                              {isBn ? 'উইশলিস্ট ও ফেভারিট' : 'Wishlist & Favorites'}
+                            </span>
+                            <span className="text-[10px] text-stone-400 dark:text-slate-500">
+                              {isBn ? 'সংরক্ষিত পছন্দের পণ্যসমূহ' : 'Saved favorite items'}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          {wishlist.length > 0 && (
+                            <span className="px-2 py-0.5 rounded-full bg-rose-600 text-white text-[10px] font-bold shadow-2xs">
+                              {wishlist.length}
+                            </span>
+                          )}
+                          <ChevronRight className="w-4 h-4 text-stone-400 group-hover:translate-x-0.5 transition-transform" />
+                        </div>
+                      </Link>
+
+                      {/* 2. Track Order */}
                       <Link
                         to="/track-order"
                         onClick={() => setIsAccountMenuOpen(false)}
@@ -362,36 +512,33 @@ export function Header() {
                         <ChevronRight className="w-4 h-4 text-stone-400 group-hover:translate-x-0.5 transition-transform" />
                       </Link>
 
-                      {/* 2. Favorite Items / Wishlist (ফেভারিট আইটেম) */}
+                      {/* 3. My Orders */}
                       <Link
-                        to="/account?tab=wishlist"
+                        to="/account?tab=orders"
                         onClick={() => setIsAccountMenuOpen(false)}
-                        className="flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-medium text-stone-700 dark:text-slate-200 hover:bg-rose-50/80 dark:hover:bg-rose-950/40 hover:text-rose-900 dark:hover:text-rose-300 transition-colors group"
+                        className="flex items-center justify-between px-3 py-2 rounded-xl text-xs text-stone-700 dark:text-slate-300 hover:bg-stone-50 dark:hover:bg-slate-800/60 transition-colors"
                       >
-                        <div className="flex items-center gap-2.5">
-                          <div className="p-1.5 rounded-lg bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 group-hover:bg-rose-100 dark:group-hover:bg-rose-900/60 transition-colors">
-                            <Heart className="w-4 h-4" />
-                          </div>
-                          <div>
-                            <span className="font-semibold block text-stone-900 dark:text-slate-100">
-                              {isBn ? 'ফেভারিট আইটেম' : 'Favorite Items'}
-                            </span>
-                            <span className="text-[10px] text-stone-400 dark:text-slate-500">
-                              {isBn ? 'সংরক্ষিত পছন্দের তালিকা' : 'Saved wishlist items'}
-                            </span>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-1.5">
-                          {wishlist.length > 0 && (
-                            <span className="px-2 py-0.5 rounded-full bg-rose-600 text-white text-[10px] font-bold shadow-2xs">
-                              {wishlist.length}
-                            </span>
-                          )}
-                          <ChevronRight className="w-4 h-4 text-stone-400 group-hover:translate-x-0.5 transition-transform" />
-                        </div>
+                        <span className="flex items-center gap-2.5">
+                          <Package className="w-4 h-4 text-stone-500" />
+                          <span className="font-semibold">{isBn ? 'আমার অর্ডারসমূহ' : 'My Orders'}</span>
+                        </span>
+                        <ChevronRight className="w-3.5 h-3.5 text-stone-400" />
                       </Link>
 
-                      {/* 3. Language Settings (ল্যাঙ্গুয়েজ সেটিংস) */}
+                      {/* 4. Account Dashboard / Profile */}
+                      <Link
+                        to="/account?tab=profile"
+                        onClick={() => setIsAccountMenuOpen(false)}
+                        className="flex items-center justify-between px-3 py-2 rounded-xl text-xs text-stone-700 dark:text-slate-300 hover:bg-stone-50 dark:hover:bg-slate-800/60 transition-colors"
+                      >
+                        <span className="flex items-center gap-2.5">
+                          <User className="w-4 h-4 text-stone-500" />
+                          <span className="font-semibold">{isBn ? 'প্রোফাইল ও ঠিকানা' : 'Profile & Addresses'}</span>
+                        </span>
+                        <ChevronRight className="w-3.5 h-3.5 text-stone-400" />
+                      </Link>
+
+                      {/* 5. Language Settings */}
                       <div className="px-3 py-2 rounded-xl text-xs font-medium text-stone-700 dark:text-slate-200 hover:bg-stone-50/80 dark:hover:bg-slate-800/60 transition-colors">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2.5">
@@ -400,15 +547,11 @@ export function Header() {
                             </div>
                             <div>
                               <span className="font-semibold block text-stone-900 dark:text-slate-100">
-                                {isBn ? 'ল্যাঙ্গুয়েজ সেটিংস' : 'Language Settings'}
-                              </span>
-                              <span className="text-[10px] text-stone-400 dark:text-slate-500">
-                                {isBn ? 'ভাষা পরিবর্তন করুন' : 'Change interface language'}
+                                {isBn ? 'ভাষা নির্বাচন' : 'Language'}
                               </span>
                             </div>
                           </div>
 
-                          {/* Language Switcher Buttons */}
                           <div className="inline-flex p-0.5 rounded-lg bg-stone-100 dark:bg-slate-800 border border-stone-200 dark:border-slate-700">
                             <button
                               type="button"
@@ -443,36 +586,9 @@ export function Header() {
                       </div>
                     </div>
 
-                    {/* Secondary Account Options */}
-                    <div className="my-1.5 border-t border-stone-100 dark:border-slate-800 pt-1 space-y-0.5">
-                      <Link
-                        to="/account?tab=orders"
-                        onClick={() => setIsAccountMenuOpen(false)}
-                        className="flex items-center justify-between px-3 py-2 rounded-xl text-xs text-stone-700 dark:text-slate-300 hover:bg-stone-50 dark:hover:bg-slate-800/60 transition-colors"
-                      >
-                        <span className="flex items-center gap-2.5">
-                          <Package className="w-3.5 h-3.5 text-stone-500" />
-                          <span>{isBn ? 'আমার অর্ডারসমূহ' : 'My Orders'}</span>
-                        </span>
-                        <ChevronRight className="w-3.5 h-3.5 text-stone-400" />
-                      </Link>
-
-                      <Link
-                        to="/account?tab=profile"
-                        onClick={() => setIsAccountMenuOpen(false)}
-                        className="flex items-center justify-between px-3 py-2 rounded-xl text-xs text-stone-700 dark:text-slate-300 hover:bg-stone-50 dark:hover:bg-slate-800/60 transition-colors"
-                      >
-                        <span className="flex items-center gap-2.5">
-                          <User className="w-3.5 h-3.5 text-stone-500" />
-                          <span>{isBn ? 'অ্যাকাউন্ট ড্যাশবোর্ড' : 'Account Dashboard'}</span>
-                        </span>
-                        <ChevronRight className="w-3.5 h-3.5 text-stone-400" />
-                      </Link>
-                    </div>
-
                     {/* Sign Out (for logged-in customers) */}
                     {currentCustomerId && (
-                      <div className="pt-1 border-t border-stone-100 dark:border-slate-800 mt-1">
+                      <div className="pt-2 border-t border-stone-100 dark:border-slate-800 mt-1">
                         <button
                           type="button"
                           onClick={() => {
@@ -489,19 +605,6 @@ export function Header() {
                   </div>
                 )}
               </div>
-
-              {/* Cart Conversion Button (Highlighted Luxury Pill) */}
-              <Link
-                to="/cart"
-                className="inline-flex h-9 px-3 sm:px-3.5 items-center justify-center gap-2 rounded-full bg-teal-900 hover:bg-teal-950 dark:bg-teal-600 dark:hover:bg-teal-500 text-white text-xs font-bold shadow-xs active:scale-95 transition-all flex-shrink-0"
-                title={isBn ? 'শপিং ব্যাগ' : 'Shopping Cart'}
-              >
-                <ShoppingBag className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">{isBn ? 'কার্ট' : 'Cart'}</span>
-                <span className="min-w-[18px] h-[18px] px-1 rounded-full bg-amber-400 text-stone-950 text-[10px] font-extrabold flex items-center justify-center shadow-2xs">
-                  {cartCount}
-                </span>
-              </Link>
             </div>
           </div>
         </div>
@@ -628,7 +731,7 @@ export function Header() {
         )}
       </AnimatePresence>
 
-      {/* Mobile Top-Down Dropdown Menu (মোবাইলের ড্রপ ডাউন মেনু) */}
+      {/* Mobile Category & Navigation Drawer (মোবাইল সাইড প্যানেল ও ক্যাটাগরি মেনু) */}
       <AnimatePresence>
         {isMobileMenuOpen && (
           <div className="fixed inset-x-0 top-16 sm:top-18 lg:top-20 bottom-0 z-40 xl:hidden flex flex-col">
@@ -644,17 +747,42 @@ export function Header() {
               aria-hidden="true"
             />
 
-            {/* Dropdown Card unfolding downwards from the header */}
+            {/* Slide Down Dedicated Category Drawer */}
             <motion.div
               key="mobile-dropdown-panel"
               initial={{ opacity: 0, y: -16 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -16 }}
               transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
-              className="relative z-10 w-full max-h-[calc(100vh-4.5rem)] overflow-y-auto bg-white/98 dark:bg-slate-950/98 backdrop-blur-2xl border-b border-stone-200 dark:border-slate-800 shadow-2xl flex flex-col divide-y divide-stone-100 dark:divide-slate-800"
+              className="relative z-10 w-full max-h-[calc(100vh-4rem)] overflow-y-auto bg-white/98 dark:bg-slate-950/98 backdrop-blur-2xl border-b border-stone-200 dark:border-slate-800 shadow-2xl flex flex-col"
             >
-              {/* 1. Mobile Quick Search */}
-              <div className="p-3.5 sm:p-4 bg-stone-50/70 dark:bg-slate-900/60">
+              {/* 1. Category Drawer Header & Fast Search */}
+              <div className="p-3.5 sm:p-4 bg-stone-50/90 dark:bg-slate-900/80 border-b border-stone-200/80 dark:border-slate-800 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="p-1.5 rounded-lg bg-teal-900 text-amber-300">
+                      <Layers className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <span className="text-xs font-bold uppercase tracking-wider text-stone-900 dark:text-stone-100 block">
+                        {isBn ? 'মেনু ও ক্যাটাগরি সমূহ' : 'Menu & Categories'}
+                      </span>
+                      <span className="text-[10px] text-stone-500 dark:text-slate-400 block">
+                        {isBn ? 'প্রধান ৫টি ক্যাটাগরি ও কালেকশন' : 'Essential 5 categories & collections'}
+                      </span>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className="p-1.5 rounded-lg text-stone-400 hover:text-stone-700 dark:hover:text-stone-200 hover:bg-stone-200/60 dark:hover:bg-slate-800 transition-colors"
+                    aria-label="Close menu"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+
+                {/* Quick Search */}
                 <form
                   onSubmit={(e) => {
                     handleSearch(e);
@@ -663,297 +791,135 @@ export function Header() {
                   className="flex gap-2"
                 >
                   <div className="relative flex-1">
-                    <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-teal-700 dark:text-teal-400" />
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-teal-700 dark:text-teal-400" />
                     <input
                       type="text"
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
-                      placeholder={isBn ? 'পণ্য, ক্যাটাগরি বা উপকরণ খুঁজুন...' : 'Search products, categories...'}
-                      className="w-full text-xs pl-10 pr-3 py-2.5 rounded-xl border border-stone-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-stone-900 dark:text-stone-100 placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-teal-700/30"
+                      placeholder={isBn ? 'ক্যাটাগরি বা পণ্য খুঁজুন...' : 'Search categories or products...'}
+                      className="w-full text-xs pl-9 pr-3 py-2 rounded-xl border border-stone-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-stone-900 dark:text-stone-100 placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-teal-700/30"
                     />
                   </div>
                   <button
                     type="submit"
-                    className="px-4 py-2.5 bg-teal-900 dark:bg-teal-600 hover:bg-teal-950 dark:hover:bg-teal-500 text-white rounded-xl text-xs font-bold active:scale-95 transition-all shadow-xs shrink-0"
+                    className="px-3.5 py-2 bg-teal-900 dark:bg-teal-600 hover:bg-teal-950 text-white rounded-xl text-xs font-bold active:scale-95 transition-all shadow-2xs shrink-0"
                   >
-                    {isBn ? 'খুঁজুন' : 'Search'}
+                    {isBn ? 'খুঁজুন' : 'Find'}
                   </button>
                 </form>
+              </div>
 
-                {/* Popular Searches */}
-                <div className="flex flex-wrap items-center gap-1.5 mt-2.5">
-                  <span className="text-[10px] font-bold text-stone-400 dark:text-slate-500 uppercase tracking-wider mr-1">
-                    {isBn ? 'জনপ্রিয়:' : 'Popular:'}
-                  </span>
-                  {popularSearches.slice(0, 4).map((term) => (
-                    <button
-                      key={term}
-                      type="button"
-                      onClick={() => {
-                        handleQuickSearch(term);
-                        setIsMobileMenuOpen(false);
-                      }}
-                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium bg-white dark:bg-slate-800 border border-stone-200 dark:border-slate-700 text-stone-700 dark:text-slate-300 hover:text-teal-900 hover:border-teal-700 transition-colors shadow-2xs"
+              {/* 2. Essential 5 Category Items with Smooth Accordion Expansion */}
+              <div className="p-3 sm:p-4 space-y-2.5">
+                {navMenuItems.map((item) => {
+                  const Icon = item.icon;
+                  const isExpanded = expandedCategory === item.id;
+                  const isActive = location.pathname === item.path;
+
+                  return (
+                    <div
+                      key={item.id}
+                      className={`rounded-xl border transition-all overflow-hidden ${
+                        isActive
+                          ? 'bg-teal-50/90 dark:bg-teal-950/50 border-teal-700/80 shadow-2xs'
+                          : 'bg-white dark:bg-slate-900 border-stone-200/80 dark:border-slate-800/80 hover:border-teal-700/50'
+                      }`}
                     >
-                      <Sparkle className="w-2.5 h-2.5 text-amber-500" />
-                      <span>{term}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
+                      {/* Main Category Header Row */}
+                      <div className="flex items-center justify-between p-2.5 sm:p-3 gap-2">
+                        <Link
+                          to={item.path}
+                          onClick={() => setIsMobileMenuOpen(false)}
+                          className="flex items-center gap-3 min-w-0 flex-1 group"
+                        >
+                          <div className="w-10 h-10 rounded-xl bg-teal-900 dark:bg-teal-950 text-amber-300 dark:text-amber-400 flex items-center justify-center font-bold text-xs shrink-0 shadow-2xs group-hover:scale-105 transition-transform">
+                            <Icon className="w-5 h-5" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-xs sm:text-sm font-bold text-stone-900 dark:text-white truncate block">
+                                {item.name}
+                              </span>
+                            </div>
+                            <span className="text-[10px] text-stone-500 dark:text-slate-400 truncate block">
+                              {item.description}
+                            </span>
+                          </div>
+                        </Link>
 
-              {/* 2. Main Navigation & Categories Accordion Dropdown */}
-              <div className="p-3.5 sm:p-4 space-y-1">
-                <div className="text-[10px] font-bold text-stone-400 dark:text-slate-500 uppercase tracking-wider px-3 block mb-1">
-                  {isBn ? 'নেভিগেশন ও ক্যাটাগরি' : 'Navigation & Categories'}
-                </div>
+                        {/* Right: Badge & Sub-Menu Toggle Button */}
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <span className="px-2 py-0.5 rounded-full bg-stone-100 dark:bg-slate-800 text-stone-700 dark:text-slate-300 text-[10px] font-bold">
+                            {item.badge}
+                          </span>
 
-                <Link
-                  to="/"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                  className={`flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all ${
-                    location.pathname === '/'
-                      ? 'bg-teal-50 dark:bg-teal-950/40 text-teal-900 dark:text-teal-300'
-                      : 'text-stone-800 dark:text-slate-200 hover:bg-stone-50 dark:hover:bg-slate-900'
-                  }`}
-                >
-                  <span>{isBn ? 'হোম' : 'Home'}</span>
-                  <ChevronRight className="w-4 h-4 text-stone-400" />
-                </Link>
-
-                <Link
-                  to="/shop"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                  className={`flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all ${
-                    location.pathname === '/shop'
-                      ? 'bg-teal-50 dark:bg-teal-950/40 text-teal-900 dark:text-teal-300'
-                      : 'text-stone-800 dark:text-slate-200 hover:bg-stone-50 dark:hover:bg-slate-900'
-                  }`}
-                >
-                  <span>{isBn ? 'সকল পণ্য' : 'All Products'}</span>
-                  <ChevronRight className="w-4 h-4 text-stone-400" />
-                </Link>
-
-                {/* Categories Dropdown Accordion */}
-                <div className="rounded-xl border border-stone-200/70 dark:border-slate-800 overflow-hidden bg-stone-50/50 dark:bg-slate-900/40">
-                  <button
-                    type="button"
-                    onClick={() => setIsCategoriesAccordionOpen(!isCategoriesAccordionOpen)}
-                    className="w-full flex items-center justify-between px-3.5 py-2.5 text-xs font-bold text-stone-800 dark:text-slate-200 hover:bg-stone-100/70 dark:hover:bg-slate-800/70 transition-colors"
-                  >
-                    <div className="flex items-center gap-2">
-                      <Layers className="w-4 h-4 text-teal-700 dark:text-teal-400" />
-                      <span>{isBn ? 'ক্যাটাগরি সমূহ (ড্রপ ডাউন)' : 'Product Categories (Dropdown)'}</span>
-                    </div>
-                    <ChevronDown className={`w-4 h-4 text-stone-400 transition-transform duration-200 ${isCategoriesAccordionOpen ? 'rotate-180 text-teal-700 dark:text-teal-400' : ''}`} />
-                  </button>
-
-                  {isCategoriesAccordionOpen && (
-                    <div className="p-2 pt-0 space-y-1 border-t border-stone-200/50 dark:border-slate-800/50 bg-white dark:bg-slate-950">
-                      <Link
-                        to="/category/traditional-clothing"
-                        onClick={() => setIsMobileMenuOpen(false)}
-                        className="flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium text-stone-700 dark:text-slate-300 hover:bg-teal-50 dark:hover:bg-teal-950/30 hover:text-teal-950 dark:hover:text-teal-300 transition-colors"
-                      >
-                        <span>{isBn ? 'ঐতিহ্যবাহী পোশাক ও শাড়ি' : 'Traditional Clothing & Sarees'}</span>
-                        <ChevronRight className="w-3.5 h-3.5 text-stone-400" />
-                      </Link>
-                      <Link
-                        to="/category/handicrafts-decor"
-                        onClick={() => setIsMobileMenuOpen(false)}
-                        className="flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium text-stone-700 dark:text-slate-300 hover:bg-teal-50 dark:hover:bg-teal-950/30 hover:text-teal-950 dark:hover:text-teal-300 transition-colors"
-                      >
-                        <span>{isBn ? 'হস্তশিল্প ও গৃহসজ্জা' : 'Handicrafts & Home Decor'}</span>
-                        <ChevronRight className="w-3.5 h-3.5 text-stone-400" />
-                      </Link>
-                      <Link
-                        to="/category/organic-pantry"
-                        onClick={() => setIsMobileMenuOpen(false)}
-                        className="flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium text-stone-700 dark:text-slate-300 hover:bg-teal-50 dark:hover:bg-teal-950/30 hover:text-teal-950 dark:hover:text-teal-300 transition-colors"
-                      >
-                        <span>{isBn ? 'খাঁটি অর্গানিক খাদ্য' : 'Pure Organic Pantry'}</span>
-                        <ChevronRight className="w-3.5 h-3.5 text-stone-400" />
-                      </Link>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* 3. Account & Orders Section */}
-              <div className="p-3.5 sm:p-4 space-y-2.5 bg-stone-50/40 dark:bg-slate-900/30">
-                <div className="text-[10px] font-bold text-stone-400 dark:text-slate-500 uppercase tracking-wider px-3 block mb-1">
-                  {isBn ? 'ইউজার অ্যাকাউন্ট ও সেবা' : 'Account & Services'}
-                </div>
-
-                {currentCustomerId ? (
-                  <div className="p-3 rounded-xl bg-white dark:bg-slate-900 border border-stone-200/80 dark:border-slate-700 space-y-2.5">
-                    <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-full bg-teal-900 text-white flex items-center justify-center font-bold text-xs shadow-xs shrink-0">
-                        {customerProfile?.name ? customerProfile.name.slice(0, 2).toUpperCase() : 'KH'}
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="text-xs font-bold text-stone-900 dark:text-white truncate">
-                          {customerProfile?.name || 'Customer Account'}
-                        </div>
-                        <div className="text-[11px] text-stone-500 dark:text-slate-400 truncate">
-                          {customerProfile?.phone || customerProfile?.email || 'Active Member'}
+                          {item.subItems && item.subItems.length > 0 && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                setExpandedCategory(prev => prev === item.id ? null : item.id);
+                              }}
+                              aria-label={`Toggle ${item.name} sub-menu`}
+                              aria-expanded={isExpanded}
+                              className={`p-1.5 rounded-lg border border-stone-200/80 dark:border-slate-700 text-stone-500 hover:text-stone-900 dark:hover:text-stone-100 hover:bg-stone-100 dark:hover:bg-slate-800 transition-all duration-200 ${
+                                isExpanded ? 'rotate-180 bg-teal-50 dark:bg-teal-950/80 border-teal-700 text-teal-800 dark:text-teal-300' : ''
+                              }`}
+                            >
+                              <ChevronDown className="w-4 h-4" />
+                            </button>
+                          )}
                         </div>
                       </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-2 pt-1 border-t border-stone-100 dark:border-slate-800">
-                      <Link
-                        to="/account?tab=orders"
-                        onClick={() => setIsMobileMenuOpen(false)}
-                        className="flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg bg-stone-100 dark:bg-slate-800 text-stone-700 dark:text-slate-200 text-xs font-semibold hover:bg-teal-50 hover:text-teal-900 transition-colors"
-                      >
-                        <Package className="w-3.5 h-3.5 text-teal-700 dark:text-teal-400" />
-                        <span>{isBn ? 'অর্ডারসমূহ' : 'My Orders'}</span>
-                      </Link>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setIsMobileMenuOpen(false);
-                          logoutCustomer();
-                        }}
-                        className="flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 text-xs font-semibold hover:bg-rose-100 transition-colors"
-                      >
-                        <LogOut className="w-3.5 h-3.5" />
-                        <span>{isBn ? 'সাইন আউট' : 'Sign Out'}</span>
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsMobileMenuOpen(false);
-                      setAuthModalMode('login');
-                      setAuthModalOpen(true);
-                    }}
-                    className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-teal-900 hover:bg-teal-950 dark:bg-teal-600 dark:hover:bg-teal-500 text-white text-xs font-bold shadow-xs active:scale-95 transition-all"
-                  >
-                    <LogIn className="w-4 h-4" />
-                    <span>{isBn ? 'কাস্টমার লগইন / সাইন আপ' : 'Sign In / Register'}</span>
-                  </button>
-                )}
 
-                {/* Track Order & Wishlist Quick Buttons */}
-                <div className="grid grid-cols-2 gap-2">
-                  <Link
-                    to="/track-order"
-                    onClick={() => setIsMobileMenuOpen(false)}
-                    className="flex items-center gap-2 p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-stone-200/80 dark:border-slate-700/80 text-xs font-semibold text-stone-700 dark:text-slate-200 hover:border-teal-700 transition-colors"
-                  >
-                    <Truck className="w-4 h-4 text-teal-700 dark:text-teal-400" />
-                    <span>{isBn ? 'অর্ডার ট্র্যাক' : 'Track Order'}</span>
-                  </Link>
-                  <Link
-                    to="/account?tab=wishlist"
-                    onClick={() => setIsMobileMenuOpen(false)}
-                    className="flex items-center justify-between p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-stone-200/80 dark:border-slate-700/80 text-xs font-semibold text-stone-700 dark:text-slate-200 hover:border-rose-500 transition-colors"
-                  >
-                    <div className="flex items-center gap-2">
-                      <Heart className="w-4 h-4 text-rose-500" />
-                      <span>{isBn ? 'উইশলিস্ট' : 'Wishlist'}</span>
+                      {/* Expandable Sub-Menu Accordion */}
+                      <AnimatePresence initial={false}>
+                        {isExpanded && item.subItems && item.subItems.length > 0 && (
+                          <motion.div
+                            key={`sub-${item.id}`}
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: 'auto' }}
+                            exit={{ opacity: 0, height: 0 }}
+                            transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+                            className="overflow-hidden border-t border-stone-100 dark:border-slate-800/90 bg-stone-50/80 dark:bg-slate-900/60"
+                          >
+                            <div className="py-2 px-3 space-y-1">
+                              {item.subItems.map((sub, idx) => (
+                                <Link
+                                  key={idx}
+                                  to={sub.path}
+                                  onClick={() => setIsMobileMenuOpen(false)}
+                                  className="flex items-center justify-between py-2 px-3 rounded-lg text-xs font-medium text-stone-700 dark:text-slate-300 hover:text-teal-950 dark:hover:text-teal-200 hover:bg-white dark:hover:bg-slate-800 transition-colors"
+                                >
+                                  <div className="flex items-center gap-2.5 min-w-0">
+                                    <div className="w-1.5 h-1.5 rounded-full bg-teal-600 dark:bg-teal-400 shrink-0" />
+                                    <span className="truncate">{sub.name}</span>
+                                  </div>
+                                  <ChevronRight className="w-3.5 h-3.5 text-stone-400 shrink-0" />
+                                </Link>
+                              ))}
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
                     </div>
-                    {wishlist.length > 0 && (
-                      <span className="px-1.5 py-0.5 rounded-full bg-rose-600 text-white text-[10px] font-bold">
-                        {wishlist.length}
-                      </span>
-                    )}
-                  </Link>
-                </div>
+                  );
+                })}
               </div>
 
-              {/* 4. Language & Display Theme Selector */}
-              <div className="p-3.5 sm:p-4 space-y-3 bg-white dark:bg-slate-950">
-                <div className="grid grid-cols-2 gap-3">
-                  {/* Language Selector */}
-                  <div>
-                    <span className="text-[10px] font-bold text-stone-400 dark:text-slate-500 uppercase tracking-wider block mb-1.5">
-                      {isBn ? 'ভাষা (Language)' : 'Language'}
-                    </span>
-                    <div className="grid grid-cols-2 p-1 bg-stone-100 dark:bg-slate-900 rounded-xl border border-stone-200/70 dark:border-slate-800">
-                      <button
-                        type="button"
-                        onClick={() => setLanguage('BN')}
-                        className={`py-1.5 px-2 rounded-lg text-xs font-bold text-center transition-all ${
-                          language === 'BN'
-                            ? 'bg-teal-900 text-white shadow-2xs'
-                            : 'text-stone-600 dark:text-slate-400'
-                        }`}
-                      >
-                        বাংলা
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setLanguage('EN')}
-                        className={`py-1.5 px-2 rounded-lg text-xs font-bold text-center transition-all ${
-                          language === 'EN'
-                            ? 'bg-teal-900 text-white shadow-2xs'
-                            : 'text-stone-600 dark:text-slate-400'
-                        }`}
-                      >
-                        EN
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Theme Mode Selector */}
-                  <div>
-                    <span className="text-[10px] font-bold text-stone-400 dark:text-slate-500 uppercase tracking-wider block mb-1.5">
-                      {isBn ? 'ডিসপ্লে থিম' : 'Display Mode'}
-                    </span>
-                    <div className="grid grid-cols-2 p-1 bg-stone-100 dark:bg-slate-900 rounded-xl border border-stone-200/70 dark:border-slate-800">
-                      <button
-                        type="button"
-                        onClick={() => setTheme('light')}
-                        className={`py-1.5 px-2 rounded-lg text-xs font-bold flex items-center justify-center gap-1 transition-all ${
-                          theme === 'light'
-                            ? 'bg-white text-stone-900 shadow-2xs'
-                            : 'text-stone-600 dark:text-slate-400'
-                        }`}
-                      >
-                        <Sun className="w-3.5 h-3.5 text-amber-500" />
-                        <span>{isBn ? 'লাইট' : 'Light'}</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setTheme('dark')}
-                        className={`py-1.5 px-2 rounded-lg text-xs font-bold flex items-center justify-center gap-1 transition-all ${
-                          theme === 'dark'
-                            ? 'bg-slate-800 text-white shadow-2xs'
-                            : 'text-stone-600 dark:text-slate-400'
-                        }`}
-                      >
-                        <Moon className="w-3.5 h-3.5 text-teal-400" />
-                        <span>{isBn ? 'ডার্ক' : 'Dark'}</span>
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Footer Links: Admin / Portal & Hotline */}
-                <div className="pt-2 border-t border-stone-100 dark:border-slate-800 flex items-center justify-between text-xs text-stone-500 dark:text-slate-400">
-                  <Link
-                    to="/admin"
-                    onClick={() => setIsMobileMenuOpen(false)}
-                    className="inline-flex items-center gap-1.5 text-teal-800 dark:text-teal-400 font-semibold hover:underline"
-                  >
-                    <ShieldCheck className="w-3.5 h-3.5" />
-                    <span>{isBn ? 'অ্যাডমিন ও পোর্টাল' : 'Admin & Portal'}</span>
-                  </Link>
-
-                  {siteContent.contact?.phone && (
-                    <a
-                      href={`tel:${siteContent.contact.phone}`}
-                      className="inline-flex items-center gap-1 text-stone-600 dark:text-slate-300 font-medium hover:text-teal-700"
-                    >
-                      <PhoneCall className="w-3.5 h-3.5 text-teal-600" />
-                      <span>{siteContent.contact.phone}</span>
-                    </a>
-                  )}
-                </div>
+              {/* 3. Bottom Footer Note & Close Action */}
+              <div className="p-3 bg-stone-50 dark:bg-slate-900/60 border-t border-stone-150 dark:border-slate-800 flex items-center justify-between">
+                <span className="text-[11px] text-stone-500 dark:text-slate-400 font-medium">
+                  {isBn ? 'কিশলয় • খাঁটি দেশীয় পণ্য' : 'Kisholoy • Authentic Crafts'}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="px-3 py-1.5 rounded-lg bg-stone-200/80 dark:bg-slate-800 text-stone-700 dark:text-slate-300 text-xs font-semibold hover:bg-stone-300 transition-colors"
+                >
+                  {isBn ? 'বন্ধ করুন' : 'Close'}
+                </button>
               </div>
             </motion.div>
           </div>

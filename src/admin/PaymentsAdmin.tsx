@@ -7,12 +7,13 @@ import {
 import { useApp } from '../context/AppContext';
 import { PaymentTransaction, FraudRiskAssessment } from '../types';
 import { AdminModalShell } from '../components/admin/AdminModalShell';
+import { INITIAL_PAYMENT_TRANSACTIONS } from '../data/mockData';
 
 export function PaymentsAdmin() {
   const { orders, showToast, language } = useApp();
   const isBn = language === 'BN';
   const [activeTab, setActiveTab] = useState<'ledger' | 'settlement' | 'fraud' | 'ipn_tester' | 'refunds'>('ledger');
-  const [transactions, setTransactions] = useState<PaymentTransaction[]>([]);
+  const [transactions, setTransactions] = useState<PaymentTransaction[]>(INITIAL_PAYMENT_TRANSACTIONS);
   const [isLoadingTx, setIsLoadingTx] = useState(false);
   const [selectedTxPayload, setSelectedTxPayload] = useState<PaymentTransaction | null>(null);
 
@@ -668,6 +669,7 @@ export function PaymentsAdmin() {
         label="Raw Payload Modal"
         overlayClassName="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-900/60 backdrop-blur-xs"
       >
+        {selectedTxPayload && (
           <div className="bg-stone-900 text-white rounded-xl shadow-2xl border border-stone-800 w-full max-w-lg overflow-hidden animate-in fade-in">
             <div className="p-4 bg-stone-800 flex justify-between items-center text-xs font-bold">
               <span>Raw IPN Gateway Data ({selectedTxPayload.orderNumber})</span>
@@ -677,6 +679,7 @@ export function PaymentsAdmin() {
               <pre>{JSON.stringify(selectedTxPayload.rawIpnPayload, null, 2)}</pre>
             </div>
           </div>
+        )}
       </AdminModalShell>
     </div>
   );

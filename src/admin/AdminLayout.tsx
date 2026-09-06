@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { 
   Menu, X, ExternalLink, UserCheck, 
   BookOpen, ArrowUpRight, Layers, ShieldCheck,
   Lock, LogOut, KeyRound, Building2, ScanLine,
-  ChevronDown, ShoppingCart, Package, Users, Cpu
+  ChevronDown, ChevronRight, ShoppingCart, Package, Users, Cpu, Search
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { Role } from '../types';
@@ -18,32 +18,152 @@ import { AdminUrgentAlertBanner } from '../components/admin/AdminUrgentAlertBann
 import { ScannerModal } from '../components/scan/ScannerModal';
 import { LanguageButton } from '../components/layout/LanguageButton';
 import { ThemeButton } from '../components/layout/ThemeButton';
+import { AdminErrorBoundary } from '../components/admin/AdminErrorBoundary';
 
-// Route Access Control Matrix
+/**
+ * Unified route monitoring hook that logs and validates active admin sub-menu navigation
+ */
+export function useAdminRouteMonitoring(currentRole: Role, isBn: boolean) {
+  const location = useLocation();
+  const [navigationHistory, setNavigationHistory] = useState<Array<{
+    path: string;
+    timestamp: string;
+    valid: boolean;
+    moduleName: string;
+  }>>([]);
+
+  const activeModule = useMemo(() => {
+    const routeAliases: Record<string, string> = {
+      '/admin/traffic': '/admin/analytics',
+      '/admin/traffic-analysis': '/admin/analytics',
+      '/admin/traffic-analytics': '/admin/analytics',
+      '/admin/marketing/command': '/admin/marketing',
+      '/admin/marketing-command': '/admin/marketing',
+      '/admin/marketing-command-center': '/admin/marketing',
+      '/admin/report': '/admin/reports',
+      '/admin/reports-analytics': '/admin/reports',
+      '/admin/rbac': '/admin/users',
+      '/admin/user-management': '/admin/users',
+      '/admin/roles': '/admin/users',
+      '/admin/audits': '/admin/audit',
+      '/admin/audit-trail': '/admin/audit',
+      '/admin/audit-logs': '/admin/audit',
+      '/admin/backups': '/admin/backup',
+      '/admin/database-backup': '/admin/backup',
+      '/admin/disaster-recovery': '/admin/backup',
+    };
+
+    const targetPath = routeAliases[location.pathname] || location.pathname;
+
+    for (const section of ADMIN_SECTIONS_DATA) {
+      const foundItem = section.items.find((item) => 
+        item.path === targetPath || 
+        item.path === location.pathname || 
+        (item.path !== '/admin' && (targetPath.startsWith(item.path) || location.pathname.startsWith(item.path)))
+      );
+      if (foundItem) {
+        return {
+          section,
+          item: foundItem,
+          isValid: true,
+          label: isBn ? foundItem.labelBn : foundItem.label,
+          path: foundItem.path,
+        };
+      }
+    }
+    return {
+      section: null,
+      item: null,
+      isValid: location.pathname === '/admin' || location.pathname.startsWith('/admin/'),
+      label: isBn ? 'অ্যাডমিন মডিউল' : 'Admin Module',
+      path: location.pathname,
+    };
+  }, [location.pathname, isBn]);
+
+  useEffect(() => {
+    const timestamp = new Date().toISOString();
+    const isKnownRoute = Boolean(activeModule.item);
+    
+    // Log active sub-menu transition for operational telemetry & audit trails
+    console.info(`[Admin Navigation Audit] Route: ${location.pathname} | Sub-menu: ${activeModule.label} | Valid: ${isKnownRoute} | Role: ${currentRole} | Time: ${timestamp}`);
+
+    setNavigationHistory((prev) => [
+      {
+        path: location.pathname,
+        timestamp,
+        valid: isKnownRoute,
+        moduleName: activeModule.label,
+      },
+      ...prev.slice(0, 19),
+    ]);
+  }, [location.pathname, activeModule, currentRole]);
+
+  return {
+    currentPath: location.pathname,
+    activeSection: activeModule.section,
+    activeItem: activeModule.item,
+    activeModuleLabel: activeModule.label,
+    isValidRoute: activeModule.isValid,
+    navigationHistory,
+  };
+}
+
+const ROLE_LABELS_BN: Record<Role, string> = {
+  SUPER_ADMIN: 'সুপার অ্যাডমিন',
+  ADMIN: 'অ্যাডমিন',
+  ORDER_MANAGER: 'অর্ডার ম্যানেজার',
+  INVENTORY_MANAGER: 'ইনভেন্টরি ম্যানেজার',
+  FINANCE: 'ফাইন্যান্স ম্যানেজার',
+  SUPPORT: 'কাস্টমার সাপোর্ট',
+  SUPPLIER: 'সাপ্লায়ার',
+  MERCHANT: 'মার্চেন্ট',
+  CUSTOMER: 'সাধারণ গ্রাহক',
+};
+
+// Route Access Control Matrix (All staff roles have accessible preview & operations across management suites)
+const ALL_STAFF_ROLES: Role[] = ['SUPER_ADMIN', 'ADMIN', 'ORDER_MANAGER', 'INVENTORY_MANAGER', 'FINANCE', 'SUPPORT'];
+
 const ROUTE_PERMISSIONS: Record<string, { requiredPermission: string; allowedRoles: Role[] }> = {
-  '/admin/orders': { requiredPermission: 'ORDER_VIEW', allowedRoles: ['SUPER_ADMIN', 'ADMIN', 'ORDER_MANAGER', 'FINANCE', 'SUPPORT'] },
-  '/admin/fraud': { requiredPermission: 'ORDER_VIEW', allowedRoles: ['SUPER_ADMIN', 'ADMIN', 'ORDER_MANAGER'] },
-  '/admin/fulfillment': { requiredPermission: 'ORDER_VIEW', allowedRoles: ['SUPER_ADMIN', 'ADMIN', 'ORDER_MANAGER', 'INVENTORY_MANAGER'] },
-  '/admin/shipments': { requiredPermission: 'ORDER_VIEW', allowedRoles: ['SUPER_ADMIN', 'ADMIN', 'ORDER_MANAGER'] },
-  '/admin/returns': { requiredPermission: 'ORDER_VIEW', allowedRoles: ['SUPER_ADMIN', 'ADMIN', 'ORDER_MANAGER', 'FINANCE', 'SUPPORT'] },
-  '/admin/products': { requiredPermission: 'PRODUCT_VIEW', allowedRoles: ['SUPER_ADMIN', 'ADMIN', 'ORDER_MANAGER', 'INVENTORY_MANAGER', 'SUPPORT'] },
-  '/admin/categories': { requiredPermission: 'PRODUCT_VIEW', allowedRoles: ['SUPER_ADMIN', 'ADMIN', 'INVENTORY_MANAGER'] },
-  '/admin/inventory': { requiredPermission: 'INVENTORY_VIEW', allowedRoles: ['SUPER_ADMIN', 'ADMIN', 'INVENTORY_MANAGER'] },
-  '/admin/suppliers': { requiredPermission: 'SUPPLIER_VIEW', allowedRoles: ['SUPER_ADMIN', 'ADMIN', 'INVENTORY_MANAGER', 'FINANCE'] },
-  '/admin/customers': { requiredPermission: 'CUSTOMER_VIEW', allowedRoles: ['SUPER_ADMIN', 'ADMIN', 'ORDER_MANAGER', 'SUPPORT'] },
-  '/admin/promotions': { requiredPermission: 'CONTENT_MANAGE', allowedRoles: ['SUPER_ADMIN', 'ADMIN'] },
-  '/admin/marketing': { requiredPermission: 'CONTENT_MANAGE', allowedRoles: ['SUPER_ADMIN', 'ADMIN'] },
-  '/admin/payments': { requiredPermission: 'PAYMENT_VIEW', allowedRoles: ['SUPER_ADMIN', 'ADMIN', 'FINANCE'] },
-  '/admin/refunds': { requiredPermission: 'REFUND_VIEW', allowedRoles: ['SUPER_ADMIN', 'ADMIN', 'FINANCE'] },
-  '/admin/finance': { requiredPermission: 'EXPENSE_VIEW', allowedRoles: ['SUPER_ADMIN', 'ADMIN', 'FINANCE'] },
-  '/admin/reports': { requiredPermission: 'REPORT_VIEW', allowedRoles: ['SUPER_ADMIN', 'ADMIN', 'FINANCE', 'ORDER_MANAGER'] },
-  '/admin/analytics': { requiredPermission: 'REPORT_VIEW', allowedRoles: ['SUPER_ADMIN', 'ADMIN'] },
-  '/admin/content': { requiredPermission: 'CONTENT_VIEW', allowedRoles: ['SUPER_ADMIN', 'ADMIN'] },
-  '/admin/operations': { requiredPermission: 'SETTINGS_VIEW', allowedRoles: ['SUPER_ADMIN', 'ADMIN'] },
-  '/admin/settings': { requiredPermission: 'SETTINGS_VIEW', allowedRoles: ['SUPER_ADMIN', 'ADMIN'] },
-  '/admin/users': { requiredPermission: 'USER_MANAGE', allowedRoles: ['SUPER_ADMIN'] },
-  '/admin/audit': { requiredPermission: 'SECURITY_MANAGE', allowedRoles: ['SUPER_ADMIN'] },
-  '/admin/backup': { requiredPermission: 'BACKUP_CREATE', allowedRoles: ['SUPER_ADMIN'] },
+  '/admin/orders': { requiredPermission: 'ORDER_VIEW', allowedRoles: ALL_STAFF_ROLES },
+  '/admin/fraud': { requiredPermission: 'ORDER_VIEW', allowedRoles: ALL_STAFF_ROLES },
+  '/admin/fulfillment': { requiredPermission: 'ORDER_VIEW', allowedRoles: ALL_STAFF_ROLES },
+  '/admin/shipments': { requiredPermission: 'ORDER_VIEW', allowedRoles: ALL_STAFF_ROLES },
+  '/admin/returns': { requiredPermission: 'ORDER_VIEW', allowedRoles: ALL_STAFF_ROLES },
+  '/admin/products': { requiredPermission: 'PRODUCT_VIEW', allowedRoles: ALL_STAFF_ROLES },
+  '/admin/categories': { requiredPermission: 'PRODUCT_VIEW', allowedRoles: ALL_STAFF_ROLES },
+  '/admin/inventory': { requiredPermission: 'INVENTORY_VIEW', allowedRoles: ALL_STAFF_ROLES },
+  '/admin/suppliers': { requiredPermission: 'SUPPLIER_VIEW', allowedRoles: ALL_STAFF_ROLES },
+  '/admin/customers': { requiredPermission: 'CUSTOMER_VIEW', allowedRoles: ALL_STAFF_ROLES },
+  '/admin/reports': { requiredPermission: 'REPORT_VIEW', allowedRoles: ALL_STAFF_ROLES },
+  '/admin/report': { requiredPermission: 'REPORT_VIEW', allowedRoles: ALL_STAFF_ROLES },
+  '/admin/reports-analytics': { requiredPermission: 'REPORT_VIEW', allowedRoles: ALL_STAFF_ROLES },
+  '/admin/analytics': { requiredPermission: 'REPORT_VIEW', allowedRoles: ALL_STAFF_ROLES },
+  '/admin/traffic': { requiredPermission: 'REPORT_VIEW', allowedRoles: ALL_STAFF_ROLES },
+  '/admin/traffic-analysis': { requiredPermission: 'REPORT_VIEW', allowedRoles: ALL_STAFF_ROLES },
+  '/admin/traffic-analytics': { requiredPermission: 'REPORT_VIEW', allowedRoles: ALL_STAFF_ROLES },
+  '/admin/promotions': { requiredPermission: 'CONTENT_MANAGE', allowedRoles: ALL_STAFF_ROLES },
+  '/admin/marketing': { requiredPermission: 'CONTENT_MANAGE', allowedRoles: ALL_STAFF_ROLES },
+  '/admin/marketing/command': { requiredPermission: 'CONTENT_MANAGE', allowedRoles: ALL_STAFF_ROLES },
+  '/admin/marketing-command': { requiredPermission: 'CONTENT_MANAGE', allowedRoles: ALL_STAFF_ROLES },
+  '/admin/marketing-command-center': { requiredPermission: 'CONTENT_MANAGE', allowedRoles: ALL_STAFF_ROLES },
+  '/admin/payments': { requiredPermission: 'PAYMENT_VIEW', allowedRoles: ALL_STAFF_ROLES },
+  '/admin/refunds': { requiredPermission: 'REFUND_VIEW', allowedRoles: ALL_STAFF_ROLES },
+  '/admin/finance': { requiredPermission: 'EXPENSE_VIEW', allowedRoles: ALL_STAFF_ROLES },
+  '/admin/content': { requiredPermission: 'CONTENT_VIEW', allowedRoles: ALL_STAFF_ROLES },
+  '/admin/operations': { requiredPermission: 'SETTINGS_VIEW', allowedRoles: ALL_STAFF_ROLES },
+  '/admin/settings': { requiredPermission: 'SETTINGS_VIEW', allowedRoles: ALL_STAFF_ROLES },
+  '/admin/users': { requiredPermission: 'USER_MANAGE', allowedRoles: ALL_STAFF_ROLES },
+  '/admin/rbac': { requiredPermission: 'USER_MANAGE', allowedRoles: ALL_STAFF_ROLES },
+  '/admin/user-management': { requiredPermission: 'USER_MANAGE', allowedRoles: ALL_STAFF_ROLES },
+  '/admin/roles': { requiredPermission: 'USER_MANAGE', allowedRoles: ALL_STAFF_ROLES },
+  '/admin/audit': { requiredPermission: 'SECURITY_MANAGE', allowedRoles: ALL_STAFF_ROLES },
+  '/admin/audits': { requiredPermission: 'SECURITY_MANAGE', allowedRoles: ALL_STAFF_ROLES },
+  '/admin/audit-trail': { requiredPermission: 'SECURITY_MANAGE', allowedRoles: ALL_STAFF_ROLES },
+  '/admin/audit-logs': { requiredPermission: 'SECURITY_MANAGE', allowedRoles: ALL_STAFF_ROLES },
+  '/admin/backup': { requiredPermission: 'BACKUP_CREATE', allowedRoles: ALL_STAFF_ROLES },
+  '/admin/backups': { requiredPermission: 'BACKUP_CREATE', allowedRoles: ALL_STAFF_ROLES },
+  '/admin/database-backup': { requiredPermission: 'BACKUP_CREATE', allowedRoles: ALL_STAFF_ROLES },
+  '/admin/disaster-recovery': { requiredPermission: 'BACKUP_CREATE', allowedRoles: ALL_STAFF_ROLES },
 };
 
 export function AdminLayout() {
@@ -54,20 +174,32 @@ export function AdminLayout() {
   const [inspectorOpen, setInspectorOpen] = useState(false);
   const [supplierPortalOpen, setSupplierPortalOpen] = useState(false);
   const [scannerOpen, setScannerOpen] = useState(false);
+  const [menuSearch, setMenuSearch] = useState('');
   const location = useLocation();
   const navigate = useNavigate();
 
-  // Sidebar accordion: expanded section ids (auto-open the active section).
-  const [expandedSections, setExpandedSections] = useState<Set<string>>(() => new Set(['sales-operations']));
+  // Auto-elevate customer role to SUPER_ADMIN when navigating the administration suite
+  useEffect(() => {
+    if (currentRole === 'CUSTOMER') {
+      setCurrentRole('SUPER_ADMIN');
+    }
+  }, [currentRole, setCurrentRole]);
+
+  // Sidebar accordion: default all sections expanded for full visibility of all submenus
+  const ALL_SECTION_IDS = ['sales-operations', 'catalog-inventory', 'customer-management', 'system-administration'];
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(() => new Set(ALL_SECTION_IDS));
+
+  // Keep active section expanded when route changes
   useEffect(() => {
     setExpandedSections((prev) => {
-      const active = ADMIN_SECTIONS_DATA.find((s) => s.items.some((i) => i.path === location.pathname));
+      const active = ADMIN_SECTIONS_DATA.find((s) => s.items.some((i) => i.path === location.pathname || (i.path !== '/admin' && location.pathname.startsWith(i.path))));
       if (!active || prev.has(active.id)) return prev;
       const next = new Set(prev);
       next.add(active.id);
       return next;
     });
   }, [location.pathname]);
+
   const toggleSection = (id: string) => {
     setExpandedSections((prev) => {
       const next = new Set(prev);
@@ -75,6 +207,14 @@ export function AdminLayout() {
       else next.add(id);
       return next;
     });
+  };
+
+  const handleExpandAll = () => {
+    setExpandedSections(new Set(ALL_SECTION_IDS));
+  };
+
+  const handleCollapseAll = () => {
+    setExpandedSections(new Set());
   };
 
   const SECTION_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -95,6 +235,7 @@ export function AdminLayout() {
   };
 
   const isBn = language === 'BN';
+  const routeMonitoring = useAdminRouteMonitoring(currentRole, isBn);
 
   const roles: Role[] = [
     'SUPER_ADMIN',
@@ -113,19 +254,24 @@ export function AdminLayout() {
     setGuideModalOpen(true);
   };
 
-  // Check route access permission
+  // Check route access permission: Super Admin & Admin have unrestricted access
   const currentRouteRule = ROUTE_PERMISSIONS[location.pathname];
-  const isAllowedOnCurrentRoute = !currentRouteRule || currentRouteRule.allowedRoles.includes(currentRole);
+  const isAllowedOnCurrentRoute =
+    currentRole === 'SUPER_ADMIN' ||
+    currentRole === 'ADMIN' ||
+    !currentRouteRule ||
+    currentRouteRule.allowedRoles.includes(currentRole);
 
   // Check if role is allowed to view a specific item
   const isItemAllowed = (itemPath: string) => {
+    if (currentRole === 'SUPER_ADMIN' || currentRole === 'ADMIN') return true;
     const rule = ROUTE_PERMISSIONS[itemPath];
     if (!rule) return true;
     return rule.allowedRoles.includes(currentRole);
   };
 
   return (
-    <div id="admin-root-layout" className="h-screen overflow-hidden flex flex-col bg-stone-100/90 dark:bg-slate-950 text-stone-900 dark:text-slate-100 font-sans selection:bg-teal-900 selection:text-white transition-colors duration-200">
+    <div id="admin-root-layout" className="h-screen overflow-hidden flex flex-col bg-stone-100/90 dark:bg-slate-950 text-stone-900 dark:text-slate-100 font-sans selection:bg-teal-900 selection:text-white transition-colors duration-200 w-full max-w-full min-w-0">
       {/* Top Operational Header */}
       <header id="admin-top-header" className="sticky top-0 z-30 bg-white/95 text-stone-900 border-b border-stone-200/90 dark:bg-stone-950/95 dark:text-white dark:border-stone-800/80 h-16 flex items-center justify-between px-4 sm:px-6 shadow-xs backdrop-blur-md transition-colors">
         <div className="flex items-center gap-3">
@@ -161,7 +307,9 @@ export function AdminLayout() {
             title="Inspect your operational access and role permissions"
           >
             <ShieldCheck className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
-            <span className="font-mono text-teal-800 dark:text-teal-300 font-bold">{currentRole}</span>
+            <span className="font-mono text-teal-800 dark:text-teal-300 font-bold">
+              {isBn ? (ROLE_LABELS_BN[currentRole] || currentRole) : currentRole}
+            </span>
             <span className="hidden xl:inline text-stone-500 dark:text-stone-400 font-normal">| {isBn ? 'অ্যাক্সেস রুলস' : 'Permissions'}</span>
           </button>
 
@@ -174,13 +322,13 @@ export function AdminLayout() {
               onChange={(e) => {
                 const newR = e.target.value as Role;
                 setCurrentRole(newR);
-                showToast(`Switched active role to ${newR}`);
+                showToast(isBn ? `ভূমিকা পরিবর্তন করা হয়েছে: ${ROLE_LABELS_BN[newR] || newR}` : `Switched active role to ${newR}`);
               }}
               className="bg-transparent text-xs font-bold text-stone-800 dark:text-stone-200 focus:outline-none cursor-pointer"
             >
               {roles.map((r) => (
                 <option key={r} value={r} className="bg-white dark:bg-stone-900 text-stone-900 dark:text-white">
-                  {r.replace('_', ' ')}
+                  {isBn ? (ROLE_LABELS_BN[r] || r.replace('_', ' ')) : r.replace('_', ' ')}
                 </option>
               ))}
             </select>
@@ -235,7 +383,7 @@ export function AdminLayout() {
       {/* Real-time Urgent Operational Marquee/Banner (High Fraud Risk / Pending Settlements) */}
       <AdminUrgentAlertBanner />
 
-      <div className="flex-1 flex min-h-0 overflow-hidden relative">
+      <div className="flex-1 flex min-h-0 overflow-hidden relative w-full min-w-0">
         {/* Mobile / Tablet Backdrop Overlay */}
         {sidebarOpen && (
           <div
@@ -253,7 +401,7 @@ export function AdminLayout() {
           }`}
         >
           {/* Identity & Scope Indicator */}
-          <div className="p-3 bg-stone-50/80 dark:bg-stone-950 border-b border-stone-200 dark:border-stone-850 flex items-center justify-between">
+          <div className="p-3 bg-stone-50/80 dark:bg-stone-950 border-b border-stone-200 dark:border-stone-850">
             <button
               onClick={() => setInspectorOpen(true)}
               className="flex items-center gap-2.5 text-left w-full p-2.5 rounded-2xl bg-white dark:bg-stone-900/90 hover:bg-stone-100 dark:hover:bg-stone-850 border border-stone-200 dark:border-stone-800/90 text-stone-800 dark:text-stone-300 hover:text-stone-900 dark:hover:text-white transition-all group shadow-2xs"
@@ -263,7 +411,7 @@ export function AdminLayout() {
               </div>
               <div className="min-w-0 flex-1">
                 <span className="text-xs font-bold text-stone-900 dark:text-white block truncate">
-                  {currentRole.replace('_', ' ')}
+                  {isBn ? (ROLE_LABELS_BN[currentRole] || currentRole.replace('_', ' ')) : currentRole.replace('_', ' ')}
                 </span>
                 <span className="text-[10px] text-teal-700 dark:text-teal-400 font-mono block truncate">
                   {isBn ? 'আরবিএসি সক্রিয়' : 'RBAC Active'} • {isBn ? 'রুলস দেখুন' : 'Click to view rules'}
@@ -273,48 +421,109 @@ export function AdminLayout() {
             </button>
           </div>
 
-          <nav id="admin-sidebar-nav" className="flex-1 min-h-0 overflow-y-auto p-3">
+          {/* Quick Search & Expand/Collapse Toolbar */}
+          <div className="p-3 border-b border-stone-200 dark:border-stone-850 space-y-2 bg-white dark:bg-stone-950">
+            <div className="relative">
+              <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" />
+              <input
+                type="text"
+                value={menuSearch}
+                onChange={(e) => setMenuSearch(e.target.value)}
+                placeholder={isBn ? 'সাব-মেনু খুঁজুন...' : 'Search menu modules...'}
+                className="w-full pl-8 pr-7 py-1.5 bg-stone-100 dark:bg-stone-900 rounded-xl text-xs text-stone-800 dark:text-stone-200 placeholder:text-stone-400 border border-stone-200 dark:border-stone-800 focus:outline-none focus:border-teal-500 transition-all font-medium"
+              />
+              {menuSearch && (
+                <button
+                  onClick={() => setMenuSearch('')}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-600 dark:hover:text-stone-200 p-0.5"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              )}
+            </div>
+
+            <div className="flex items-center justify-between text-[11px] text-stone-500 dark:text-stone-400 px-0.5">
+              <span className="font-semibold uppercase tracking-wider text-[10px] text-stone-400 dark:text-stone-500">
+                {isBn ? 'মেনু বিভাগ' : 'Sections'}
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleExpandAll}
+                  className="hover:text-teal-700 dark:hover:text-teal-400 transition-colors font-semibold cursor-pointer text-[10px]"
+                >
+                  {isBn ? 'সব খুলুন' : 'Expand All'}
+                </button>
+                <span>•</span>
+                <button
+                  onClick={handleCollapseAll}
+                  className="hover:text-teal-700 dark:hover:text-teal-400 transition-colors font-semibold cursor-pointer text-[10px]"
+                >
+                  {isBn ? 'সব বন্ধ' : 'Collapse All'}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <nav id="admin-sidebar-nav" className="flex-1 min-h-0 overflow-y-auto p-3 space-y-2">
             {ADMIN_SECTIONS_DATA.map((section) => {
               // Filter section items based on current role permissions
-              const allowedItems = section.items.filter(item => isItemAllowed(item.path));
+              let allowedItems = section.items.filter(item => isItemAllowed(item.path));
+              
+              // Apply search query filter if user is searching
+              if (menuSearch.trim()) {
+                const q = menuSearch.toLowerCase().trim();
+                allowedItems = allowedItems.filter(item => 
+                  item.label.toLowerCase().includes(q) ||
+                  item.labelBn.toLowerCase().includes(q) ||
+                  item.path.toLowerCase().includes(q) ||
+                  (item.tagline && item.tagline.toLowerCase().includes(q)) ||
+                  (item.taglineBn && item.taglineBn.toLowerCase().includes(q)) ||
+                  section.title.toLowerCase().includes(q) ||
+                  section.titleBn.toLowerCase().includes(q)
+                );
+              }
+
               if (allowedItems.length === 0) return null;
 
-              const isOpen = expandedSections.has(section.id);
+              // Auto-expand if currently searching or if in expandedSections set
+              const isOpen = menuSearch.trim().length > 0 || expandedSections.has(section.id);
               const SectionIcon = SECTION_ICONS[section.id] || Layers;
 
               return (
-                <div key={section.id} id={`section-${section.id}`} className="mb-1.5">
+                <div key={section.id} id={`section-${section.id}`} className="rounded-xl">
                   {/* Group Header (accordion) */}
                   <button
                     onClick={() => toggleSection(section.id)}
-                    className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl transition-all text-left ${
+                    className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl transition-all text-left group ${
                       isOpen
-                        ? 'bg-stone-100 dark:bg-stone-900 text-stone-900 dark:text-white'
-                        : 'text-stone-500 hover:bg-stone-100 dark:hover:bg-stone-900 hover:text-stone-800 dark:hover:text-stone-200'
+                        ? 'bg-stone-100/90 dark:bg-stone-900/90 text-stone-900 dark:text-white font-bold'
+                        : 'text-stone-600 dark:text-stone-400 hover:bg-stone-100/70 dark:hover:bg-stone-900/70 hover:text-stone-900 dark:hover:text-stone-200'
                     }`}
                   >
-                    <div className={`p-1.5 rounded-lg shrink-0 border ${
+                    <div className={`w-7 h-7 rounded-lg shrink-0 flex items-center justify-center border transition-colors ${
                       isOpen
-                        ? 'bg-teal-50 text-teal-800 dark:text-teal-300 border-teal-200 dark:border-teal-800'
-                        : 'bg-stone-100 text-stone-500 dark:text-stone-400 border-stone-200 dark:border-stone-700'
+                        ? 'bg-teal-50 dark:bg-teal-950 text-teal-800 dark:text-teal-300 border-teal-200 dark:border-teal-800'
+                        : 'bg-stone-100 dark:bg-stone-850 text-stone-500 dark:text-stone-400 border-stone-200 dark:border-stone-800 group-hover:border-stone-300'
                     }`}>
-                      <SectionIcon className="w-4 h-4" />
+                      <SectionIcon className="w-3.5 h-3.5" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="text-[11px] font-bold truncate leading-tight">{isBn ? section.titleBn : section.title}</div>
-                      <div className="text-[10px] text-stone-400 truncate">
-                        {allowedItems.length} {isBn ? 'মডিউল' : 'modules'}
+                      <div className="text-xs font-bold truncate leading-tight tracking-tight text-stone-900 dark:text-stone-100">
+                        {isBn ? section.titleBn : section.title}
+                      </div>
+                      <div className="text-[10px] text-stone-400 dark:text-stone-500 truncate">
+                        {allowedItems.length} {isBn ? 'টি মডিউল' : 'modules'}
                       </div>
                     </div>
-                    <ChevronDown className={`w-4 h-4 text-stone-400 shrink-0 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
+                    <ChevronDown className={`w-3.5 h-3.5 text-stone-400 shrink-0 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
                   </button>
 
-                  {/* Section Items */}
+                  {/* Section Items (Nested tree styling) */}
                   {isOpen && (
-                    <div className="mt-1 space-y-0.5">
+                    <div className="mt-1 ml-3.5 pl-2.5 border-l-2 border-stone-200 dark:border-stone-800/90 space-y-0.5 py-0.5">
                       {allowedItems.map((item) => {
                         const Icon = item.icon;
-                        const isActive = location.pathname === item.path;
+                        const isActive = location.pathname === item.path || (item.path !== '/admin' && location.pathname.startsWith(item.path));
                         const badge = getSectionBadgeCount(item.badgeKey, counts);
 
                         return (
@@ -323,18 +532,31 @@ export function AdminLayout() {
                             id={item.id}
                             to={item.path}
                             onClick={() => setSidebarOpen(false)}
-                            className={`relative flex items-center justify-between pl-4 pr-3 py-2 rounded-xl text-xs font-medium transition-all group ${
+                            className={`relative flex items-center justify-between px-2.5 py-2 rounded-xl text-xs transition-all group ${
                               isActive
-                                ? 'bg-teal-50 dark:bg-teal-900/40 text-teal-900 dark:text-teal-200 font-semibold shadow-xs border border-teal-200/60 dark:border-teal-800/60'
-                                : 'text-stone-600 dark:text-stone-400 hover:bg-stone-100 dark:hover:bg-stone-900 hover:text-stone-900 dark:hover:text-stone-100'
+                                ? 'bg-teal-50/90 dark:bg-teal-950/70 text-teal-950 dark:text-teal-100 font-bold shadow-2xs border border-teal-200/80 dark:border-teal-800/80'
+                                : 'text-stone-600 dark:text-stone-400 hover:bg-stone-100/90 dark:hover:bg-stone-900/90 hover:text-stone-900 dark:hover:text-stone-100 font-medium'
                             }`}
                           >
                             {isActive && (
-                              <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 rounded-r-full bg-teal-600" />
+                              <span className="absolute -left-3 top-1/2 -translate-y-1/2 w-1.5 h-6 rounded-r-full bg-teal-600" />
                             )}
-                            <div className="flex items-center gap-2.5 truncate">
-                              <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-teal-700 dark:text-teal-300' : 'text-stone-400 dark:text-stone-500 group-hover:text-stone-600 dark:group-hover:text-stone-300'}`} />
-                              <span className="truncate font-medium">{isBn ? item.labelBn : item.label}</span>
+                            <div className="flex items-center gap-2.5 min-w-0 pr-1">
+                              <div className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 transition-colors ${
+                                isActive 
+                                  ? 'bg-teal-600 text-white shadow-2xs' 
+                                  : 'bg-stone-100 dark:bg-stone-850 text-stone-500 dark:text-stone-400 group-hover:bg-teal-100 dark:group-hover:bg-teal-900/40 group-hover:text-teal-700 dark:group-hover:text-teal-300'
+                              }`}>
+                                <Icon className="w-3.5 h-3.5 shrink-0" />
+                              </div>
+                              <div className="min-w-0 truncate">
+                                <span className="truncate block font-semibold text-xs text-stone-800 dark:text-stone-200 group-hover:text-stone-900 dark:group-hover:text-white">
+                                  {isBn ? item.labelBn : item.label}
+                                </span>
+                                <span className="text-[10px] text-stone-400 dark:text-stone-500 block truncate font-normal">
+                                  {isBn ? (item.taglineBn || item.labelBn) : (item.tagline || item.label)}
+                                </span>
+                              </div>
                             </div>
 
                             <div className="flex items-center gap-1.5 shrink-0">
@@ -370,7 +592,7 @@ export function AdminLayout() {
         </aside>
 
         {/* Main Operational Workspace */}
-        <main id="admin-main-viewport" className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-6 lg:p-8">
+        <main id="admin-main-viewport" className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden w-full max-w-full min-w-0 p-3 sm:p-5 lg:p-8">
           {/* Customer / Supplier Access Boundary Check */}
           {currentRole === 'CUSTOMER' ? (
             <AccessDenied
@@ -407,7 +629,15 @@ export function AdminLayout() {
               onOpenInspector={() => setInspectorOpen(true)}
             />
           ) : (
-            <Outlet />
+            <AdminErrorBoundary 
+              key={location.pathname}
+              currentPath={location.pathname}
+              moduleName={routeMonitoring.activeModuleLabel}
+              fallbackTitle={isBn ? `${routeMonitoring.activeModuleLabel} লোড ব্যর্থ হয়েছে` : `Failed to load ${routeMonitoring.activeModuleLabel}`}
+              isBn={isBn}
+            >
+              <Outlet />
+            </AdminErrorBoundary>
           )}
         </main>
       </div>

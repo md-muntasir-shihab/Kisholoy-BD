@@ -1041,6 +1041,7 @@ export function ProductsAdmin() {
       <ProductDeleteConfirmModal
         product={null}
         bulkCount={selectedIds.length}
+        productsList={products.filter((p) => selectedIds.includes(p.id))}
         isOpen={isBulkDeleteModalOpen}
         onClose={() => setIsBulkDeleteModalOpen(false)}
         onConfirm={handleBulkDeleteConfirm}

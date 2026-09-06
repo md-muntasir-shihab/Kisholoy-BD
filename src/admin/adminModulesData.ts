@@ -3,7 +3,7 @@ import {
   LayoutDashboard, ShoppingCart, ShieldAlert, Truck, Building2, Cpu, 
   RotateCcw, DollarSign, CreditCard, Package, Folders, Warehouse, 
   Users, Megaphone, Gift, BarChart3, FileText, Settings, ShieldCheck, 
-  History, Database, Activity
+  History, Database, Activity, Sliders
 } from 'lucide-react';
 
 export interface AdminModuleItem {
@@ -561,6 +561,32 @@ export const ADMIN_SECTIONS_DATA: AdminSectionGroup[] = [
           'ওয়েবসাইটের উপরের অফার ঘোষণা বা জরুরি ছুটির নোটিশ পরিবর্তন করা',
           'দোকানের যোগাযোগের ঠিকানা, ফোন ও হোয়াটসঅ্যাপ নম্বর আপডেট করা',
           'রিটার্ন পলিসি, প্রাইভেসি ও শর্তাবলী সহজেই এডিট ও সেভ করা'
+        ]
+      },
+      {
+        id: 'admin-nav-operations',
+        sectionId: 'system-administration',
+        label: 'Operations & Automations',
+        labelBn: 'অপারেশনস ও অটোমেশন হাব',
+        path: '/admin/operations',
+        icon: Sliders,
+        role: 'Admin, Super Admin',
+        roleBn: 'অ্যাডমিন, সুপার অ্যাডমিন',
+        tagline: 'Automated order status triggers, courier webhooks, notification workflows, and background job queues',
+        taglineBn: 'স্বয়ংক্রিয় অর্ডার নোটিফিকেশন, কুরিয়ার ওয়েবহুক, ব্যাকগ্রাউন্ড কিউ ও অটোমেশন রুলস',
+        description: 'Configure intelligent background business workflows. Automate customer SMS notifications on dispatch, courier delivery webhooks, pending order reminders, and automated stock safety thresholds.',
+        descriptionBn: 'দোকানের স্বয়ংক্রিয় কাজের নিয়মাবলী নির্ধারণ। পার্সেল ডেলিভারি হলে স্বয়ংক্রিয় এসএমএস পাঠানো, কুরিয়ার থেকে স্ট্যাটাস আপডেট গ্রহণ এবং স্টক শেষ হওয়ার পূর্বে স্বয়ংক্রিয় সতর্কবার্তা।',
+        tasksEn: [
+          'Configure automated SMS & email customer alerts for order lifecycle',
+          'Inspect incoming courier webhooks from Steadfast, Pathao and RedX',
+          'Manage background job queues and schedule sync intervals',
+          'Set automated stock deduction rules and low-inventory safety alerts'
+        ],
+        tasksBn: [
+          'অর্ডারের বিভিন্ন ধাপে স্বয়ংক্রিয় এসএমএস ও ইমেইল নোটিফিকেশন সেট করা',
+          'স্টেডফাস্ট ও পাঠাও থেকে আসা লাইভ ওয়েবহুক মেসেজ পর্যবেক্ষণ করা',
+          'ব্যাকগ্রাউন্ড অটোমেশন জব ও ডাটা সিঙ্ক প্রক্রিয়া নিয়ন্ত্রণ করা',
+          'স্টক স্বয়ংক্রিয়ভাবে সমন্বয় ও অ্যালার্ট পাওয়ার নিয়ম চালু করা'
         ]
       },
       {

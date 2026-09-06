@@ -1522,6 +1522,7 @@ export function SuppliersAdmin() {
         closeOnBackdrop={false}
         overlayClassName="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4"
       >
+        {pendingPaymentPayload && (
           <div className="bg-white rounded-xl max-w-sm w-full p-6 shadow-2xl space-y-4 border-2 border-amber-300">
             <div className="flex items-center gap-2 text-amber-700">
               <ShieldAlert className="w-5 h-5" />
@@ -1557,6 +1558,7 @@ export function SuppliersAdmin() {
               </div>
             </form>
           </div>
+        )}
       </AdminModalShell>
 
       {/* 11-Point Contextual Help Modal */}
@@ -1566,6 +1568,7 @@ export function SuppliersAdmin() {
         label="11-Point Contextual Help Modal"
         overlayClassName="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-150"
       >
+        {activeHelp && (
           <div className="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-2xl max-h-[90vh] overflow-y-auto space-y-5 border border-stone-200">
             <div className="flex items-start justify-between border-b border-stone-200 pb-4">
               <div>
@@ -1671,6 +1674,7 @@ export function SuppliersAdmin() {
               </button>
             </div>
           </div>
+        )}
       </AdminModalShell>
 
       {/* Bulk Supplier Import Modal (CSV & JSON) */}
@@ -1689,17 +1693,7 @@ export function SuppliersAdmin() {
         <SupplierPortalModal
           isOpen={Boolean(previewPortalSupplier)}
           onClose={() => setPreviewPortalSupplier(null)}
-          supplier={{
-            id: previewPortalSupplier.id,
-            companyName: previewPortalSupplier.companyName,
-            contactPerson: previewPortalSupplier.contactPerson,
-            email: previewPortalSupplier.email,
-            phone: previewPortalSupplier.phone,
-            status: previewPortalSupplier.status,
-            totalPurchased: previewPortalSupplier.totalPurchased,
-            totalPaid: previewPortalSupplier.totalPaid,
-            totalDue: previewPortalSupplier.totalDue
-          }}
+          supplier={previewPortalSupplier}
         />
       )}
 

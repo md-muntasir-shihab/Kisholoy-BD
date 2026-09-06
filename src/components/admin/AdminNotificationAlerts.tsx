@@ -8,6 +8,59 @@ import {
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { SettlementRecord, Order, Product, CustomerReturnRequest } from '../../types';
+import { formatDateDisplay, toBanglaDigits } from '../../utils/dateFilterUtils';
+
+export function formatNotificationTime(timestamp: string | Date | undefined | null, isBn = false): string {
+  if (!timestamp) return isBn ? 'তারিখ অনুপস্থিত' : 'N/A';
+  const d = typeof timestamp === 'string' ? new Date(timestamp) : timestamp;
+  if (isNaN(d.getTime())) return isBn ? 'ভুল তারিখ' : 'Invalid Date';
+
+  const now = new Date();
+  const diffSec = Math.floor((now.getTime() - d.getTime()) / 1000);
+
+  if (diffSec < 60) {
+    return isBn ? 'এইমাত্র' : 'Just now';
+  }
+  const diffMin = Math.floor(diffSec / 60);
+  if (diffMin < 60) {
+    return isBn ? `${toBanglaDigits(diffMin)} মিনিট আগে` : `${diffMin}m ago`;
+  }
+  const diffHours = Math.floor(diffMin / 60);
+  if (diffHours < 24 && now.getDate() === d.getDate()) {
+    const hours = d.getHours();
+    const minutes = d.getMinutes().toString().padStart(2, '0');
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    const h12 = hours % 12 || 12;
+    return isBn 
+      ? `আজ, ${toBanglaDigits(h12)}:${toBanglaDigits(minutes)} ${ampm}`
+      : `Today, ${h12.toString().padStart(2, '0')}:${minutes} ${ampm}`;
+  }
+  if (diffHours < 48) {
+    const hours = d.getHours();
+    const minutes = d.getMinutes().toString().padStart(2, '0');
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    const h12 = hours % 12 || 12;
+    return isBn 
+      ? `গতকাল, ${toBanglaDigits(h12)}:${toBanglaDigits(minutes)} ${ampm}`
+      : `Yesterday, ${h12.toString().padStart(2, '0')}:${minutes} ${ampm}`;
+  }
+
+  const day = d.getDate();
+  const monthIdx = d.getMonth();
+  const year = d.getFullYear();
+  const hours = d.getHours();
+  const minutes = d.getMinutes().toString().padStart(2, '0');
+  const ampm = hours >= 12 ? 'PM' : 'AM';
+  const h12 = hours % 12 || 12;
+
+  const SHORT_MONTHS_EN = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const SHORT_MONTHS_BN = ['জানু', 'ফেব্রু', 'মার্চ', 'এপ্রিল', 'মে', 'জুন', 'জুলাই', 'আগস্ট', 'সেপ্টে', 'অক্টো', 'নভে', 'ডিসে'];
+
+  if (isBn) {
+    return `${toBanglaDigits(day)} ${SHORT_MONTHS_BN[monthIdx]} ${toBanglaDigits(year)}, ${toBanglaDigits(h12)}:${toBanglaDigits(minutes)} ${ampm}`;
+  }
+  return `${day.toString().padStart(2, '0')} ${SHORT_MONTHS_EN[monthIdx]} ${year}, ${h12.toString().padStart(2, '0')}:${minutes} ${ampm}`;
+}
 
 export interface UrgentAlertItem {
   id: string;
@@ -259,7 +312,7 @@ export function AdminNotificationAlerts() {
             ? criticalCount > 0
               ? 'bg-rose-100 text-rose-900 border-rose-300 hover:bg-rose-200 dark:bg-rose-950/80 dark:text-rose-200 dark:border-rose-700/80 dark:hover:bg-rose-900 shadow-xs ring-1 ring-rose-500/30'
               : 'bg-amber-100 text-amber-900 border-amber-300 hover:bg-amber-200 dark:bg-amber-950/80 dark:text-amber-200 dark:border-amber-700/80 dark:hover:bg-amber-900'
-            : 'bg-stone-100 hover:bg-stone-200 dark:bg-stone-900 dark:hover:bg-stone-850 text-stone-700 dark:text-stone-300 hover:text-stone-900 dark:hover:text-white border-stone-200 dark:border-stone-800'
+            : 'bg-stone-100 hover:bg-stone-200 dark:bg-stone-900 dark:hover:bg-stone-800 text-stone-700 dark:text-stone-300 hover:text-stone-900 dark:hover:text-white border-stone-200 dark:border-stone-800'
         }`}
         title={
           activeAlerts.length > 0
@@ -291,12 +344,12 @@ export function AdminNotificationAlerts() {
       {isOpen && (
         <div
           id="admin-alerts-popover"
-          className="absolute right-0 mt-3 w-96 sm:w-[420px] max-w-[95vw] bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-750 rounded-2xl shadow-2xl z-50 text-stone-900 dark:text-stone-100 overflow-hidden text-xs animate-in fade-in slide-in-from-top-2 duration-150"
+          className="absolute right-0 mt-3 w-96 sm:w-[420px] max-w-[95vw] bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-2xl shadow-2xl z-50 text-stone-900 dark:text-stone-100 overflow-hidden text-xs animate-in fade-in slide-in-from-top-2 duration-150"
         >
           {/* Popover Header */}
           <div className="p-4 bg-stone-50 dark:bg-stone-950 border-b border-stone-200 dark:border-stone-800 flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <div className={`p-1.5 rounded-lg ${criticalCount > 0 ? 'bg-rose-100 dark:bg-rose-900/60 text-rose-800 dark:text-rose-300' : 'bg-teal-100 dark:bg-teal-900/60 text-teal-800 dark:text-teal-300'}`}>
+              <div className={`p-1.5 rounded-lg ${criticalCount > 0 ? 'bg-rose-100 dark:bg-rose-950 text-rose-800 dark:text-rose-300' : 'bg-teal-100 dark:bg-teal-950 text-teal-800 dark:text-teal-300'}`}>
                 <ShieldAlert className="w-4 h-4" />
               </div>
               <div>
@@ -304,15 +357,15 @@ export function AdminNotificationAlerts() {
                   <h3 className="font-serif font-bold text-sm text-stone-900 dark:text-white">
                     {isBn ? 'অপারেশনস রাডার ও অ্যালার্ট' : 'Operations Radar & Alerts'}
                   </h3>
-                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[9px] font-mono font-bold bg-emerald-950 text-emerald-400 border border-emerald-800/80">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[9px] font-mono font-bold bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-400 border border-emerald-300 dark:border-emerald-800/80">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                     LIVE
                   </span>
                 </div>
-                <p className="text-[10px] text-stone-400">
+                <p className="text-[10px] text-stone-500 dark:text-stone-400">
                   {activeAlerts.length > 0 
-                    ? `${activeAlerts.length} actionable items require admin authorization`
-                    : 'All operational parameters nominal'}
+                    ? (isBn ? `${activeAlerts.length}টি অ্যাকশনেবল অ্যালার্ট রয়েছে` : `${activeAlerts.length} actionable items require authorization`)
+                    : (isBn ? 'সকল অপারেশন স্বাভাবিক রয়েছে' : 'All operational parameters nominal')}
                 </p>
               </div>
             </div>
@@ -320,22 +373,25 @@ export function AdminNotificationAlerts() {
             {/* Header controls: Sound & Close */}
             <div className="flex items-center gap-1">
               <button
+                type="button"
                 onClick={() => {
                   setSoundEnabled(!soundEnabled);
-                  showToast(soundEnabled ? 'Audio alerts muted' : 'Audio alerts enabled');
+                  showToast(soundEnabled ? (isBn ? 'অ্যালার্ট শব্দ বন্ধ' : 'Audio alerts muted') : (isBn ? 'অ্যালার্ট শব্দ চালু' : 'Audio alerts enabled'));
                 }}
                 className={`p-1.5 rounded-lg transition-colors ${
                   soundEnabled 
-                    ? 'text-teal-400 hover:bg-stone-850' 
-                    : 'text-stone-500 hover:text-stone-300 hover:bg-stone-850'
+                    ? 'text-teal-700 dark:text-teal-400 hover:bg-stone-200 dark:hover:bg-stone-800' 
+                    : 'text-stone-400 dark:text-stone-500 hover:text-stone-700 dark:hover:text-stone-300 hover:bg-stone-200 dark:hover:bg-stone-800'
                 }`}
-                title={soundEnabled ? 'Mute Alert Chimes' : 'Unmute Alert Chimes'}
+                title={soundEnabled ? (isBn ? 'শব্দ মিউট করুন' : 'Mute Alert Chimes') : (isBn ? 'শব্দ চালু করুন' : 'Unmute Alert Chimes')}
               >
                 {soundEnabled ? <Volume2 className="w-3.5 h-3.5" /> : <VolumeX className="w-3.5 h-3.5" />}
               </button>
               <button
+                type="button"
                 onClick={() => setIsOpen(false)}
-                className="p-1.5 rounded-lg text-stone-400 hover:text-white hover:bg-stone-850 transition-colors"
+                className="p-1.5 rounded-lg text-stone-400 hover:text-stone-700 dark:hover:text-white hover:bg-stone-200 dark:hover:bg-stone-800 transition-colors"
+                title={isBn ? 'বন্ধ করুন' : 'Close'}
               >
                 <X className="w-3.5 h-3.5" />
               </button>
@@ -344,16 +400,17 @@ export function AdminNotificationAlerts() {
 
           {/* Urgent Summary Strip (If Critical Fraud / Settlement Present) */}
           {(fraudCount > 0 || settlementCount > 0) && (
-            <div className="px-4 py-2 bg-gradient-to-r from-rose-950/80 to-amber-950/80 border-b border-rose-900/40 flex items-center justify-between text-[11px]">
-              <div className="flex items-center gap-2 text-rose-200">
-                <AlertTriangle className="w-3.5 h-3.5 text-rose-400 shrink-0" />
+            <div className="px-4 py-2 bg-rose-50 dark:bg-rose-950/70 border-b border-rose-200 dark:border-rose-900/50 flex items-center justify-between text-[11px]">
+              <div className="flex items-center gap-2 text-rose-900 dark:text-rose-200">
+                <AlertTriangle className="w-3.5 h-3.5 text-rose-600 dark:text-rose-400 shrink-0" />
                 <span>
-                  <strong>{fraudCount}</strong> {isBn ? 'ঝুঁকিপূর্ণ অর্ডার' : 'Fraud Alert(s)'} &bull; <strong>{settlementCount}</strong> {isBn ? 'সেটেলমেন্ট বাকি' : 'Settlement(s)'}
+                  <strong>{fraudCount}</strong> {isBn ? 'টি ঝুঁকিপূর্ণ অর্ডার' : ' Fraud Alert(s)'} &bull; <strong>{settlementCount}</strong> {isBn ? 'টি সেটেলমেন্ট বাকি' : ' Settlement(s)'}
                 </span>
               </div>
               <button
+                type="button"
                 onClick={handleDismissAll}
-                className="text-[10px] font-semibold text-stone-300 hover:text-white underline"
+                className="text-[10px] font-semibold text-rose-700 dark:text-rose-300 hover:underline"
               >
                 {isBn ? 'সবগুলো গ্রহণ করুন' : 'Acknowledge All'}
               </button>
@@ -361,47 +418,51 @@ export function AdminNotificationAlerts() {
           )}
 
           {/* Category Filter Tabs */}
-          <div className="flex items-center gap-1 p-2 bg-stone-950/60 border-b border-stone-800 text-[11px] overflow-x-auto no-scrollbar">
+          <div className="flex items-center gap-1 p-2 bg-stone-50 dark:bg-stone-950/80 border-b border-stone-200 dark:border-stone-800 text-[11px] overflow-x-auto no-scrollbar">
             <button
+              type="button"
               onClick={() => setSelectedFilter('ALL')}
               className={`px-2.5 py-1 rounded-lg font-semibold transition-colors shrink-0 ${
                 selectedFilter === 'ALL'
-                  ? 'bg-teal-900 text-white shadow-2xs'
-                  : 'text-stone-400 hover:text-stone-200 hover:bg-stone-850'
+                  ? 'bg-teal-800 text-white shadow-2xs'
+                  : 'text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-200 hover:bg-stone-200/70 dark:hover:bg-stone-800'
               }`}
             >
               {isBn ? 'সকল' : 'All'} ({activeAlerts.length})
             </button>
             <button
+              type="button"
               onClick={() => setSelectedFilter('FRAUD')}
               className={`px-2.5 py-1 rounded-lg font-semibold transition-colors shrink-0 flex items-center gap-1 ${
                 selectedFilter === 'FRAUD'
-                  ? 'bg-rose-900 text-white shadow-2xs'
-                  : 'text-stone-400 hover:text-rose-300 hover:bg-stone-850'
+                  ? 'bg-rose-700 text-white shadow-2xs'
+                  : 'text-stone-600 dark:text-stone-400 hover:text-rose-700 dark:hover:text-rose-300 hover:bg-rose-50 dark:hover:bg-stone-800'
               }`}
             >
-              <ShieldAlert className="w-3 h-3 text-rose-400" />
+              <ShieldAlert className="w-3 h-3 text-rose-500" />
               <span>{isBn ? 'জালিয়াতি' : 'Fraud Risk'}</span>
-              {fraudCount > 0 && <span className="px-1 bg-rose-800 rounded text-[9px] font-mono">{fraudCount}</span>}
+              {fraudCount > 0 && <span className="px-1 bg-rose-200 dark:bg-rose-900 text-rose-900 dark:text-rose-200 rounded text-[9px] font-mono">{fraudCount}</span>}
             </button>
             <button
+              type="button"
               onClick={() => setSelectedFilter('SETTLEMENT')}
               className={`px-2.5 py-1 rounded-lg font-semibold transition-colors shrink-0 flex items-center gap-1 ${
                 selectedFilter === 'SETTLEMENT'
-                  ? 'bg-amber-900 text-white shadow-2xs'
-                  : 'text-stone-400 hover:text-amber-300 hover:bg-stone-850'
+                  ? 'bg-amber-700 text-white shadow-2xs'
+                  : 'text-stone-600 dark:text-stone-400 hover:text-amber-700 dark:hover:text-amber-300 hover:bg-amber-50 dark:hover:bg-stone-800'
               }`}
             >
-              <Landmark className="w-3 h-3 text-amber-400" />
+              <Landmark className="w-3 h-3 text-amber-500" />
               <span>{isBn ? 'সেটেলমেন্ট' : 'Settlements'}</span>
-              {settlementCount > 0 && <span className="px-1 bg-amber-800 rounded text-[9px] font-mono">{settlementCount}</span>}
+              {settlementCount > 0 && <span className="px-1 bg-amber-200 dark:bg-amber-900 text-amber-900 dark:text-amber-200 rounded text-[9px] font-mono">{settlementCount}</span>}
             </button>
             <button
+              type="button"
               onClick={() => setSelectedFilter('OPERATIONS')}
               className={`px-2.5 py-1 rounded-lg font-semibold transition-colors shrink-0 ${
                 selectedFilter === 'OPERATIONS'
-                  ? 'bg-stone-750 text-white shadow-2xs'
-                  : 'text-stone-400 hover:text-stone-200 hover:bg-stone-850'
+                  ? 'bg-stone-800 text-white shadow-2xs'
+                  : 'text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-200 hover:bg-stone-200/70 dark:hover:bg-stone-800'
               }`}
             >
               {isBn ? 'ইনভেন্টরি / আরএমএ' : 'Stock & RMA'}
@@ -409,16 +470,16 @@ export function AdminNotificationAlerts() {
           </div>
 
           {/* Alerts Scrollable Feed */}
-          <div className="max-h-[340px] overflow-y-auto divide-y divide-stone-800 p-2 space-y-2">
+          <div className="max-h-[340px] overflow-y-auto p-2 space-y-2 bg-white dark:bg-stone-900">
             {displayedAlerts.length === 0 ? (
               <div className="p-8 text-center space-y-2">
-                <div className="w-10 h-10 rounded-full bg-emerald-950/60 border border-emerald-800/80 text-emerald-400 flex items-center justify-center mx-auto shadow-xs">
+                <div className="w-10 h-10 rounded-full bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800/80 text-emerald-700 dark:text-emerald-400 flex items-center justify-center mx-auto shadow-xs">
                   <CheckCircle2 className="w-5 h-5" />
                 </div>
-                <h4 className="font-bold text-stone-200">
+                <h4 className="font-bold text-stone-800 dark:text-stone-200">
                   {isBn ? 'কোনো জরুরি সতর্কতা নেই' : 'All Clear — No Pending Alerts'}
                 </h4>
-                <p className="text-[11px] text-stone-400 max-w-xs mx-auto">
+                <p className="text-[11px] text-stone-500 dark:text-stone-400 max-w-xs mx-auto">
                   {isBn
                     ? 'সকল আর্থিক সেটেলমেন্ট অনুমোদিত এবং কোনো ঝুঁকিপূর্ণ অর্ডার চিহ্নিত নেই।'
                     : 'All payouts reconciled, fraud checks cleared, and inventory thresholds healthy.'}
@@ -426,9 +487,9 @@ export function AdminNotificationAlerts() {
                 <button
                   type="button"
                   onClick={handleSimulateUrgentAlert}
-                  className="mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-stone-800 hover:bg-stone-750 text-stone-300 hover:text-white text-[10px] font-mono transition-colors"
+                  className="mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-stone-100 hover:bg-stone-200 dark:bg-stone-800 dark:hover:bg-stone-700 text-stone-700 dark:text-stone-300 hover:text-stone-900 dark:hover:text-white text-[10px] font-mono transition-colors"
                 >
-                  <PlayCircle className="w-3 h-3 text-teal-400" />
+                  <PlayCircle className="w-3 h-3 text-teal-600 dark:text-teal-400" />
                   <span>{isBn ? 'টেস্ট অ্যালার্ট সিমুলেট করুন' : 'Simulate Test Fraud Alert'}</span>
                 </button>
               </div>
@@ -438,53 +499,58 @@ export function AdminNotificationAlerts() {
                   key={alert.id}
                   className={`p-3 rounded-xl transition-all border ${
                     alert.severity === 'CRITICAL'
-                      ? 'bg-rose-950/40 border-rose-800/60 hover:bg-rose-950/60'
+                      ? 'bg-rose-50/90 dark:bg-rose-950/50 border-rose-200 dark:border-rose-900/60 hover:bg-rose-100/70 dark:hover:bg-rose-900/50'
                       : alert.severity === 'HIGH'
-                      ? 'bg-amber-950/30 border-amber-800/50 hover:bg-amber-950/50'
-                      : 'bg-stone-850/60 border-stone-750 hover:bg-stone-800'
+                      ? 'bg-amber-50/90 dark:bg-amber-950/40 border-amber-200 dark:border-amber-900/60 hover:bg-amber-100/70 dark:hover:bg-amber-900/50'
+                      : 'bg-stone-50 dark:bg-slate-800/80 border-stone-200 dark:border-slate-700 hover:bg-stone-100 dark:hover:bg-slate-800'
                   }`}
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex items-center gap-2">
                       <span className={`px-2 py-0.5 rounded text-[9px] font-bold font-mono uppercase tracking-wider ${
                         alert.type === 'FRAUD_RISK'
-                          ? 'bg-rose-900 text-rose-200 border border-rose-700'
+                          ? 'bg-rose-100 dark:bg-rose-900 text-rose-800 dark:text-rose-200 border border-rose-300 dark:border-rose-700'
                           : alert.type === 'PENDING_SETTLEMENT'
-                          ? 'bg-amber-900 text-amber-200 border border-amber-700'
-                          : 'bg-teal-900 text-teal-200 border border-teal-700'
+                          ? 'bg-amber-100 dark:bg-amber-900 text-amber-800 dark:text-amber-200 border border-amber-300 dark:border-amber-700'
+                          : 'bg-teal-100 dark:bg-teal-900 text-teal-800 dark:text-teal-200 border border-teal-300 dark:border-teal-700'
                       }`}>
-                        {alert.type === 'FRAUD_RISK' ? 'FRAUD RISK' : alert.type === 'PENDING_SETTLEMENT' ? 'SETTLEMENT' : 'OPERATION'}
+                        {alert.type === 'FRAUD_RISK' 
+                          ? (isBn ? 'জালিয়াতি ঝুঁকি' : 'FRAUD RISK') 
+                          : alert.type === 'PENDING_SETTLEMENT' 
+                          ? (isBn ? 'সেটেলমেন্ট' : 'SETTLEMENT') 
+                          : (isBn ? 'অপারেশন' : 'OPERATION')}
                       </span>
                       {alert.metadata && (
-                        <span className="text-[10px] text-stone-400 font-mono">
+                        <span className="text-[10px] text-stone-500 dark:text-stone-400 font-mono">
                           {alert.metadata}
                         </span>
                       )}
                     </div>
 
                     <button
+                      type="button"
                       onClick={(e) => handleDismissAlert(alert.id, e)}
-                      className="text-stone-500 hover:text-stone-300 p-0.5 rounded transition-colors"
-                      title="Dismiss alert"
+                      className="text-stone-400 hover:text-stone-700 dark:hover:text-stone-200 p-0.5 rounded transition-colors"
+                      title={isBn ? 'বাতিল করুন' : 'Dismiss alert'}
                     >
                       <X className="w-3.5 h-3.5" />
                     </button>
                   </div>
 
                   <div className="mt-1.5">
-                    <h5 className="font-bold text-stone-100 text-xs leading-snug">
+                    <h5 className="font-bold text-stone-900 dark:text-stone-100 text-xs leading-snug">
                       {isBn ? alert.titleBn : alert.title}
                     </h5>
-                    <p className="text-[11px] text-stone-300 mt-0.5 leading-relaxed">
+                    <p className="text-[11px] text-stone-600 dark:text-stone-300 mt-0.5 leading-relaxed">
                       {isBn ? alert.descriptionBn : alert.description}
                     </p>
                   </div>
 
                   {/* Actions Row */}
-                  <div className="mt-3 pt-2 border-t border-stone-800/80 flex items-center justify-between text-[11px]">
-                    <span className="text-[10px] text-stone-500 flex items-center gap-1 font-mono">
+                  <div className="mt-3 pt-2 border-t border-stone-200/80 dark:border-stone-800/80 flex items-center justify-between text-[11px]">
+                    <span className="text-[10px] text-stone-500 dark:text-stone-400 flex items-center gap-1 font-mono">
                       <Clock className="w-3 h-3" />
-                      {new Date(alert.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      {formatNotificationTime(alert.timestamp, isBn)}
                     </span>
 
                     <div className="flex items-center gap-1.5">
@@ -495,10 +561,10 @@ export function AdminNotificationAlerts() {
                             alert.onQuickAction?.();
                             handleDismissAlert(alert.id);
                           }}
-                          className="px-2.5 py-1 rounded-lg bg-emerald-800 hover:bg-emerald-700 text-white font-semibold transition-colors flex items-center gap-1"
+                          className="px-2.5 py-1 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white font-semibold transition-colors flex items-center gap-1"
                         >
                           <Check className="w-3 h-3" />
-                          <span>Quick Settle</span>
+                          <span>{isBn ? 'কুইক সেটেল' : 'Quick Settle'}</span>
                         </button>
                       )}
 
@@ -507,8 +573,8 @@ export function AdminNotificationAlerts() {
                         onClick={() => handleActionClick(alert)}
                         className={`px-3 py-1 rounded-lg font-semibold transition-colors flex items-center gap-1 ${
                           alert.severity === 'CRITICAL'
-                            ? 'bg-rose-800 hover:bg-rose-700 text-white'
-                            : 'bg-teal-800 hover:bg-teal-700 text-white'
+                            ? 'bg-rose-700 hover:bg-rose-800 text-white'
+                            : 'bg-teal-800 hover:bg-teal-900 text-white'
                         }`}
                       >
                         <span>{alert.actionLabel}</span>
@@ -522,10 +588,11 @@ export function AdminNotificationAlerts() {
           </div>
 
           {/* Popover Footer */}
-          <div className="p-3 bg-stone-950 border-t border-stone-800 flex items-center justify-between text-[11px] text-stone-400">
+          <div className="p-3 bg-stone-50 dark:bg-stone-950 border-t border-stone-200 dark:border-stone-800 flex items-center justify-between text-[11px] text-stone-500 dark:text-stone-400">
             <button
+              type="button"
               onClick={handleSimulateUrgentAlert}
-              className="hover:text-teal-300 transition-colors flex items-center gap-1 text-[10px]"
+              className="hover:text-teal-700 dark:hover:text-teal-300 transition-colors flex items-center gap-1 text-[10px]"
             >
               <RefreshCw className="w-3 h-3" />
               <span>{isBn ? 'সিমুলেট ইভেন্ট' : 'Simulate Spike'}</span>
@@ -533,10 +600,11 @@ export function AdminNotificationAlerts() {
 
             {activeAlerts.length > 0 && (
               <button
+                type="button"
                 onClick={handleDismissAll}
-                className="text-teal-400 hover:text-teal-300 font-semibold transition-colors"
+                className="text-teal-700 dark:text-teal-400 hover:text-teal-900 dark:hover:text-teal-300 font-semibold transition-colors"
               >
-                {isBn ? 'সকল মার্ক করুন' : 'Mark All Read'}
+                {isBn ? 'সকল পঠিত মার্ক করুন' : 'Mark All Read'}
               </button>
             )}
           </div>

@@ -67,7 +67,7 @@ export function ShipmentsAdmin() {
   const pendingShipmentOrders = orders.filter((o) => 
     o.orderStatus === 'PROCESSING' || 
     o.orderStatus === 'CONFIRMED' || 
-    (o.orderStatus === 'PAID' && !o.courier?.trackingId)
+    (o.paymentStatus === 'PAID' && !o.courier?.trackingId)
   );
 
   // Filtered dispatched orders
@@ -868,6 +868,7 @@ export function ShipmentsAdmin() {
         closeOnBackdrop={false}
         overlayClassName="fixed inset-0 z-50 bg-stone-900/60 backdrop-blur-xs flex items-center justify-center p-4"
       >
+        {dispatchModalOrder && (
           <form onSubmit={handleExecuteDispatch} className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-stone-200 space-y-4 animate-in fade-in zoom-in-95 duration-150">
             <div className="flex items-center justify-between border-b border-stone-200 pb-3">
               <div>
@@ -955,6 +956,7 @@ export function ShipmentsAdmin() {
               </button>
             </div>
           </form>
+        )}
       </AdminModalShell>
 
       {/* UNIFIED PRINT DOCUMENTS MODAL */}

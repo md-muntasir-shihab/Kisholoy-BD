@@ -505,6 +505,7 @@ export function AuditAdmin() {
         label="Inspect Cryptographic Hash"
         overlayClassName="fixed inset-0 bg-stone-900/50 backdrop-blur-xs z-50 flex items-center justify-center p-4"
       >
+        {inspectEntry && (
           <div className="bg-white rounded-xl max-w-lg w-full p-6 shadow-xl border border-stone-200">
             <div className="flex items-center justify-between pb-3 border-b border-stone-200">
               <div className="flex items-center gap-2">
@@ -555,6 +556,7 @@ export function AuditAdmin() {
               </button>
             </div>
           </div>
+        )}
       </AdminModalShell>
 
       {/* MODAL: 10-Point Security Vulnerability Scanner */}
@@ -685,6 +687,7 @@ export function AuditAdmin() {
         label="GLOBAL CONTEXTUAL ADMIN HELP MODAL"
         overlayClassName="fixed inset-0 bg-stone-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4"
       >
+        {activeHelp && (
           <div className="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-2xl border border-stone-200 max-h-[90vh] flex flex-col">
             <div className="flex items-center justify-between pb-3 border-b border-stone-200">
               <div className="flex items-center gap-2.5">
@@ -810,6 +813,7 @@ export function AuditAdmin() {
               </button>
             </div>
           </div>
+        )}
       </AdminModalShell>
 
       {/* Date-wise Master Data Hub Modal */}

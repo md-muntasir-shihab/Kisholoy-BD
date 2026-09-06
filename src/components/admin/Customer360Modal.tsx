@@ -136,7 +136,7 @@ export function Customer360Modal({
         district: 'Dhaka',
         recencyDays: 14,
         frequencyCount: relatedOrders.length || 1,
-        monetaryTotal: sampleCustomer.totalSpent || 5000,
+        monetaryTotal: ('totalSpent' in sampleCustomer ? (sampleCustomer as any).totalSpent : relatedOrders.reduce((sum, o) => sum + (o.total || 0), 0)) || 5000,
         rScore: 4,
         fScore: 3,
         mScore: 4,

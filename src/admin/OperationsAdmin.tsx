@@ -1590,6 +1590,7 @@ export function OperationsAdmin() {
         label="Inspect Notification Log Modal"
         overlayClassName="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4 backdrop-blur-xs"
       >
+        {selectedNotificationLog && (
           <div className="bg-white rounded-2xl max-w-xl w-full p-6 shadow-2xl space-y-4 border border-stone-200">
             <div className="flex justify-between items-center border-b border-stone-200 pb-3">
               <div>
@@ -1634,6 +1635,7 @@ export function OperationsAdmin() {
               </div>
             </div>
           </div>
+        )}
       </AdminModalShell>
 
       {/* Register Webhook Modal */}
@@ -1716,6 +1718,7 @@ export function OperationsAdmin() {
         label="Inspect Task Payload Modal"
         overlayClassName="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4 backdrop-blur-xs"
       >
+        {selectedJobPayload && (
           <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4">
             <div className="flex justify-between items-center border-b border-stone-200 pb-3">
               <div>
@@ -1735,6 +1738,7 @@ export function OperationsAdmin() {
               </pre>
             </div>
           </div>
+        )}
       </AdminModalShell>
     </div>
   );

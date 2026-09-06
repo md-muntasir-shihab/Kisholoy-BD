@@ -47,6 +47,7 @@ export type PaymentStatus =
 
 export type SettlementStatus = 
   | 'PENDING' 
+  | 'INITIATED'
   | 'ELIGIBLE' 
   | 'PROCESSING' 
   | 'SETTLED' 
@@ -99,8 +100,10 @@ export interface Product {
   badge?: string;
   badgeBn?: string;
   isFeatured?: boolean;
+  featured?: boolean;
   readyToShip: boolean;
   variants?: ProductVariant[];
+  origin?: string;
   attributes?: {
     material?: string;
     origin?: string;
@@ -130,6 +133,7 @@ export interface CartItem {
   variantId?: string;
   variantName?: string;
   sku: string;
+  product?: any;
 }
 
 export interface ShippingAddress {
@@ -149,6 +153,7 @@ export interface OrderItem {
   productId: string;
   title: string;
   titleBn: string;
+  productTitle?: string; // alias
   price: number;
   quantity: number;
   image: string;
@@ -176,6 +181,7 @@ export interface OrderChannelDetails {
   chatNotes?: string;
   whatsappNumber?: string;
   confirmedViaChat?: boolean;
+  internalNotes?: string;
 }
 
 export interface OrderAdvancePayment {
@@ -183,6 +189,7 @@ export interface OrderAdvancePayment {
   amount: number;
   method: 'BKASH' | 'NAGAD' | 'ROCKET' | 'BANK' | 'CASH' | 'OTHER';
   trxId?: string;
+  transactionId?: string; // alias
   receivedAt?: string;
   receivedBy?: string;
   verified: boolean;
@@ -224,12 +231,14 @@ export interface Order {
     whatsappNumber?: string;
     socialProfile?: string;
   };
+  customerName?: string; // alias
   shippingAddress: ShippingAddress;
   items: OrderItem[];
   subtotal: number;
   shippingFee: number;
   discount: number;
   total: number;
+  grandTotal?: number; // alias
   balanceDueCod?: number;
   paymentMethod: 'COD' | 'SSLCOMMERZ' | 'BKASH' | 'MANUAL';
   paymentStatus: PaymentStatus;
@@ -281,6 +290,7 @@ export interface Customer {
   totalOrders: number;
   totalSpent: number;
   defaultAddress: string;
+  address?: string; // alias for defaultAddress
   status: 'ACTIVE' | 'BLOCKED';
   whatsappNumber?: string;
   socialProfile?: string;
@@ -403,7 +413,9 @@ export interface SettlementRecord {
   status: SettlementStatus;
   payoutDate?: string;
   utrOrReference?: string;
+  utrNumber?: string; // alias
   notes?: string;
+  createdAt?: string;
 }
 
 export interface ReconciliationAnomaly {
@@ -439,7 +451,7 @@ export interface AutomationJob {
   id: string;
   type: 'WEBHOOK_RETRY' | 'COURIER_SYNC' | 'PAYMENT_VERIFY' | 'SMS_DISPATCH' | 'EMAIL_DISPATCH' | 'INVENTORY_ALERT' | 'WEBHOOK_OUTBOUND' | 'REFUND_DISBURSEMENT';
   priority?: 'CRITICAL' | 'HIGH' | 'NORMAL' | 'LOW';
-  status: 'PENDING' | 'PROCESSING' | 'SUCCESS' | 'FAILED' | 'RETRYING' | 'MANUAL_ACTION_REQUIRED' | 'DLQ_DEAD_LETTER';
+  status: 'PENDING' | 'PROCESSING' | 'SUCCESS' | 'COMPLETED' | 'FAILED' | 'RETRYING' | 'MANUAL_ACTION_REQUIRED' | 'DLQ_DEAD_LETTER';
   attempts: number;
   maxAttempts: number;
   lastAttemptAt: string;
@@ -503,6 +515,8 @@ export interface WhatsAppButtonConfig {
   text: string;
   textBn: string;
   value?: string;
+  url?: string;
+  payload?: string;
 }
 
 export interface NotificationTemplate {
@@ -583,6 +597,7 @@ export interface CustomerNotification {
   message: string;
   messageBn: string;
   type: 'ORDER' | 'SHIPMENT' | 'RETURN' | 'PROMO' | 'SYSTEM';
+  channel?: 'IN_APP' | 'SMS' | 'EMAIL' | 'PUSH' | string;
   link?: string;
   isRead: boolean;
   createdAt: string;
@@ -591,11 +606,15 @@ export interface CustomerNotification {
 export interface QueueStats {
   totalJobs: number;
   pendingCount: number;
+  pendingJobs?: number;
   processingCount: number;
+  processingJobs?: number;
+  completedJobs?: number;
   retryingCount: number;
   successCount: number;
   failedCount: number;
   dlqCount: number;
+  dlqJobs?: number;
   workerActive: boolean;
   throughputPerMinute: number;
 }
@@ -624,6 +643,7 @@ export interface FraudRiskAssessment {
   riskRating: 'LOW' | 'MEDIUM' | 'HIGH' | 'SUSPICIOUS';
   flags: string[];
   reasons: string[];
+  triggeredRules?: string[]; // alias
   recommendation: 'AUTO_APPROVE' | 'REQUIRE_PHONE_VERIFICATION' | 'REQUIRE_ADVANCE_SHIPPING_FEE' | 'BLOCK';
   breakdown: {
     phoneScore: number;
@@ -667,6 +687,7 @@ export interface FraudRiskSettings {
   autoBlockThreshold: number;
   phoneVerificationThreshold: number;
   advanceFeeThresholdBdt: number;
+  advancePaymentThreshold?: number; // alias
   advanceFeeAmountBdt: number;
   velocityWindowMinutes: number;
   maxOrdersPerVelocityWindow: number;
@@ -1073,6 +1094,9 @@ export interface RoutingRuleConfig {
   conditionType: 'CUSTOMER_DIVISION' | 'PRODUCT_CATEGORY' | 'STOCK_LEVEL' | 'ORDER_VALUE';
   matchValue: string; // e.g. 'Chattogram' or 'Traditional Clothing'
   targetWarehouseId: string;
+  targetWarehouseName?: string;
+  fallbackWarehouseName?: string;
+  strategy?: string;
 }
 
 export type PickListStatus = 'GENERATED' | 'IN_PROGRESS' | 'PICKED' | 'PACKED';
@@ -1226,20 +1250,24 @@ export interface LoyaltyPointsTransaction {
 
 export interface CustomerLoyaltyWallet {
   customerId: string;
-  customerName: string;
-  phone: string;
+  customerName?: string;
+  phone?: string;
   email?: string;
   tier: LoyaltyTier;
   pointsBalance: number;
-  lifetimeEarnedPoints: number;
-  lifetimeRedeemedPoints: number;
+  lifetimeEarnedPoints?: number;
+  lifetimeRedeemedPoints?: number;
+  lifetimePointsEarned?: number;
+  lifetimePointsRedeemed?: number;
+  tierMultiplier?: number;
   referralCode: string;
   referredByCode?: string;
-  referralCount: number;
-  totalWalletSavingsBdt: number;
-  transactions: LoyaltyPointsTransaction[];
-  joinedAt: string;
-  lastActiveAt: string;
+  referralCount?: number;
+  totalWalletSavingsBdt?: number;
+  transactions?: LoyaltyPointsTransaction[];
+  history?: any[];
+  joinedAt?: string;
+  lastActiveAt?: string;
 }
 
 export interface PromotionSystemStats {
@@ -1258,7 +1286,7 @@ export interface CustomerAddress {
   id: string;
   customerId: string;
   label: 'Home' | 'Office' | 'Other';
-  labelBn: string;
+  labelBn?: string;
   recipientName: string;
   phone: string;
   altPhone?: string;
@@ -1289,12 +1317,14 @@ export interface CustomerReturnRequest {
   id: string;
   requestNumber: string;
   customerId: string;
+  customerName?: string;
   customerPhone: string;
   orderId: string;
   orderNumber: string;
   productId: string;
   productTitle: string;
   quantity: number;
+  items?: { reason?: string; quantity?: number; productId?: string; }[];
   reason: 'DEFECTIVE_DAMAGED' | 'WRONG_ITEM' | 'NOT_AS_DESCRIBED' | 'SIZE_FIT_ISSUE' | 'CHANGED_MIND';
   reasonDetails: string;
   images?: string[];
@@ -1740,6 +1770,7 @@ export interface GoogleDriveConfig {
   syncFrequency: 'REALTIME' | 'HOURLY' | 'DAILY';
   syncTargets: string[];
   lastSyncAt: string | null;
+  lastSyncedAt?: string | null; // alias
   totalSyncedFiles: number;
   syncLog: {
     id: string;
@@ -1758,8 +1789,9 @@ export interface GoogleDriveFileItem {
   sizeBytes: number;
   createdAt: string;
   webViewLink: string;
-  fileType: 'JSON_SNAPSHOT' | 'SHEET_TAB' | 'CSV_EXPORT';
+  fileType: 'JSON_SNAPSHOT' | 'SHEET_TAB' | 'CSV_EXPORT' | 'SPREADSHEET';
   recordCount?: number;
+  recordsCount?: number; // alias
   checksumSha256?: string;
 }
 
@@ -1849,7 +1881,7 @@ export interface RestoreDryRunResult {
 // Supplier Management & Procurement Ledger Types
 // =============================================================
 
-export type SupplierStatus = 'ACTIVE' | 'INACTIVE' | 'SUSPENDED';
+export type SupplierStatus = 'ACTIVE' | 'INACTIVE' | 'SUSPENDED' | 'UNDER_REVIEW';
 
 export type SupplierPaymentTerms = 'ADVANCE' | 'NET_15' | 'NET_30' | 'COD' | 'CONSIGNMENT';
 
@@ -1923,16 +1955,20 @@ export interface SupplierInteraction {
 export interface Supplier {
   id: string;
   code: string; // SUP-001
-  companyName: string;
+  companyName?: string;
+  name?: string; // alias for companyName
   contactPerson: string;
   email: string;
   phone: string;
   secondaryPhone?: string;
   address: string;
   district: string; // Bangladesh District (e.g. Narayanganj, Sylhet, Comilla)
-  categoriesSupplied: string[];
+  division?: string;
+  categoriesSupplied?: string[];
   tradeLicenseNumber?: string;
+  tradeLicense?: string; // alias
   tinNumber?: string;
+  taxIdentificationNumber?: string; // alias for tinNumber
   vatRegistrationNumber?: string;
   bankDetails?: {
     bankName: string;
@@ -1946,20 +1982,25 @@ export interface Supplier {
     accountType: 'MERCHANT' | 'PERSONAL';
     accountNumber: string;
   };
-  paymentTerms: SupplierPaymentTerms;
+  paymentTerms?: SupplierPaymentTerms;
+  paymentTermsDays?: number;
   status: SupplierStatus;
   
   // Financial Summary (Server-authoritative)
-  totalPurchased: number;
-  totalPaid: number;
-  totalDue: number;
+  totalPurchased?: number;
+  totalPaid?: number;
+  totalDue?: number;
+  outstandingDue?: number; // alias for totalDue
+  suppliedProducts?: any[]; // alias for supplied product list
 
   // Feature-flagged Supplier Portal Isolation
   portalAccess: {
     enabled: boolean; // Feature flag - disabled by default
     loginEmail?: string;
+    email?: string; // alias
+    role?: string;
     lastLoginAt?: string;
-    loginIsolated: boolean; // isolated from internal staff/customer DB
+    loginIsolated?: boolean; // isolated from internal staff/customer DB
     /**
      * scrypt hash of the portal password (`scrypt$N$salt$key`). Never a
      * plaintext password, and never serialised to any client.
@@ -2096,7 +2137,7 @@ export interface SupplierAgreement {
   supplierId: string;
   productId?: string;
   variantId?: string;
-  status: 'ACTIVE' | 'INACTIVE' | 'EXPIRED';
+  status: 'ACTIVE' | 'INACTIVE' | 'EXPIRED' | 'DRAFT' | 'TERMINATED';
   effectiveFrom: string;
   effectiveTo?: string;
   settlementMethod: SupplierSettlementMethod;
@@ -2127,6 +2168,16 @@ export interface SupplyBatch {
   expiryDate?: string;
   status: 'ACTIVE' | 'DEPLETED' | 'ON_HOLD';
   notes?: string;
+
+  // Convenient compatibility aliases
+  productName?: string;
+  receivedQuantity?: number;
+  soldQuantity?: number;
+  remainingQuantity?: number;
+  returnedQuantity?: number;
+  unitCost?: number;
+  sellingPrice?: number;
+  supplierSharePercentage?: number;
 }
 
 export interface SupplierEligibleSale {
@@ -2158,6 +2209,7 @@ export interface SupplierSettlement {
   supplierShare: number;
   supplierShareAmount?: number;
   kisholoyShare: number;
+  kisholoyShareAmount?: number;
   returnsAdjustment: number;
   refundAdjustment: number;
   previousSupplierDue?: number;
@@ -2166,7 +2218,7 @@ export interface SupplierSettlement {
   netPayable?: number;
   paidAmount?: number;
   remainingDue?: number;
-  status: 'DRAFT' | 'PENDING' | 'PARTIALLY_PAID' | 'PAID' | 'CANCELLED';
+  status: 'DRAFT' | 'PENDING' | 'APPROVED' | 'PARTIALLY_PAID' | 'PAID' | 'CANCELLED';
   eligibleSalesCount: number;
   createdAt: string;
   updatedAt: string;

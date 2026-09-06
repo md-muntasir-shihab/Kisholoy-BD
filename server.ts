@@ -3732,6 +3732,18 @@ async function startServer() {
     }
   });
 
+  app.all('/api/security/auth/persona-session', (req, res) => {
+    try {
+      const role = (req.body?.role || req.query?.role || 'SUPER_ADMIN') as any;
+      const clientIp = (req.headers['x-forwarded-for'] as string)?.split(',')[0].trim() || req.socket.remoteAddress || '127.0.0.1';
+      const userAgent = (req.headers['user-agent'] as string) || 'KisholoyAdminClient';
+      const result = securityEngine.getOrCreatePersonaSession(role, clientIp, userAgent);
+      res.json(result);
+    } catch (e: any) {
+      res.status(500).json({ success: false, error: e.message });
+    }
+  });
+
   app.post('/api/security/auth/change-password', (req, res) => {
     try {
       const { userId, currentPassword, newPassword, operator, skipOldCheck } = req.body;

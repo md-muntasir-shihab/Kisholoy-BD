@@ -987,6 +987,7 @@ export const SupplierSettlementsView: React.FC<SupplierSettlementsViewProps> = (
         label="6 Settlement Detail Breakdown Modal"
         overlayClassName="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-900/60 backdrop-blur-xs animate-in fade-in duration-150"
       >
+        {selectedSettlement && (
           <div className="bg-white w-full max-w-2xl rounded-2xl shadow-2xl border border-stone-200 overflow-hidden flex flex-col max-h-[90vh]">
             <div className="px-6 py-4 bg-emerald-900 text-white flex items-center justify-between">
               <div>
@@ -1076,6 +1077,7 @@ export const SupplierSettlementsView: React.FC<SupplierSettlementsViewProps> = (
               </div>
             </div>
           </div>
+        )}
       </AdminModalShell>
 
       {/* 7. Generate Settlement Modal Wizard */}
@@ -1241,6 +1243,7 @@ export const SupplierSettlementsView: React.FC<SupplierSettlementsViewProps> = (
         closeOnBackdrop={false}
         overlayClassName="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-900/60 backdrop-blur-xs animate-in fade-in duration-150"
       >
+        {selectedSettlement && (
           <div className="bg-white w-full max-w-md rounded-2xl shadow-2xl border border-stone-200 overflow-hidden flex flex-col">
             <div className="px-6 py-4 bg-emerald-800 text-white flex items-center justify-between">
               <h3 className="font-bold text-sm">Disburse Supplier Payout</h3>
@@ -1339,6 +1342,7 @@ export const SupplierSettlementsView: React.FC<SupplierSettlementsViewProps> = (
               </div>
             </form>
           </div>
+        )}
       </AdminModalShell>
     </div>
   );

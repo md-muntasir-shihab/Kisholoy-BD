@@ -26,12 +26,53 @@ import { BACKUP_HELP_DEFINITIONS, BackupFunctionHelp } from './backupHelpData';
 import { AdminModalShell } from '../components/admin/AdminModalShell';
 import { usePendingAction } from '../hooks/usePendingAction';
 
-export function BackupAdmin() {
+export type BackupActiveTab = 'snapshots' | 'google_drive' | 'dr_pipeline' | 'export_import' | 'system_health';
+
+interface BackupAdminProps {
+  initialTab?: BackupActiveTab;
+}
+
+export function BackupAdmin({ initialTab }: BackupAdminProps = {}) {
   const { language, currentRole, showToast, logAudit, products, orders, customers } = useApp();
   const isBn = language === 'BN';
 
   // Tab State
-  const [activeTab, setActiveTab] = useState<'snapshots' | 'google_drive' | 'dr_pipeline' | 'export_import' | 'system_health'>('snapshots');
+  const [activeTab, setActiveTab] = useState<BackupActiveTab>(() => {
+    if (initialTab) return initialTab;
+    try {
+      const pathname = window.location.pathname.toLowerCase();
+      if (pathname.includes('disaster') || pathname.includes('dr')) return 'dr_pipeline';
+      const raw = new URLSearchParams(window.location.search).get('tab');
+      const t = raw?.toLowerCase();
+      if (t && ['snapshots', 'google_drive', 'dr_pipeline', 'export_import', 'system_health'].includes(t)) {
+        return t as BackupActiveTab;
+      }
+    } catch {
+      /* ignore */
+    }
+    return 'snapshots';
+  });
+
+  useEffect(() => {
+    if (initialTab) {
+      setActiveTab(initialTab);
+      return;
+    }
+    try {
+      const pathname = window.location.pathname.toLowerCase();
+      if (pathname.includes('disaster') || pathname.includes('dr')) {
+        setActiveTab('dr_pipeline');
+        return;
+      }
+      const raw = new URLSearchParams(window.location.search).get('tab');
+      const t = raw?.toLowerCase();
+      if (t && ['snapshots', 'google_drive', 'dr_pipeline', 'export_import', 'system_health'].includes(t)) {
+        setActiveTab(t as BackupActiveTab);
+      }
+    } catch {
+      /* ignore */
+    }
+  }, [initialTab]);
   // F-306: blocks duplicate submits while a mutation is in flight.
   const { run, isPending, isBusy } = usePendingAction();
 
@@ -1970,6 +2011,7 @@ export function BackupAdmin() {
         closeOnBackdrop={false}
         overlayClassName="fixed inset-0 z-50 bg-stone-900/60 backdrop-blur-xs flex items-center justify-center p-4"
       >
+        {selectedSnapshotForRestore && (
           <div className="bg-white rounded-2xl border border-stone-200 shadow-xl max-w-2xl w-full p-6 space-y-5 animate-in fade-in zoom-in-95 duration-150">
             {/* Modal Header */}
             <div className="flex items-start justify-between">
@@ -2108,6 +2150,7 @@ export function BackupAdmin() {
               </>
             )}
           </div>
+        )}
       </AdminModalShell>
 
       {/* ========================================================================= */}
@@ -2119,6 +2162,7 @@ export function BackupAdmin() {
         label=""
         overlayClassName="fixed inset-0 z-50 bg-stone-900/60 backdrop-blur-xs flex items-center justify-center p-4"
       >
+        {selectedHelp && (
           <div className="bg-white rounded-2xl border border-stone-200 shadow-2xl max-w-2xl w-full p-6 space-y-4 max-h-[90vh] overflow-y-auto animate-in fade-in zoom-in-95 duration-150">
             {/* Header */}
             <div className="flex items-start justify-between border-b border-stone-200 pb-3">
@@ -2255,6 +2299,7 @@ export function BackupAdmin() {
               </button>
             </div>
           </div>
+        )}
       </AdminModalShell>
     </div>
   );

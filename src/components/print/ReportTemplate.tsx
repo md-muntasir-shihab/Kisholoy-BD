@@ -46,6 +46,9 @@ export interface ReportPrintData {
   dateRange: string;
   from: string;
   to: string;
+  settings?: PrintSettings;
+  siteContent?: SiteContent;
+  codes?: { barcodes: Record<string, string>; qrs: Record<string, string> };
 }
 
 export interface ReportTemplateProps {

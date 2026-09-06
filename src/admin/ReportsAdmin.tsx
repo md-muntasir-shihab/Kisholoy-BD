@@ -373,7 +373,7 @@ export function ReportsAdmin() {
               <AdminHelpButton helpData={REPORTS_HELP_DATA.NBR_VAT_MUSHAK_63} size="sm" />
             </div>
             <div className="text-base sm:text-lg font-bold text-stone-900 font-mono">
-              ৳{analyticsData?.taxSummary.netVatPayable.toLocaleString('en-BD') || '0'}
+              ৳{analyticsData?.taxSummary?.netVatPayable ? analyticsData.taxSummary.netVatPayable.toLocaleString('en-BD') : '0'}
             </div>
             <div className="text-[11px] text-stone-500 font-medium">
               মূসক-৬.৩ (৫%)
@@ -1304,7 +1304,7 @@ export function ReportsAdmin() {
       )}
 
       {/* Business Document Printable Modal (Manifest / Tax Statement) */}
-      {documentModal.isOpen && !(documentModal.selectedOrder && (documentModal.type === 'INVOICE' || documentModal.type === 'PACKING_SLIP')) && (
+      {documentModal.isOpen && (documentModal.type === 'COURIER_MANIFEST' || documentModal.type === 'TAX_STATEMENT') && (
         <BusinessDocumentModal
           type={documentModal.type}
           order={documentModal.selectedOrder}

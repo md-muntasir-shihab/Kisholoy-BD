@@ -5,7 +5,8 @@ import {
   Printer, ArrowRight, Search, FileText, ChevronRight, Layers, Receipt,
   ShieldAlert, ShieldCheck, AlertTriangle, ExternalLink, Building2, User,
   Calendar, Download, Sparkles, Plus, MessageCircle, MessageSquare, Phone,
-  Send, Share2, DollarSign, Package, Copy, Check
+  Send, Share2, DollarSign, Package, Copy, Check, CheckSquare, Square, XCircle,
+  Trash2
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { Order, OrderStatus, OrderSourceChannel } from '../types';
@@ -17,6 +18,7 @@ import { ManualOrderModal } from '../components/admin/ManualOrderModal';
 import { OrderCourierDispatchModal } from '../components/admin/OrderCourierDispatchModal';
 import { OrderLiveTrackingTimeline } from '../components/admin/OrderLiveTrackingTimeline';
 import { AdminModalShell } from '../components/admin/AdminModalShell';
+import { AdminConfirmDialog, ConfirmItemSummary } from '../components/admin/AdminConfirmDialog';
 import { 
   DateFilterConfig, 
   filterItemsByDate, 
@@ -38,6 +40,13 @@ export function OrdersAdmin() {
   const [showDataHub, setShowDataHub] = useState(false);
   const [showManualOrderModal, setShowManualOrderModal] = useState(false);
   const [manualOrderInitialChannel, setManualOrderInitialChannel] = useState<OrderSourceChannel>('WHATSAPP');
+
+  // Bulk Selection & Safety Dialog States
+  const [selectedOrderIds, setSelectedOrderIds] = useState<string[]>([]);
+  const [isBulkCancelModalOpen, setIsBulkCancelModalOpen] = useState(false);
+  const [isBulkStatusModalOpen, setIsBulkStatusModalOpen] = useState(false);
+  const [bulkTargetStatus, setBulkTargetStatus] = useState<OrderStatus>('CONFIRMED');
+  const [statusChangeConfirm, setStatusChangeConfirm] = useState<{ order: Order; newStatus: OrderStatus } | null>(null);
   
   // Courier Integration states
   const [courierDispatchOrder, setCourierDispatchOrder] = useState<Order | null>(null);
@@ -71,9 +80,9 @@ export function OrdersAdmin() {
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
         return (
-          o.orderNumber.toLowerCase().includes(q) ||
-          o.customer.name.toLowerCase().includes(q) ||
-          o.customer.phone.includes(q) ||
+          (o.orderNumber && o.orderNumber.toLowerCase().includes(q)) ||
+          (o.customer?.name && o.customer.name.toLowerCase().includes(q)) ||
+          (o.customer?.phone && o.customer.phone.includes(q)) ||
           (o.channelDetails?.operatorName && o.channelDetails.operatorName.toLowerCase().includes(q))
         );
       }
@@ -83,17 +92,17 @@ export function OrdersAdmin() {
 
   // Helper: Open WhatsApp with Order summary
   const openWhatsAppForOrder = (order: Order) => {
-    const cleanPhone = order.customer.phone.replace(/[^0-9]/g, '');
+    const cleanPhone = (order.customer?.phone || '').replace(/[^0-9]/g, '');
     const internationalPhone = cleanPhone.startsWith('88') ? cleanPhone : `88${cleanPhone}`;
     const advancePaid = order.advancePayment?.isPaid ? order.advancePayment.amount : (order.advancePaymentAmount || 0);
     const balanceCod = order.balanceDueCod ?? Math.max(0, order.total - advancePaid);
 
-    const itemsText = order.items.map((it, idx) => 
+    const itemsText = (order.items || []).map((it, idx) => 
       `${idx + 1}. *${it.title}* - ${it.quantity}x @ ৳${it.price.toLocaleString()} = ৳${(it.price * it.quantity).toLocaleString()}`
     ).join('\n');
 
     const msg = `🌸 *কিশলয় (KISHOLOY) অর্ডার কনফার্মেশন* 🌸
-প্রিয় ${order.customer.name},
+প্রিয় ${order.customer?.name || 'গ্রাহক'},
 আপনার অর্ডার #${order.orderNumber} সফলভাবে গ্রহণ করা হয়েছে! 🌿
 
 🛍️ *অর্ডারের আইটেম:*
@@ -102,8 +111,8 @@ ${itemsText}
 💰 *সর্বমোট:* ৳${order.total.toLocaleString()}
 ${advancePaid > 0 ? `✅ *অগ্রিম পরিশোধ:* ৳${advancePaid.toLocaleString()}\n🔴 *ক্যাশ অন ডেলিভারি (বকেয়া):* ৳${balanceCod.toLocaleString()}` : `🔴 *ক্যাশ অন ডেলিভারি (বকেয়া):* ৳${order.total.toLocaleString()}`}
 
-📍 *ঠিকানা:* ${order.shippingAddress.address}, ${order.shippingAddress.district}
-🚚 *কুরিয়ার:* ${order.courier.provider} (${order.courier.trackingId || 'Preparing'})
+📍 *ঠিকানা:* ${order.shippingAddress?.address || ''}, ${order.shippingAddress?.district || ''}
+🚚 *কুরিয়ার:* ${order.courier?.provider || 'Courier'} (${order.courier?.trackingId || 'Preparing'})
 🔎 *ট্র্যাকিং লিংক:* https://kisholoy.com/track/${order.orderNumber}
 
 ধন্যবাদ কিশলয়ের সাথে থাকার জন্য! 🍃`;
@@ -118,8 +127,8 @@ ${advancePaid > 0 ? `✅ *অগ্রিম পরিশোধ:* ৳${advancePa
       'Order Date': o.createdAt ? new Date(o.createdAt).toLocaleString('en-GB') : '',
       'Source Channel': o.orderSource || 'WEB',
       'Operator': o.channelDetails?.operatorName || 'System Checkout',
-      'Customer Name': o.customer.name,
-      'Phone': o.customer.phone,
+      'Customer Name': o.customer?.name || 'Guest',
+      'Phone': o.customer?.phone || '',
       'Address': o.shippingAddress?.address || '',
       'District': o.shippingAddress?.district || '',
       'Payment Method': o.paymentMethod,
@@ -154,6 +163,81 @@ ${advancePaid > 0 ? `✅ *অগ্রিম পরিশোধ:* ৳${advancePa
     showToast(isBn ? 'অর্ডার তালিকা CSV ফরম্যাটে ডাউনলোড হয়েছে' : 'Orders CSV exported successfully.');
   };
 
+  // Selected orders array & summaries for safety dialog
+  const selectedOrders = useMemo(() => {
+    return orders.filter((o) => selectedOrderIds.includes(o.id));
+  }, [orders, selectedOrderIds]);
+
+  const selectedOrderSummaries: ConfirmItemSummary[] = useMemo(() => {
+    return selectedOrders.map((o) => ({
+      id: o.id,
+      label: `Order #${o.orderNumber} — ${o.customer?.name || 'Guest Customer'}`,
+      subtext: `৳${o.total.toLocaleString()} · Status: ${o.orderStatus} · ${o.orderSource || 'WEB'} · ${o.shippingAddress?.district || ''}`,
+      badge: o.orderStatus,
+    }));
+  }, [selectedOrders]);
+
+  const handleToggleSelectAll = () => {
+    if (selectedOrderIds.length === filteredOrders.length && filteredOrders.length > 0) {
+      setSelectedOrderIds([]);
+    } else {
+      setSelectedOrderIds(filteredOrders.map((o) => o.id));
+    }
+  };
+
+  const handleToggleOrderSelect = (id: string, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    setSelectedOrderIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+    );
+  };
+
+  const handleBulkCancelConfirm = async () => {
+    if (selectedOrderIds.length === 0) return;
+    try {
+      selectedOrderIds.forEach((id) => {
+        updateOrderStatus(id, 'CANCELLED');
+      });
+      showToast(
+        isBn
+          ? `${selectedOrderIds.length}টি অর্ডার সফলভাবে বাতিল করা হয়েছে`
+          : `Successfully cancelled ${selectedOrderIds.length} selected orders.`,
+        'success'
+      );
+      setSelectedOrderIds([]);
+      setIsBulkCancelModalOpen(false);
+    } catch (err: any) {
+      showToast(err.message || 'Failed to cancel orders', 'error');
+    }
+  };
+
+  const handleBulkStatusConfirm = async () => {
+    if (selectedOrderIds.length === 0 || !bulkTargetStatus) return;
+    try {
+      selectedOrderIds.forEach((id) => {
+        updateOrderStatus(id, bulkTargetStatus);
+      });
+      showToast(
+        isBn
+          ? `${selectedOrderIds.length}টি অর্ডারের স্থিতি "${bulkTargetStatus}" করা হয়েছে`
+          : `Updated ${selectedOrderIds.length} orders to status ${bulkTargetStatus}.`,
+        'success'
+      );
+      setSelectedOrderIds([]);
+      setIsBulkStatusModalOpen(false);
+    } catch (err: any) {
+      showToast(err.message || 'Failed to update order statuses', 'error');
+    }
+  };
+
+  const handleSingleStatusChange = (order: Order, newStatus: OrderStatus) => {
+    if (newStatus === 'CANCELLED' || newStatus === 'RETURNED') {
+      setStatusChangeConfirm({ order, newStatus });
+    } else {
+      updateOrderStatus(order.id, newStatus);
+    }
+  };
+
   const allStatuses: OrderStatus[] = [
     'PENDING',
     'CONFIRMED',
@@ -168,45 +252,45 @@ ${advancePaid > 0 ? `✅ *অগ্রিম পরিশোধ:* ৳${advancePa
   ];
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div className="space-y-4 sm:space-y-6 max-w-7xl mx-auto w-full min-w-0 overflow-x-hidden">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-serif font-bold text-stone-900">Orders Operational Desk</h1>
-            <span className="text-xs bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded-full border border-emerald-300 flex items-center gap-1">
-              <MessageCircle className="w-3 h-3 text-emerald-600" />
+            <h1 className="text-xl sm:text-2xl font-serif font-bold text-stone-900 dark:text-white">Orders Operational Desk</h1>
+            <span className="text-xs bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 font-bold px-2 py-0.5 rounded-full border border-emerald-300 dark:border-emerald-800 flex items-center gap-1">
+              <MessageCircle className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
               <span>Omnichannel</span>
             </span>
           </div>
-          <p className="text-xs text-stone-500">Manage web checkouts, WhatsApp & social assisted orders, inventory lock, and courier dispatch.</p>
+          <p className="text-xs text-stone-500 dark:text-stone-400 mt-0.5">Manage web checkouts, WhatsApp & social assisted orders, inventory lock, and courier dispatch.</p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2 w-full lg:w-auto">
           {/* Create Manual / WhatsApp Order Button */}
           <button
             onClick={() => {
               setManualOrderInitialChannel('WHATSAPP');
               setShowManualOrderModal(true);
             }}
-            className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold flex items-center gap-2 shadow-sm transition-all"
+            className="flex-1 sm:flex-initial px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 active:scale-[0.98] text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 shadow-xs transition-all"
           >
             <Plus className="w-4 h-4" />
             <MessageCircle className="w-4 h-4 text-emerald-200" />
-            <span>{isBn ? '+ হোয়াটসঅ্যাপ/সোশ্যাল অর্ডার' : '+ Create Order (WhatsApp / Social)'}</span>
+            <span>{isBn ? '+ হোয়াটসঅ্যাপ/সোশ্যাল অর্ডার' : '+ Create Order'}</span>
           </button>
 
           <button
             onClick={() => setShowDataHub(true)}
-            className="px-3.5 py-2 bg-stone-900 hover:bg-stone-950 text-teal-300 rounded-xl text-xs font-bold flex items-center gap-2 shadow-xs transition-all border border-stone-800"
+            className="px-3.5 py-2 bg-stone-900 hover:bg-stone-950 text-teal-300 rounded-xl text-xs font-bold flex items-center justify-center gap-2 shadow-xs transition-all border border-stone-800"
           >
             <Sparkles className="w-4 h-4 text-teal-400" />
-            <span>{isBn ? 'মাস্টার ডেট হাব' : 'Date & Export Hub'}</span>
+            <span>{isBn ? 'মাস্টার ডেট হাব' : 'Date Hub'}</span>
           </button>
           <button
             onClick={() => setShowBulkPrint(true)}
-            className="px-4 py-2 bg-teal-900 hover:bg-teal-950 text-white rounded-xl text-xs font-bold flex items-center gap-2 shadow-xs transition-all"
+            className="px-3.5 py-2 bg-teal-900 hover:bg-teal-950 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 shadow-xs transition-all"
           >
             <Printer className="w-4 h-4 text-teal-300" />
-            <span>{isBn ? 'বাল্ক প্রিন্ট' : 'Bulk Print Orders'}</span>
+            <span>{isBn ? 'বাল্ক প্রিন্ট' : 'Bulk Print'}</span>
           </button>
         </div>
       </div>
@@ -223,30 +307,30 @@ ${advancePaid > 0 ? `✅ *অগ্রিম পরিশোধ:* ৳${advancePa
       />
 
       {/* Filters Bar with Channel & Status */}
-      <div className="bg-white p-4 rounded-xl border border-stone-200 shadow-xs space-y-3">
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="relative w-full sm:w-80">
-            <Search className="w-4 h-4 text-stone-400 absolute left-3 top-3" />
+      <div className="bg-white dark:bg-stone-900 p-3.5 sm:p-4 rounded-xl border border-stone-200 dark:border-stone-800 shadow-xs space-y-3 w-full min-w-0">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 sm:gap-4">
+          <div className="relative w-full lg:w-80">
+            <Search className="w-4 h-4 text-stone-400 absolute left-3 top-2.5" />
             <input
               type="text"
-              placeholder="Search by order #, name, phone, or agent..."
+              placeholder={isBn ? 'অর্ডার #, নাম, ফোন বা এজেন্ট দিয়ে খুঁজুন...' : 'Search by order #, name, phone...'}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full text-xs pl-9 pr-3 py-2 border border-stone-300 rounded-lg focus:outline-none focus:border-teal-800"
+              className="w-full text-xs pl-9 pr-3 py-2 border border-stone-300 dark:border-stone-700 bg-white dark:bg-stone-850 rounded-lg focus:outline-none focus:border-teal-800 text-stone-900 dark:text-stone-100"
             />
           </div>
 
           {/* Status Filter Chips */}
-          <div className="flex items-center gap-1.5 overflow-x-auto w-full sm:w-auto pb-1 sm:pb-0 text-xs">
-            <span className="text-[11px] font-bold text-stone-400 uppercase tracking-wider mr-1">Status:</span>
+          <div className="flex items-center gap-1.5 overflow-x-auto w-full lg:w-auto pb-1 lg:pb-0 text-xs scrollbar-none min-w-0">
+            <span className="text-[11px] font-bold text-stone-400 uppercase tracking-wider mr-1 shrink-0">Status:</span>
             {['ALL', 'PENDING', 'CONFIRMED', 'PROCESSING', 'READY_TO_SHIP', 'SHIPPED', 'DELIVERED'].map((st) => (
               <button
                 key={st}
                 onClick={() => setStatusFilter(st)}
-                className={`px-3 py-1.5 rounded-lg font-semibold whitespace-nowrap transition-colors ${
+                className={`px-2.5 py-1.5 rounded-lg font-semibold whitespace-nowrap transition-colors shrink-0 text-xs ${
                   statusFilter === st
                     ? 'bg-teal-900 text-white shadow-xs'
-                    : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
+                    : 'bg-stone-100 dark:bg-stone-800 text-stone-600 dark:text-stone-300 hover:bg-stone-200 dark:hover:bg-stone-700'
                 }`}
               >
                 {st}
@@ -256,8 +340,8 @@ ${advancePaid > 0 ? `✅ *অগ্রিম পরিশোধ:* ৳${advancePa
         </div>
 
         {/* Channel Filter Chips */}
-        <div className="flex items-center gap-1.5 overflow-x-auto pt-2 border-t border-stone-100 text-xs">
-          <span className="text-[11px] font-bold text-stone-400 uppercase tracking-wider mr-1 flex items-center gap-1">
+        <div className="flex items-center gap-1.5 overflow-x-auto pt-2 border-t border-stone-100 dark:border-stone-800 text-xs scrollbar-none min-w-0">
+          <span className="text-[11px] font-bold text-stone-400 uppercase tracking-wider mr-1 flex items-center gap-1 shrink-0">
             <Share2 className="w-3 h-3 text-stone-500" />
             <span>Channel:</span>
           </span>
@@ -275,10 +359,10 @@ ${advancePaid > 0 ? `✅ *অগ্রিম পরিশোধ:* ৳${advancePa
               <button
                 key={ch.id}
                 onClick={() => setChannelFilter(ch.id)}
-                className={`px-2.5 py-1 rounded-lg text-xs font-semibold flex items-center gap-1.5 whitespace-nowrap transition-all border ${
+                className={`px-2.5 py-1 rounded-lg text-xs font-semibold flex items-center gap-1.5 whitespace-nowrap transition-all border shrink-0 ${
                   isSelected
                     ? 'bg-stone-900 text-white border-stone-900 shadow-xs'
-                    : 'bg-stone-50 text-stone-600 border-stone-200 hover:bg-stone-100'
+                    : 'bg-stone-50 dark:bg-stone-800 text-stone-600 dark:text-stone-300 border-stone-200 dark:border-stone-700 hover:bg-stone-100 dark:hover:bg-stone-750'
                 }`}
               >
                 {Icon && <Icon className="w-3.5 h-3.5" />}
@@ -292,12 +376,261 @@ ${advancePaid > 0 ? `✅ *অগ্রিম পরিশোধ:* ৳${advancePa
         </div>
       </div>
 
-      {/* Orders Table */}
-      <div className="bg-white rounded-xl border border-stone-200 shadow-xs overflow-hidden">
-        <div className="overflow-x-auto">
+      {/* Bulk Action Toolbar */}
+      {selectedOrderIds.length > 0 && (
+        <div className="p-3 bg-teal-50 dark:bg-teal-950/70 rounded-xl border border-teal-200 dark:border-teal-800 flex flex-wrap items-center justify-between gap-3 shadow-xs animate-in fade-in duration-150">
+          <div className="flex items-center gap-2">
+            <span className="w-2.5 h-2.5 rounded-full bg-teal-600 animate-pulse"></span>
+            <span className="text-xs font-bold text-teal-950 dark:text-teal-200">
+              {selectedOrderIds.length} {isBn ? 'টি অর্ডার নির্বাচিত' : 'orders selected'}
+            </span>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              onClick={() => {
+                const data = getExportableOrders().filter(o =>
+                  selectedOrderIds.includes(
+                    orders.find(ord => ord.orderNumber === o['Order Number'])?.id || ''
+                  )
+                );
+                if (data.length > 0) {
+                  exportToExcel(data, 'Selected_Orders', 'Kisholoy_Orders_Selected', dateFilter);
+                  showToast(isBn ? `${data.length}টি নির্বাচিত অর্ডার এক্সেলে ডাউনলোড হয়েছে` : `Exported ${data.length} selected orders to Excel.`);
+                }
+              }}
+              className="px-3 py-1.5 bg-white dark:bg-stone-800 hover:bg-stone-50 dark:hover:bg-stone-750 text-stone-800 dark:text-stone-200 rounded-lg text-xs font-bold border border-stone-300 dark:border-stone-700 shadow-2xs transition-colors flex items-center gap-1.5"
+            >
+              <Download className="w-3.5 h-3.5 text-stone-500" />
+              <span>{isBn ? 'নির্বাচিত এক্সপোর্ট' : 'Export Selected'}</span>
+            </button>
+
+            {/* Quick Status Setter */}
+            <div className="flex items-center gap-1 bg-white dark:bg-stone-800 p-1 rounded-lg border border-stone-300 dark:border-stone-700">
+              <span className="text-[10px] font-bold text-stone-500 px-1 uppercase">Set:</span>
+              {(['CONFIRMED', 'PROCESSING', 'READY_TO_SHIP'] as OrderStatus[]).map((st) => (
+                <button
+                  key={st}
+                  onClick={() => {
+                    setBulkTargetStatus(st);
+                    setIsBulkStatusModalOpen(true);
+                  }}
+                  className="px-2 py-1 hover:bg-stone-100 dark:hover:bg-stone-700 text-stone-700 dark:text-stone-200 rounded text-[11px] font-bold transition-colors"
+                >
+                  {st}
+                </button>
+              ))}
+            </div>
+
+            {/* Bulk Cancel Button */}
+            <button
+              onClick={() => setIsBulkCancelModalOpen(true)}
+              className="px-3.5 py-1.5 bg-rose-600 hover:bg-rose-700 active:bg-rose-800 text-white rounded-lg text-xs font-bold shadow-2xs transition-colors flex items-center gap-1.5"
+            >
+              <XCircle className="w-3.5 h-3.5" />
+              <span>{isBn ? 'নির্বাচিত অর্ডার বাতিল' : 'Cancel Selected'}</span>
+            </button>
+
+            <button
+              onClick={() => setSelectedOrderIds([])}
+              className="px-2.5 py-1.5 text-stone-500 hover:text-stone-800 dark:hover:text-stone-200 text-xs font-semibold"
+            >
+              {isBn ? 'বাছাই বাতিল' : 'Deselect All'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Orders View: Responsive Cards for Mobile (<md) and Table for Desktop (>=md) */}
+      <div className="bg-white dark:bg-stone-900 rounded-xl border border-stone-200 dark:border-stone-800 shadow-xs overflow-hidden">
+        {/* Mobile Cards View (<md) */}
+        <div className="block md:hidden divide-y divide-stone-200 dark:divide-stone-800">
+          {filteredOrders.length === 0 ? (
+            <div className="p-8 text-center text-stone-400 text-xs">
+              {isBn ? 'কোনো অর্ডার পাওয়া যায়নি।' : 'No orders found matching filters.'}
+            </div>
+          ) : (
+            filteredOrders.map((order) => {
+              const risk = order.fraudRisk;
+              const isHighRisk = risk && (risk.riskScore >= 60 || risk.riskRating === 'HIGH' || risk.riskRating === 'SUSPICIOUS');
+              const orderSource = order.orderSource || 'WEB';
+              const advanceAmount = order.advancePayment?.isPaid ? order.advancePayment.amount : (order.advancePaymentAmount || 0);
+              const isSelected = selectedOrderIds.includes(order.id);
+
+              return (
+                <div key={order.id} className={`p-4 space-y-3 transition-colors ${isHighRisk ? 'bg-rose-50/30 dark:bg-rose-950/20' : ''} ${isSelected ? 'bg-teal-50/40 dark:bg-teal-950/30' : ''}`}>
+                  {/* Top Bar: Checkbox + Order # + Channel + Date */}
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-center gap-2.5">
+                      <button
+                        type="button"
+                        onClick={(e) => handleToggleOrderSelect(order.id, e)}
+                        className="p-1 text-stone-400 hover:text-teal-800 dark:hover:text-teal-300"
+                        aria-label={`Select order ${order.orderNumber}`}
+                      >
+                        {isSelected ? (
+                          <CheckSquare className="w-4 h-4 text-teal-800 dark:text-teal-400" />
+                        ) : (
+                          <Square className="w-4 h-4 text-stone-400" />
+                        )}
+                      </button>
+                      <div>
+                        <button
+                          onClick={() => setSelectedOrder(order)}
+                          className="font-mono font-bold text-sm text-teal-900 dark:text-teal-300 hover:underline text-left block"
+                        >
+                          {order.orderNumber}
+                        </button>
+                        <span className="text-[11px] text-stone-500 dark:text-stone-400">
+                          {new Date(order.createdAt).toLocaleDateString()} • {new Date(order.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                      </div>
+                    </div>
+
+                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold ${
+                      orderSource === 'WHATSAPP' ? 'bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 border border-emerald-300' :
+                      orderSource === 'MESSENGER' ? 'bg-blue-100 dark:bg-blue-950 text-blue-800 dark:text-blue-300 border border-blue-300' :
+                      orderSource === 'PHONE' ? 'bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 border border-amber-300' :
+                      orderSource === 'DIRECT' ? 'bg-purple-100 dark:bg-purple-950 text-purple-800 dark:text-purple-300 border border-purple-300' :
+                      'bg-stone-100 dark:bg-stone-800 text-stone-700 dark:text-stone-300 border border-stone-200 dark:border-stone-700'
+                    }`}>
+                      {orderSource === 'WHATSAPP' && <MessageCircle className="w-2.5 h-2.5 text-emerald-600" />}
+                      {orderSource === 'MESSENGER' && <MessageSquare className="w-2.5 h-2.5 text-blue-600" />}
+                      {orderSource === 'PHONE' && <Phone className="w-2.5 h-2.5 text-amber-600" />}
+                      {orderSource === 'WEB' && <ShoppingCart className="w-2.5 h-2.5 text-stone-500" />}
+                      <span>{orderSource}</span>
+                    </span>
+                  </div>
+
+                  {/* Customer Info & Financials */}
+                  <div className="grid grid-cols-2 gap-2 text-xs bg-stone-50 dark:bg-stone-850 p-2.5 rounded-lg border border-stone-200/80 dark:border-stone-800">
+                    <div>
+                      <span className="text-[10px] text-stone-400 block uppercase font-bold">{isBn ? 'গ্রাহক' : 'Customer'}</span>
+                      <span className="font-semibold text-stone-900 dark:text-stone-100 block truncate">
+                        {order.customer?.name || (isBn ? 'নামহীন গ্রাহক' : 'Guest Customer')}
+                      </span>
+                      <a href={`tel:${order.customer?.phone}`} className="font-mono text-stone-600 dark:text-stone-400 text-[11px] hover:underline flex items-center gap-1">
+                        <Phone className="w-2.5 h-2.5 text-stone-400" />
+                        {order.customer?.phone || '-'}
+                      </a>
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-stone-400 block uppercase font-bold">{isBn ? 'মোট মূল্য' : 'Total (BDT)'}</span>
+                      <span className="font-bold text-stone-900 dark:text-stone-100 font-mono text-sm">
+                        ৳ {order.total.toLocaleString()}
+                      </span>
+                      {advanceAmount > 0 ? (
+                        <span className="text-[10px] text-emerald-700 dark:text-emerald-400 font-semibold block">
+                          Adv: ৳{advanceAmount} • COD: ৳{(order.balanceDueCod ?? (order.total - advanceAmount)).toLocaleString()}
+                        </span>
+                      ) : (
+                        <span className="text-[10px] text-stone-500 block">{order.paymentMethod} • {order.paymentStatus}</span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Status & Risk Chips */}
+                  <div className="flex flex-wrap items-center justify-between gap-2 pt-0.5">
+                    <div className="flex items-center gap-2">
+                      <select
+                        value={order.orderStatus}
+                        onChange={(e) => handleSingleStatusChange(order, e.target.value as OrderStatus)}
+                        className="bg-teal-50 dark:bg-teal-950 border border-teal-200 dark:border-teal-800 text-teal-900 dark:text-teal-200 font-bold px-2 py-1 rounded text-xs focus:outline-none"
+                      >
+                        {allStatuses.map((s) => (
+                          <option key={s} value={s} className="bg-white dark:bg-stone-900 text-stone-900 dark:text-white">
+                            {s}
+                          </option>
+                        ))}
+                      </select>
+
+                      {risk && (
+                        <Link
+                          to={`/admin/fraud?search=${encodeURIComponent(order.orderNumber)}`}
+                          className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                            risk.riskRating === 'SUSPICIOUS' ? 'bg-rose-100 text-rose-800 border border-rose-200' :
+                            risk.riskRating === 'HIGH' ? 'bg-amber-100 text-amber-800 border border-amber-200' :
+                            risk.riskRating === 'MEDIUM' ? 'bg-yellow-100 text-yellow-800 border border-yellow-200' : 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                          }`}
+                        >
+                          {risk.riskRating === 'SUSPICIOUS' ? <AlertCircle className="w-3 h-3 text-rose-600" /> :
+                           risk.riskRating === 'HIGH' ? <ShieldAlert className="w-3 h-3 text-amber-600" /> :
+                           <ShieldCheck className="w-3 h-3 text-emerald-600" />}
+                          <span>{risk.riskRating} ({risk.riskScore})</span>
+                        </Link>
+                      )}
+                    </div>
+
+                    {order.courier?.trackingId ? (
+                      <button
+                        onClick={() => setCourierDispatchOrder(order)}
+                        className="text-[11px] text-teal-800 dark:text-teal-300 font-bold flex items-center gap-1 font-mono hover:underline"
+                      >
+                        <Truck className="w-3 h-3" />
+                        <span>{order.courier.provider} • {order.courier.trackingId}</span>
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => setCourierDispatchOrder(order)}
+                        className="px-2 py-0.5 bg-teal-50 dark:bg-teal-950 text-teal-900 dark:text-teal-200 border border-teal-200 dark:border-teal-800 rounded font-bold text-[10px] flex items-center gap-1"
+                      >
+                        <Truck className="w-3 h-3" />
+                        <span>+ {isBn ? 'কুরিয়ার' : 'Courier'}</span>
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Actions Bar */}
+                  <div className="flex items-center justify-end gap-1.5 pt-2 border-t border-stone-100 dark:border-stone-800">
+                    <button
+                      onClick={() => openWhatsAppForOrder(order)}
+                      title="Send via WhatsApp"
+                      className="p-2 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 rounded-lg text-xs font-semibold flex items-center gap-1"
+                    >
+                      <MessageCircle className="w-3.5 h-3.5 text-emerald-600" />
+                      <span className="text-[11px]">WhatsApp</span>
+                    </button>
+                    <button
+                      onClick={() => setPrintOrder(order)}
+                      title="Print Order Documents"
+                      className="p-2 bg-teal-50 hover:bg-teal-100 dark:bg-teal-950 text-teal-900 dark:text-teal-200 border border-teal-200 dark:border-teal-800 rounded-lg text-xs font-semibold flex items-center gap-1"
+                    >
+                      <Printer className="w-3.5 h-3.5 text-teal-700" />
+                      <span className="text-[11px]">Print</span>
+                    </button>
+                    <button
+                      onClick={() => setSelectedOrder(order)}
+                      className="px-3 py-2 bg-stone-900 hover:bg-black text-white rounded-lg font-semibold text-xs transition-colors"
+                    >
+                      {isBn ? 'বিস্তারিত' : 'Details'}
+                    </button>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+
+        {/* Desktop Table View (>=md) */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left text-xs">
-            <thead className="bg-stone-100/75 text-stone-600 font-bold uppercase tracking-wider border-b border-stone-200">
+            <thead className="bg-stone-100/75 dark:bg-stone-800 text-stone-600 dark:text-stone-300 font-bold uppercase tracking-wider border-b border-stone-200 dark:border-stone-700">
               <tr>
+                <th className="p-4 w-10">
+                  <button
+                    type="button"
+                    onClick={handleToggleSelectAll}
+                    className="text-stone-400 hover:text-teal-800 dark:hover:text-teal-300 flex items-center justify-center p-0.5"
+                    title={selectedOrderIds.length === filteredOrders.length ? 'Deselect All' : 'Select All'}
+                    aria-label="Toggle select all orders"
+                  >
+                    {selectedOrderIds.length === filteredOrders.length && filteredOrders.length > 0 ? (
+                      <CheckSquare className="w-4 h-4 text-teal-800 dark:text-teal-400" />
+                    ) : (
+                      <Square className="w-4 h-4 text-stone-400" />
+                    )}
+                  </button>
+                </th>
                 <th className="p-4">Order # & Channel</th>
                 <th className="p-4">Date</th>
                 <th className="p-4">Customer</th>
@@ -309,20 +642,35 @@ ${advancePaid > 0 ? `✅ *অগ্রিম পরিশোধ:* ৳${advancePa
                 <th className="p-4 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-stone-200">
+            <tbody className="divide-y divide-stone-200 dark:divide-stone-800">
               {filteredOrders.map((order) => {
                 const risk = order.fraudRisk;
                 const isHighRisk = risk && (risk.riskScore >= 60 || risk.riskRating === 'HIGH' || risk.riskRating === 'SUSPICIOUS');
                 const orderSource = order.orderSource || 'WEB';
                 const advanceAmount = order.advancePayment?.isPaid ? order.advancePayment.amount : (order.advancePaymentAmount || 0);
+                const isSelected = selectedOrderIds.includes(order.id);
 
                 return (
-                <tr key={order.id} className={`hover:bg-stone-50 transition-colors ${isHighRisk ? 'bg-rose-50/20' : ''}`}>
+                <tr key={order.id} className={`hover:bg-stone-50 dark:hover:bg-stone-850 transition-colors ${isHighRisk ? 'bg-rose-50/20 dark:bg-rose-950/20' : ''} ${isSelected ? 'bg-teal-50/40 dark:bg-teal-950/30' : ''}`}>
+                  <td className="p-4 w-10">
+                    <button
+                      type="button"
+                      onClick={(e) => handleToggleOrderSelect(order.id, e)}
+                      className="text-stone-400 hover:text-teal-800 dark:hover:text-teal-300 flex items-center justify-center p-0.5"
+                      aria-label={`Select order ${order.orderNumber}`}
+                    >
+                      {isSelected ? (
+                        <CheckSquare className="w-4 h-4 text-teal-800 dark:text-teal-400" />
+                      ) : (
+                        <Square className="w-4 h-4 text-stone-400" />
+                      )}
+                    </button>
+                  </td>
                   <td className="p-4">
                     <div className="flex flex-col gap-1">
                       <button
                         onClick={() => setSelectedOrder(order)}
-                        className="font-mono font-bold text-stone-900 hover:underline text-teal-900 text-left"
+                        className="font-mono font-bold text-stone-900 dark:text-stone-100 hover:underline text-teal-900 dark:text-teal-300 text-left"
                       >
                         {order.orderNumber}
                       </button>
@@ -348,23 +696,23 @@ ${advancePaid > 0 ? `✅ *অগ্রিম পরিশোধ:* ৳${advancePa
                   </td>
                   <td className="p-4">
                     <Link
-                      to={`/admin/customers?search=${encodeURIComponent(order.customer.phone || order.customer.name)}`}
+                      to={`/admin/customers?search=${encodeURIComponent(order.customer?.phone || order.customer?.name || '')}`}
                       className="group block"
                       title="Inspect Customer in Directory"
                     >
-                      <span className="font-semibold text-stone-900 group-hover:text-teal-900 group-hover:underline flex items-center gap-1">
-                        {order.customer.name}
+                      <span className="font-semibold text-stone-900 dark:text-stone-100 group-hover:text-teal-900 dark:group-hover:text-teal-300 group-hover:underline flex items-center gap-1">
+                        {order.customer?.name || (isBn ? 'নামহীন গ্রাহক' : 'Guest Customer')}
                         <ExternalLink className="w-2.5 h-2.5 opacity-0 group-hover:opacity-100 text-teal-800 transition-opacity" />
                       </span>
-                      <span className="text-stone-500 font-mono text-[11px] group-hover:text-stone-800">{order.customer.phone}</span>
+                      <span className="text-stone-500 font-mono text-[11px] group-hover:text-stone-800 dark:group-hover:text-stone-300">{order.customer?.phone || '-'}</span>
                     </Link>
                   </td>
                   <td className="p-4">
-                    <div className="font-bold text-stone-900 font-mono">
+                    <div className="font-bold text-stone-900 dark:text-stone-100 font-mono">
                       ৳ {order.total.toLocaleString()}
                     </div>
                     {advanceAmount > 0 && (
-                      <div className="text-[10px] text-emerald-700 font-semibold">
+                      <div className="text-[10px] text-emerald-700 dark:text-emerald-400 font-semibold">
                         Adv: ৳{advanceAmount} • COD: ৳{(order.balanceDueCod ?? (order.total - advanceAmount)).toLocaleString()}
                       </div>
                     )}
@@ -412,26 +760,26 @@ ${advancePaid > 0 ? `✅ *অগ্রিম পরিশোধ:* ৳${advancePa
                   <td className="p-4">
                     <select
                       value={order.orderStatus}
-                      onChange={(e) => updateOrderStatus(order.id, e.target.value as OrderStatus)}
-                      className="bg-teal-50 border border-teal-200 text-teal-900 font-bold px-2 py-1 rounded text-xs focus:outline-none"
+                      onChange={(e) => handleSingleStatusChange(order, e.target.value as OrderStatus)}
+                      className="bg-teal-50 dark:bg-teal-950 border border-teal-200 dark:border-teal-800 text-teal-900 dark:text-teal-200 font-bold px-2 py-1 rounded text-xs focus:outline-none"
                     >
                       {allStatuses.map((s) => (
-                        <option key={s} value={s}>
+                        <option key={s} value={s} className="bg-white dark:bg-stone-900 text-stone-900 dark:text-white">
                           {s}
                         </option>
                       ))}
                     </select>
                   </td>
-                  <td className="p-4 text-stone-600 font-mono text-[11px]">
-                    {order.courier.trackingId ? (
+                  <td className="p-4 text-stone-600 dark:text-stone-400 font-mono text-[11px]">
+                    {order.courier?.trackingId ? (
                       <div className="flex items-center gap-1.5">
                         <button
                           onClick={() => setCourierDispatchOrder(order)}
                           className="text-left group hover:opacity-80 transition-opacity"
                           title="Click to view courier consignment & tracking status"
                         >
-                          <span className="text-teal-900 font-bold block">{order.courier.provider}</span>
-                          <span className="text-[10px] text-stone-500 font-mono flex items-center gap-1">
+                          <span className="text-teal-900 dark:text-teal-300 font-bold block">{order.courier?.provider || 'Courier'}</span>
+                          <span className="text-[10px] text-stone-500 dark:text-stone-400 font-mono flex items-center gap-1">
                             {order.courier.trackingId}
                             <ExternalLink className="w-2.5 h-2.5 opacity-60 group-hover:opacity-100" />
                           </span>
@@ -440,10 +788,10 @@ ${advancePaid > 0 ? `✅ *অগ্রিম পরিশোধ:* ৳${advancePa
                     ) : (
                       <button
                         onClick={() => setCourierDispatchOrder(order)}
-                        className="px-2.5 py-1 bg-teal-50 hover:bg-teal-100 text-teal-900 border border-teal-200 rounded font-bold text-[11px] flex items-center gap-1 transition-colors shadow-2xs"
+                        className="px-2.5 py-1 bg-teal-50 hover:bg-teal-100 dark:bg-teal-950 dark:hover:bg-teal-900 text-teal-900 dark:text-teal-200 border border-teal-200 dark:border-teal-800 rounded font-bold text-[11px] flex items-center gap-1 transition-colors shadow-2xs"
                       >
-                        <Truck className="w-3 h-3 text-teal-700" />
-                        <span>+ Dispatch Delivery</span>
+                        <Truck className="w-3 h-3 text-teal-700 dark:text-teal-400" />
+                        <span>{isBn ? '+ কুরিয়ার বুক করুন' : '+ Dispatch Delivery'}</span>
                       </button>
                     )}
                   </td>
@@ -501,6 +849,7 @@ ${advancePaid > 0 ? `✅ *অগ্রিম পরিশোধ:* ৳${advancePa
         label="Order Detail Modal"
         overlayClassName="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4"
       >
+        {selectedOrder && (
           <div className="bg-white dark:bg-slate-900 rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-4 sm:p-6 space-y-6 shadow-2xl border border-stone-200 dark:border-slate-800 text-stone-900 dark:text-slate-100">
             <div className="flex justify-between items-center pb-4 border-b border-stone-200 dark:border-slate-800">
               <div>
@@ -518,16 +867,16 @@ ${advancePaid > 0 ? `✅ *অগ্রিম পরিশোধ:* ৳${advancePa
             {/* Customer & Address */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
               <div className="p-4 bg-stone-50 dark:bg-slate-800/80 rounded-xl border border-stone-200 dark:border-slate-700">
-                <h4 className="font-bold text-stone-900 dark:text-white mb-1">Customer</h4>
-                <p>{selectedOrder.customer.name}</p>
-                <p className="font-mono">{selectedOrder.customer.phone}</p>
-                <p>{selectedOrder.customer.email || 'No email provided'}</p>
+                <h4 className="font-bold text-stone-900 dark:text-white mb-1">{isBn ? 'গ্রাহকের বিবরণ' : 'Customer Details'}</h4>
+                <p className="font-semibold text-stone-800 dark:text-stone-200">{selectedOrder.customer?.name || (isBn ? 'নামহীন গ্রাহক' : 'Guest Customer')}</p>
+                <p className="font-mono text-stone-600 dark:text-stone-400">{selectedOrder.customer?.phone || (isBn ? 'ফোন নম্বর নেই' : 'No phone')}</p>
+                <p className="text-stone-500 dark:text-stone-400">{selectedOrder.customer?.email || (isBn ? 'ইমেইল নেই' : 'No email provided')}</p>
               </div>
               <div className="p-4 bg-stone-50 dark:bg-slate-800/80 rounded-xl border border-stone-200 dark:border-slate-700">
-                <h4 className="font-bold text-stone-900 dark:text-white mb-1">Shipping Destination</h4>
-                <p>{selectedOrder.shippingAddress.address}</p>
-                <p>{selectedOrder.shippingAddress.thana}, {selectedOrder.shippingAddress.district}</p>
-                <p>Division: {selectedOrder.shippingAddress.division}</p>
+                <h4 className="font-bold text-stone-900 dark:text-white mb-1">{isBn ? 'ডেলিভারি গন্তব্য' : 'Shipping Destination'}</h4>
+                <p className="text-stone-800 dark:text-stone-200">{selectedOrder.shippingAddress?.address || '-'}</p>
+                <p className="text-stone-600 dark:text-stone-400">{selectedOrder.shippingAddress?.thana ? `${selectedOrder.shippingAddress.thana}, ` : ''}{selectedOrder.shippingAddress?.district || '-'}</p>
+                <p className="text-stone-500 dark:text-stone-400">{isBn ? 'বিভাগ:' : 'Division:'} {selectedOrder.shippingAddress?.division || '-'}</p>
               </div>
             </div>
 
@@ -765,32 +1114,33 @@ ${advancePaid > 0 ? `✅ *অগ্রিম পরিশোধ:* ৳${advancePa
             </div>
 
             {/* Actions */}
-            <div className="flex flex-wrap justify-between items-center gap-2 pt-2">
-              <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 pt-3 border-t border-stone-200 dark:border-slate-800">
+              <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-2">
                 <button
                   onClick={() => setCourierDispatchOrder(selectedOrder)}
-                  className="px-3.5 py-2 bg-teal-800 text-white rounded-lg text-xs font-bold hover:bg-teal-900 flex items-center gap-1.5 shadow-xs"
+                  className="px-3.5 py-2.5 bg-teal-800 text-white rounded-xl text-xs font-bold hover:bg-teal-900 flex items-center justify-center gap-1.5 shadow-xs transition-colors"
                 >
-                  <Truck className="w-3.5 h-3.5 text-teal-300" />
+                  <Truck className="w-4 h-4 text-teal-300" />
                   <span>{selectedOrder.courier?.trackingId ? 'Manage Courier / Dispatch' : 'Dispatch via Steadfast/Pathao'}</span>
                 </button>
                 <button
                   onClick={() => setPrintOrder(selectedOrder)}
-                  className="px-3.5 py-2 bg-teal-900 text-white rounded-lg text-xs font-bold hover:bg-teal-950 flex items-center gap-1.5 shadow-xs"
+                  className="px-3.5 py-2.5 bg-teal-900 text-white rounded-xl text-xs font-bold hover:bg-teal-950 flex items-center justify-center gap-1.5 shadow-xs transition-colors"
                 >
-                  <FileText className="w-3.5 h-3.5 text-teal-300" />
+                  <FileText className="w-4 h-4 text-teal-300" />
                   <span>Print Order Documents</span>
                   <span className="px-1.5 py-0.5 rounded text-[10px] bg-teal-800 text-teal-200 font-normal">One PDF</span>
                 </button>
               </div>
               <button
                 onClick={() => setSelectedOrder(null)}
-                className="px-4 py-2 bg-stone-200 text-stone-800 rounded-lg text-xs font-bold hover:bg-stone-300"
+                className="w-full sm:w-auto px-4 py-2.5 bg-stone-200 dark:bg-slate-700 text-stone-800 dark:text-stone-200 rounded-xl text-xs font-bold hover:bg-stone-300 dark:hover:bg-slate-600 transition-colors text-center"
               >
                 Close Desk
               </button>
             </div>
           </div>
+        )}
       </AdminModalShell>
 
       {/* Courier & Delivery Dispatch Modal (Steadfast & Pathao APIs) */}
@@ -845,6 +1195,89 @@ ${advancePaid > 0 ? `✅ *অগ্রিম পরিশোধ:* ৳${advancePa
           initialDomain="ORDERS"
         />
       )}
+
+      {/* Bulk Cancel Orders Safety Dialog */}
+      <AdminConfirmDialog
+        isOpen={isBulkCancelModalOpen}
+        onClose={() => setIsBulkCancelModalOpen(false)}
+        onConfirm={handleBulkCancelConfirm}
+        variant="danger"
+        language={language}
+        count={selectedOrderIds.length}
+        itemTypeLabel="order"
+        itemTypeLabelBn="টি অর্ডার"
+        title={`Cancel ${selectedOrderIds.length} Selected Orders?`}
+        titleBn={`নির্বাচিত ${selectedOrderIds.length}টি অর্ডার বাতিল করবেন?`}
+        description={`Are you sure you want to cancel ${selectedOrderIds.length} selected orders? Inventory allocations will be released and order statuses will be permanently set to CANCELLED.`}
+        descriptionBn={`আপনি কি নিশ্চিত যে নির্বাচিত ${selectedOrderIds.length}টি অর্ডার বাতিল করতে চান? সংরক্ষিত স্টক ইনভেন্টরিতে ফিরিয়ে দেওয়া হবে এবং স্ট্যাটাস CANCELLED করা হবে।`}
+        confirmLabel={`Cancel ${selectedOrderIds.length} Orders`}
+        confirmLabelBn={`${selectedOrderIds.length}টি অর্ডার বাতিল করুন`}
+        items={selectedOrderSummaries}
+        requiresTypedConfirmation={selectedOrderIds.length >= 3}
+        confirmationKeyword="CANCEL"
+        auditWarning={true}
+      />
+
+      {/* Bulk Status Update Safety Dialog */}
+      <AdminConfirmDialog
+        isOpen={isBulkStatusModalOpen}
+        onClose={() => setIsBulkStatusModalOpen(false)}
+        onConfirm={handleBulkStatusConfirm}
+        variant={bulkTargetStatus === 'DELIVERED' ? 'success' : 'info'}
+        language={language}
+        count={selectedOrderIds.length}
+        itemTypeLabel="order"
+        itemTypeLabelBn="টি অর্ডার"
+        title={`Update ${selectedOrderIds.length} Orders to ${bulkTargetStatus}?`}
+        titleBn={`নির্বাচিত ${selectedOrderIds.length}টি অর্ডারের স্থিতি "${bulkTargetStatus}" করবেন?`}
+        description={`This batch operation will advance ${selectedOrderIds.length} orders to the "${bulkTargetStatus}" operational phase.`}
+        descriptionBn={`এই ব্যাচ আপডেটের মাধ্যমে নির্বাচিত ${selectedOrderIds.length}টি অর্ডারের স্থিতি "${bulkTargetStatus}" ধাপে পরিবর্তিত হবে।`}
+        confirmLabel={`Set to ${bulkTargetStatus}`}
+        confirmLabelBn={`স্থিতি ${bulkTargetStatus} করুন`}
+        items={selectedOrderSummaries}
+        auditWarning={true}
+      />
+
+      {/* Single Critical Order Cancellation / Return Confirmation */}
+      <AdminConfirmDialog
+        isOpen={!!statusChangeConfirm}
+        onClose={() => setStatusChangeConfirm(null)}
+        onConfirm={() => {
+          if (statusChangeConfirm) {
+            updateOrderStatus(statusChangeConfirm.order.id, statusChangeConfirm.newStatus);
+            setStatusChangeConfirm(null);
+          }
+        }}
+        variant="danger"
+        language={language}
+        title={`Change Order #${statusChangeConfirm?.order.orderNumber} to ${statusChangeConfirm?.newStatus}?`}
+        titleBn={`অর্ডার #${statusChangeConfirm?.order.orderNumber}-এর স্থিতি "${statusChangeConfirm?.newStatus}" করবেন?`}
+        description={
+          statusChangeConfirm?.newStatus === 'CANCELLED'
+            ? `Cancelling this order will release allocated inventory lock and mark the record as cancelled.`
+            : `Marking this order as returned will initiate customer return and reconciliation procedures.`
+        }
+        descriptionBn={
+          statusChangeConfirm?.newStatus === 'CANCELLED'
+            ? `এই অর্ডারটি বাতিল করলে সংরক্ষিত পণ্য স্টক থেকে অবমুক্ত হবে এবং বাতিল রেকর্ড তৈরি হবে।`
+            : `অর্ডারটি রিটার্ন হিসেবে চিহ্নিত করলে গ্রাহক ফেরত ও সমন্বয় প্রক্রিয়া শুরু হবে।`
+        }
+        confirmLabel={`Confirm ${statusChangeConfirm?.newStatus}`}
+        confirmLabelBn={`নিশ্চিত করুন (${statusChangeConfirm?.newStatus})`}
+        items={
+          statusChangeConfirm
+            ? [
+                {
+                  id: statusChangeConfirm.order.id,
+                  label: `Order #${statusChangeConfirm.order.orderNumber} — ${statusChangeConfirm.order.customer?.name || 'Guest'}`,
+                  subtext: `৳${statusChangeConfirm.order.total.toLocaleString()} · Current: ${statusChangeConfirm.order.orderStatus}`,
+                  badge: statusChangeConfirm.order.orderStatus,
+                },
+              ]
+            : []
+        }
+        auditWarning={true}
+      />
     </div>
   );
 }

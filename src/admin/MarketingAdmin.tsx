@@ -24,23 +24,46 @@ import { MarketingCommandCenter } from './MarketingCommandCenter';
 import { AdminModalShell } from '../components/admin/AdminModalShell';
 import { usePendingAction } from '../hooks/usePendingAction';
 
-type ActiveTab = 'SEGMENTS' | 'CARTS' | 'CAMPAIGNS' | 'REFERRALS' | 'CRM' | 'COMMAND';
+export type MarketingActiveTab = 'SEGMENTS' | 'CARTS' | 'CAMPAIGNS' | 'REFERRALS' | 'CRM' | 'COMMAND';
 
-export function MarketingAdmin() {
+interface MarketingAdminProps {
+  initialTab?: MarketingActiveTab;
+}
+
+export function MarketingAdmin({ initialTab }: MarketingAdminProps = {}) {
   const { language, showToast, logAudit } = useApp();
 
   // F-306: blocks duplicate submits while a mutation is in flight.
   const { run, isPending, isBusy } = usePendingAction();
-  const [activeTab, setActiveTab] = useState<ActiveTab>(() => {
-    // Deep-link support: /admin/marketing?tab=command lands directly on the Command Center
+  const [activeTab, setActiveTab] = useState<MarketingActiveTab>(() => {
+    if (initialTab) return initialTab;
     try {
-      const t = new URLSearchParams(window.location.search).get('tab');
-      if (t && ['SEGMENTS', 'CARTS', 'CAMPAIGNS', 'REFERRALS', 'CRM', 'COMMAND'].includes(t)) return t as ActiveTab;
+      const raw = new URLSearchParams(window.location.search).get('tab');
+      const t = raw?.toUpperCase();
+      if (t && ['SEGMENTS', 'CARTS', 'CAMPAIGNS', 'REFERRALS', 'CRM', 'COMMAND'].includes(t)) {
+        return t as MarketingActiveTab;
+      }
     } catch {
       /* ignore */
     }
-    return 'SEGMENTS';
+    return 'COMMAND';
   });
+
+  useEffect(() => {
+    if (initialTab) {
+      setActiveTab(initialTab);
+      return;
+    }
+    try {
+      const raw = new URLSearchParams(window.location.search).get('tab');
+      const t = raw?.toUpperCase();
+      if (t && ['SEGMENTS', 'CARTS', 'CAMPAIGNS', 'REFERRALS', 'CRM', 'COMMAND'].includes(t)) {
+        setActiveTab(t as MarketingActiveTab);
+      }
+    } catch {
+      /* ignore */
+    }
+  }, [initialTab]);
   const [loading, setLoading] = useState(true);
 
   // Data states
@@ -1157,6 +1180,7 @@ export function MarketingAdmin() {
         closeOnBackdrop={false}
         overlayClassName="fixed inset-0 z-50 bg-stone-900/60 backdrop-blur-xs flex items-center justify-end"
       >
+        {selectedCustomerCrm && (
           <div className="bg-white w-full max-w-2xl h-full shadow-2xl p-6 overflow-y-auto space-y-6">
             <div className="flex items-center justify-between border-b border-stone-200 pb-4">
               <div>
@@ -1292,6 +1316,7 @@ export function MarketingAdmin() {
               </div>
             </div>
           </div>
+        )}
       </AdminModalShell>
 
       {/* ===================================================================== */}
@@ -1305,6 +1330,7 @@ export function MarketingAdmin() {
         closeOnBackdrop={false}
         overlayClassName="fixed inset-0 z-50 bg-stone-900/60 backdrop-blur-xs flex items-center justify-center p-4"
       >
+        {showCartNudgeModal && (
           <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl space-y-4">
             <div className="flex items-center justify-between border-b border-stone-200 pb-3">
               <h3 className="text-sm font-bold text-stone-900">
@@ -1384,6 +1410,7 @@ export function MarketingAdmin() {
               </button>
             </div>
           </div>
+        )}
       </AdminModalShell>
 
       {/* ===================================================================== */}
@@ -1537,6 +1564,7 @@ export function MarketingAdmin() {
         closeOnBackdrop={false}
         overlayClassName="fixed inset-0 z-50 bg-stone-900/60 backdrop-blur-xs flex items-center justify-center p-4"
       >
+        {referralConfig && (
           <form onSubmit={handleUpdateConfig} className="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl space-y-4">
             <div className="flex items-center justify-between border-b border-stone-200 pb-3">
               <h3 className="text-sm font-bold text-stone-900">
@@ -1621,6 +1649,7 @@ export function MarketingAdmin() {
               </button>
             </div>
           </form>
+        )}
       </AdminModalShell>
     </div>
   );

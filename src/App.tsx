@@ -4,7 +4,7 @@
  */
 
 import React from 'react';
-import { BrowserRouter, Routes, Route, Outlet } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Outlet, Navigate, useLocation } from 'react-router-dom';
 import { Header } from './components/layout/Header';
 import { Footer } from './components/layout/Footer';
 import { Home } from './pages/Home';
@@ -42,11 +42,40 @@ import { BackupAdmin } from './admin/BackupAdmin';
 import { FraudRiskDashboard } from './admin/FraudRiskDashboard';
 import { FulfillmentAdmin } from './admin/FulfillmentAdmin';
 import { MarketingAdmin } from './admin/MarketingAdmin';
+import { MarketingCommandCenter } from './admin/MarketingCommandCenter';
 import { PromotionsAdmin } from './admin/PromotionsAdmin';
 import { SupplierLoginPage } from './pages/supplier/SupplierLoginPage';
 import { SupplierPortalPage } from './pages/supplier/SupplierPortalPage';
-import { Navigate } from 'react-router-dom';
 import { AppProvider, useApp } from './context/AppContext';
+import { Role } from './types';
+
+// Staff/Admin roles with access to Admin Management Suites
+const AUTHORIZED_ADMIN_ROLES: Role[] = [
+  'SUPER_ADMIN',
+  'ADMIN',
+  'ORDER_MANAGER',
+  'INVENTORY_MANAGER',
+  'FINANCE',
+  'SUPPORT'
+];
+
+// Route protection wrapper for the /admin route group
+function AdminProtectedRoute({ children }: { children?: React.ReactNode }) {
+  const { currentRole } = useApp();
+  const location = useLocation();
+
+  const isAuthorizedAdmin = AUTHORIZED_ADMIN_ROLES.includes(currentRole);
+
+  if (!isAuthorizedAdmin) {
+    if (currentRole === 'SUPPLIER') {
+      return <Navigate to="/supplier" replace state={{ from: location.pathname }} />;
+    }
+    // Unauthorized users/customers are redirected away from admin management routes
+    return <Navigate to="/account" replace state={{ from: location.pathname, unauthorized: true }} />;
+  }
+
+  return children ? <>{children}</> : <Outlet />;
+}
 
 // Layout wrapper for customer-facing storefront
 function StorefrontLayout() {
@@ -101,8 +130,15 @@ export default function App() {
             <Route path="/pages/:slug" element={<PolicyPage />} />
           </Route>
 
-          {/* Phase 05: Admin Control Center Routes */}
-          <Route path="/admin" element={<AdminLayout />}>
+          {/* Phase 05: Admin Control Center Routes (Protected by AdminProtectedRoute) */}
+          <Route
+            path="/admin"
+            element={
+              <AdminProtectedRoute>
+                <AdminLayout />
+              </AdminProtectedRoute>
+            }
+          >
             <Route index element={<Dashboard />} />
             <Route path="orders" element={<OrdersAdmin />} />
             <Route path="products" element={<ProductsAdmin />} />
@@ -116,21 +152,36 @@ export default function App() {
             <Route path="refunds" element={<ReturnsRefundsAdmin />} />
             <Route path="finance" element={<FinanceAdmin />} />
             <Route path="reports" element={<ReportsAdmin />} />
+            <Route path="report" element={<ReportsAdmin />} />
+            <Route path="reports-analytics" element={<ReportsAdmin />} />
             <Route path="analytics" element={<AnalyticsAdmin />} />
+            <Route path="traffic" element={<AnalyticsAdmin initialTab="GEO_TRAFFIC" />} />
+            <Route path="traffic-analysis" element={<AnalyticsAdmin initialTab="GEO_TRAFFIC" />} />
+            <Route path="traffic-analytics" element={<AnalyticsAdmin initialTab="GEO_TRAFFIC" />} />
             <Route path="operations" element={<OperationsAdmin />} />
             <Route path="content" element={<ContentAdmin />} />
             <Route path="settings" element={<SettingsAdmin />} />
             <Route path="users" element={<UsersAdmin />} />
-            {/* S2-2: this was redirected to the dashboard, stranding 1,323
-                lines of coupon / flash-deal / loyalty UI whose API endpoints
-                all exist and are unreachable any other way. */}
+            <Route path="rbac" element={<UsersAdmin initialTab="rbac" />} />
+            <Route path="user-management" element={<UsersAdmin initialTab="users" />} />
+            <Route path="roles" element={<UsersAdmin initialTab="rbac" />} />
             <Route path="promotions" element={<PromotionsAdmin />} />
             <Route path="marketing" element={<MarketingAdmin />} />
-            <Route path="marketing/command" element={<Navigate to="/admin/marketing?tab=command" replace />} />
+            <Route path="marketing/command" element={<MarketingCommandCenter />} />
+            <Route path="marketing-command" element={<MarketingCommandCenter />} />
+            <Route path="marketing-command-center" element={<MarketingCommandCenter />} />
             <Route path="fraud" element={<FraudRiskDashboard />} />
             <Route path="fulfillment" element={<FulfillmentAdmin />} />
             <Route path="audit" element={<AuditAdmin />} />
+            <Route path="audits" element={<AuditAdmin />} />
+            <Route path="audit-trail" element={<AuditAdmin />} />
+            <Route path="audit-logs" element={<AuditAdmin />} />
             <Route path="backup" element={<BackupAdmin />} />
+            <Route path="backups" element={<BackupAdmin />} />
+            <Route path="database-backup" element={<BackupAdmin />} />
+            <Route path="disaster-recovery" element={<BackupAdmin />} />
+            {/* Catch-all fallback for undefined admin sub-routes */}
+            <Route path="*" element={<Navigate to="/admin" replace />} />
           </Route>
 
           {/* Dedicated Isolated Supplier & Artisan Portal Routes */}
@@ -138,6 +189,9 @@ export default function App() {
           <Route path="/supplier" element={<SupplierPortalPage />} />
           <Route path="/supplier-portal" element={<Navigate to="/supplier" replace />} />
           <Route path="/supplier/*" element={<SupplierPortalPage />} />
+
+          {/* Global catch-all fallback */}
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>
     </AppProvider>

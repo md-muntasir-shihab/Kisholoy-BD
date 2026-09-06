@@ -1160,6 +1160,7 @@ export const FulfillmentAdmin: React.FC = () => {
         closeOnBackdrop={false}
         overlayClassName="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm animate-in fade-in duration-200"
       >
+        {editingHub && (
           <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-stone-200 p-6 space-y-4">
             <div className="flex items-center justify-between border-b border-stone-200 pb-3">
               <h3 className="text-lg font-bold text-stone-900 flex items-center gap-2">
@@ -1324,6 +1325,7 @@ export const FulfillmentAdmin: React.FC = () => {
               </div>
             </form>
           </div>
+        )}
       </AdminModalShell>
 
       {/* ======================================================== */}
@@ -1337,6 +1339,7 @@ export const FulfillmentAdmin: React.FC = () => {
         closeOnBackdrop={false}
         overlayClassName="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm animate-in fade-in duration-200"
       >
+        {editingBinStock && (
           <div className="bg-white rounded-xl shadow-2xl max-w-md w-full border border-stone-200 p-6 space-y-4">
             <div className="flex items-center justify-between border-b border-stone-200 pb-3">
               <h3 className="text-base font-bold text-stone-900 flex items-center gap-2">
@@ -1426,6 +1429,7 @@ export const FulfillmentAdmin: React.FC = () => {
               </div>
             </div>
           </div>
+        )}
       </AdminModalShell>
 
       {/* ======================================================== */}
@@ -1697,6 +1701,7 @@ export const FulfillmentAdmin: React.FC = () => {
         label=""
         overlayClassName="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm animate-in fade-in duration-200"
       >
+        {viewingPickList && (
           <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-stone-200 p-6 space-y-4">
             <div className="flex items-center justify-between border-b border-stone-200 pb-3">
               <div>
@@ -1770,6 +1775,7 @@ export const FulfillmentAdmin: React.FC = () => {
               </button>
             </div>
           </div>
+        )}
       </AdminModalShell>
 
       {/* ======================================================== */}
@@ -1912,6 +1918,7 @@ export const FulfillmentAdmin: React.FC = () => {
         label=""
         overlayClassName="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm animate-in fade-in duration-200"
       >
+        {viewingManifest && (
           <div className="bg-white rounded-xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto border border-stone-200 p-8 space-y-6">
             <div className="flex items-start justify-between border-b border-stone-300 pb-4">
               <div>
@@ -2003,6 +2010,7 @@ export const FulfillmentAdmin: React.FC = () => {
               </button>
             </div>
           </div>
+        )}
       </AdminModalShell>
     </div>
   );

@@ -27,9 +27,51 @@ import { PermissionChangeSafetyModal } from '../components/admin/PermissionChang
 import { AdminModalShell } from '../components/admin/AdminModalShell';
 import { usePendingAction } from '../hooks/usePendingAction';
 
-export function UsersAdmin() {
+export type UsersActiveTab = 'users' | 'rbac' | 'sessions' | 'ratelimit';
+
+interface UsersAdminProps {
+  initialTab?: UsersActiveTab;
+}
+
+export function UsersAdmin({ initialTab }: UsersAdminProps = {}) {
   const { currentRole, setCurrentRole, language, showToast } = useApp();
-  const [activeTab, setActiveTab] = useState<'users' | 'rbac' | 'sessions' | 'ratelimit'>('users');
+  const [activeTab, setActiveTab] = useState<UsersActiveTab>(() => {
+    if (initialTab) return initialTab;
+    try {
+      const pathname = window.location.pathname.toLowerCase();
+      if (pathname.includes('rbac') || pathname.includes('role')) return 'rbac';
+      const raw = new URLSearchParams(window.location.search).get('tab');
+      const t = raw?.toLowerCase();
+      if (t && ['users', 'rbac', 'sessions', 'ratelimit'].includes(t)) {
+        return t as UsersActiveTab;
+      }
+    } catch {
+      /* ignore */
+    }
+    return 'users';
+  });
+
+  useEffect(() => {
+    if (initialTab) {
+      setActiveTab(initialTab);
+      return;
+    }
+    try {
+      const pathname = window.location.pathname.toLowerCase();
+      if (pathname.includes('rbac') || pathname.includes('role')) {
+        setActiveTab('rbac');
+        return;
+      }
+      const raw = new URLSearchParams(window.location.search).get('tab');
+      const t = raw?.toLowerCase();
+      if (t && ['users', 'rbac', 'sessions', 'ratelimit'].includes(t)) {
+        setActiveTab(t as UsersActiveTab);
+      }
+    } catch {
+      /* ignore */
+    }
+  }, [initialTab]);
+
   // F-306: blocks duplicate submits while a mutation is in flight.
   const { run, isPending, isBusy } = usePendingAction();
 
@@ -69,19 +111,25 @@ export function UsersAdmin() {
   const loadSecurityData = async () => {
     setLoading(true);
     try {
-      const [usersRes, sessionsRes, rolesRes, rateRes, bannedRes] = await Promise.all([
-        fetch('/api/security/users').then(r => r.json()),
-        fetch('/api/security/sessions').then(r => r.json()),
-        fetch('/api/security/rbac/roles').then(r => r.json()),
-        fetch('/api/security/rate-limit/status').then(r => r.json()),
-        fetch('/api/security/rate-limit/banned-ips').then(r => r.json())
+      const safeJson = async (url: string) => {
+        const r = await fetch(url);
+        if (!r.ok) return null;
+        return r.json().catch(() => null);
+      };
+
+      const [usersRes, sessionsRes, rolesRes, rateRes, bannedRes] = await Promise.allSettled([
+        safeJson('/api/security/users'),
+        safeJson('/api/security/sessions'),
+        safeJson('/api/security/rbac/roles'),
+        safeJson('/api/security/rate-limit/status'),
+        safeJson('/api/security/rate-limit/banned-ips')
       ]);
 
-      if (usersRes.success) setStaffUsers(usersRes.users);
-      if (sessionsRes.success) setActiveSessions(sessionsRes.sessions);
-      if (rolesRes.success) setRolePermissions(rolesRes.roles);
-      if (rateRes.success) setRateLimitStatuses(rateRes.status);
-      if (bannedRes.success) setBannedIps(bannedRes.bannedIps);
+      if (usersRes.status === 'fulfilled' && usersRes.value?.success) setStaffUsers(usersRes.value.users || []);
+      if (sessionsRes.status === 'fulfilled' && sessionsRes.value?.success) setActiveSessions(sessionsRes.value.sessions || []);
+      if (rolesRes.status === 'fulfilled' && rolesRes.value?.success) setRolePermissions(rolesRes.value.roles || []);
+      if (rateRes.status === 'fulfilled' && rateRes.value?.success) setRateLimitStatuses(rateRes.value.status || []);
+      if (bannedRes.status === 'fulfilled' && bannedRes.value?.success) setBannedIps(bannedRes.value.bannedIps || []);
     } catch (err: any) {
       console.error('Failed to load security state:', err);
       showToast('error', 'Failed to synchronize security telemetry with server.');
@@ -893,6 +941,7 @@ export function UsersAdmin() {
         label="Edit Staff Role"
         overlayClassName="fixed inset-0 bg-stone-900/50 backdrop-blur-xs z-50 flex items-center justify-center p-4"
       >
+        {editRoleUser && (
           <div className="bg-white rounded-xl max-w-md w-full p-6 shadow-xl border border-stone-200">
             <div className="flex items-center justify-between pb-3 border-b border-stone-200">
               <h3 className="font-serif font-bold text-stone-900 text-lg">Modify Staff Role</h3>
@@ -949,6 +998,7 @@ export function UsersAdmin() {
               </div>
             </div>
           </div>
+        )}
       </AdminModalShell>
 
       {/* Role Change Safety Confirmation Modal (Section 25) */}
@@ -973,6 +1023,7 @@ export function UsersAdmin() {
         label="RBAC Permission Adjustment Safety Modal"
         overlayClassName="fixed inset-0 bg-stone-900/50 backdrop-blur-xs z-50 flex items-center justify-center p-4"
       >
+        {editingRoleConfig && (
           <div className="bg-white rounded-xl max-w-2xl w-full p-6 shadow-xl border border-stone-200 flex flex-col max-h-[85vh]">
             <div className="flex items-center justify-between pb-3 border-b border-stone-200">
               <div>
@@ -1068,6 +1119,7 @@ export function UsersAdmin() {
               </div>
             </div>
           </div>
+        )}
       </AdminModalShell>
 
       {/* RBAC Permission Adjustment Safety Modal (Section 26) */}
@@ -1192,6 +1244,7 @@ export function UsersAdmin() {
         label="GLOBAL CONTEXTUAL ADMIN HELP MODAL"
         overlayClassName="fixed inset-0 bg-stone-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4"
       >
+        {activeHelp && (
           <div className="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-2xl border border-stone-200 max-h-[90vh] flex flex-col">
             <div className="flex items-center justify-between pb-3 border-b border-stone-200">
               <div className="flex items-center gap-2.5">
@@ -1317,6 +1370,7 @@ export function UsersAdmin() {
               </button>
             </div>
           </div>
+        )}
       </AdminModalShell>
     </div>
   );
